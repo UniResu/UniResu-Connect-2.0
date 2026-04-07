@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projetos - UniResu</title>
+    <link rel="stylesheet" href="../assets/css/reset.css">
+    <link rel="stylesheet" href="../assets/css/projetos.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <header class="navbar">
+        <div class="logo">
+            <img src="../assets/img/uniresulogo.png" alt="Logo UniResu">
+        </div>
+        <ul class="nav-links">
+            <li><a href="/UniResu-main/index.html#home">Home</a></li>
+            <li><a href="/UniResu-main/index.html#quem-somos">Quem Somos</a></li>
+            <li><a href="./projetos.html#projetos">Projetos Acadêmicos</a></li>
+            <li><a href="./forum.html#forum">Fórum</a></li>
+        </ul>
+        <a href="./register.html" class="btn-register">Registre-se</a>
+    </header>
+
+    <main class="main-content">
+        <section class="projects-section">
+            <h1>Projetos</h1>
+            <p class="login-hint">
+                Você deve estar conectado para gerenciar seus projetos.
+            </p>
+            <button class="btn-enter">Login</button>
+
+            <form class="search-form" id="form-busca">
+                <div class="inputs-row">
+                    <input type="text" placeholder="Buscar" id="input-buscar">
+                    <input type="text" placeholder="Local" id="input-local">
+                </div>
+
+                <label class="checkbox-remote">
+                    <input type="checkbox" id="check-remoto"> Apenas trabalhos remotos
+                </label>
+
+                <select id="select-area">
+                    <option value="">Área de Estudo</option>
+                    <option>Ciências Exatas e da Terra</option>
+                    <option>Ciências Biológicas e da Saúde</option>
+                    <option>Ciências Humanas</option>
+                    <option>Ciências Sociais Aplicadas</option>
+                    <option>Área de Tecnologias</option>
+                    <option>Engenharias</option>
+                    <option>Ciências Agrárias</option>
+                    <option>Artes e Design</option>
+                    <option>Linguística e Letras</option>
+                </select>
+
+                <button type="submit" class="btn-search">Procurar Projetos</button>
+
+                <div class="filters">
+                    <label><input type="checkbox" name="tipo_projeto" value="institucional_aberto" checked> Projeto
+                        Institucional (Aberto)</label>
+                    <label><input type="checkbox" name="tipo_projeto" value="institucional_exclusivo" checked> Projeto
+                        Institucional (Exclusivo)</label>
+                    <label><input type="checkbox" name="tipo_projeto" value="voluntario_aberto" checked> Projeto
+                        Voluntário (Aberto)</label>
+                    <label><input type="checkbox" name="tipo_projeto" value="voluntario_exclusivo" checked> Projeto
+                        Voluntário (Exclusivo)</label>
+                    <a href="#" class="rss">RSS</a>
+                </div>
+            </form>
+
+            <div class="project-list" id="lista-projetos">
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p>Grupo Acadêmico UniResu | Copyright © 2025 UniResu -
+            Conectando a Comunidade Acadêmica | Realizado por UniResu - Conectando a Comunidade Acadêmica.</p>
+    </footer>
+
+    <script src="../assets/js/projetos.js"></script>
+</body>
+
+</html>

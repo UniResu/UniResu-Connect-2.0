@@ -1,0 +1,292 @@
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 5%;
+    background-color: #4c0568;
+    color: white;
+    position: fixed;
+    width: 90%;
+    top: 0;
+    z-index: 1000;
+}
+
+.logo img {
+    height: 70px;
+}
+
+.nav-links {
+    list-style: none;
+    display: flex;
+}
+
+.nav-links li {
+    margin-left: 20px;
+}
+
+.nav-links a {
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s;
+}
+
+.nav-links a:hover {
+    color: #cb89e0;
+}
+
+.btn {
+    padding: 10px 20px;
+    border-radius: 5px;
+    text-decoration: none;
+    color: white;
+    background-color: #a242b5;
+    transition: background-color 0.3s;
+}
+
+.btn:hover {
+    background-color: #dd43e6;
+}
+
+.btn-primary {
+    background-color: white;
+    color: #7504aa;
+    font-weight: bold;
+
+}
+
+.btn-primary:hover {
+    background-color: #f0f0f0;
+}
+
+.home {
+    height: 100vh;
+    background-image: linear-gradient(#3c0453, #4c05687f),
+        url('https://uniresu.org/wp-content/uploads/2023/04/imagem-banner.jpg');
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: white;
+}
+
+.home-content {
+    max-width: 800px;
+    padding: 20px;
+}
+
+.home h1 {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.home p {
+    font-size: 1.2rem;
+    margin-bottom: 2rem;
+}
+
+.content-section {
+    background-color: rgb(198, 192, 199);
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    justify-content: flex-start;
+    padding-top: 5rem;
+    padding-bottom: 5rem;
+    box-sizing: border-box;
+}
+
+section[id] {
+    scroll-margin-top: 4rem;
+}
+
+.content-section h2 {
+    font-size: 2.5rem;
+    margin-bottom: 40px;
+    color: #520f65;
+}
+
+.bg-light {
+    background-color: #f4f4f4;
+}
+
+.cards-container {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    flex-wrap: wrap;
+}
+
+.card {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    width: 300px;
+    text-align: center;
+}
+
+.card img {
+    height: 80px;
+    margin-bottom: 20px;
+}
+
+.card h3 {
+    margin-bottom: 15px;
+    color: #5b0589;
+}
+
+.blog-card a {
+    text-decoration: none;
+    color: #5c058a;
+    font-weight: bold;
+}
+
+footer {
+    background: #000000;
+    color: white;
+    text-align: center;
+    padding: 20px 0;
+}
+
+.hamburger {
+    display: none;
+    font-size: 24px;
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+}
+
+.projetos-section {
+    background-color: #fff;
+    color: #222;
+    text-align: center;
+    padding: 80px 8%;
+}
+
+.titulo-projetos {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #4c0568;
+}
+
+.subtitulo-projetos {
+    color: #7b2cbf;
+    font-size: 1.1rem;
+    margin-bottom: 50px;
+}
+
+.lista-projetos {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    margin-bottom: 40px;
+}
+
+.projeto-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    background-color: #f9f9f9;
+    border: 1px solid #e5e5e5;
+    border-radius: 10px;
+    padding: 20px 25px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+}
+
+.projeto-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+}
+
+.projeto-info {
+    text-align: left;
+    max-width: 65%;
+}
+
+.projeto-info h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 8px;
+}
+
+.projeto-info p {
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.projeto-detalhes {
+    text-align: right;
+    font-size: 0.85rem;
+    color: #555;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.projeto-detalhes .tipo {
+    color: #e15cff;
+    font-weight: 600;
+}
+
+.botao-explorar {
+    margin-top: 20px;
+}
+
+.btn-explorar {
+    background-color: #a242b5;
+    color: white;
+    padding: 0.8rem 1.8rem;
+    border-radius: 8px;
+    text-decoration: none;
+    margin-top: 2rem;
+    font-weight: 600;
+    text-align: center;
+    transition: background-color 0.3s ease;
+}
+
+.btn-explorar:hover {
+    background-color: #dd43e6;
+}
+
+.btn-forum {
+    background-color: #a242b5;
+    color: white;
+    padding: 0.8rem 1.8rem;
+    border-radius: 8px;
+    text-decoration: none;
+    margin-top: 8rem;
+    font-weight: 600;
+    text-align: center;
+    transition: background-color 0.3s ease;
+}
+
+.btn-forum:hover {
+    background-color: #dd43e6;
+}
+
+@media (max-width: 768px) {
+    .projeto-card {
+        flex-direction: column;
+        text-align: left;
+        gap: 15px;
+    }
+
+    .projeto-info,
+    .projeto-detalhes {
+        max-width: 100%;
+        text-align: left;
+    }
+
+    .projeto-detalhes {
+        align-items: flex-start;
+    }
+}

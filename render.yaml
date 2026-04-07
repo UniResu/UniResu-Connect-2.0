@@ -1,0 +1,52 @@
+# render.yaml — Infrastructure as Code para o Render
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  # ── Backend FastAPI ──
+  - type: web
+    name: uniresu-api
+    runtime: docker
+    region: ohio
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: MONGO_URI
+        sync: false  # Definir manualmente no dashboard (segredo)
+      - key: MONGO_DB_NAME
+        value: UniResuDB
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: ORCID_CLIENT_ID
+        sync: false
+      - key: ORCID_CLIENT_SECRET
+        sync: false
+      - key: ORCID_REDIRECT_URI
+        sync: false
+      - key: ORCID_BASE_URL
+        value: https://orcid.org
+      - key: ORCID_API_URL
+        value: https://pub.orcid.org/v3.0
+      - key: ALLOWED_ORIGINS
+        value: https://uniresu-frontend.onrender.com,http://localhost:3000
+
+  # ── Frontend Next.js ──
+  - type: web
+    name: uniresu-frontend
+    runtime: node
+    region: ohio
+    plan: free
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          name: uniresu-api
+          type: web
+          property: url
+      - key: NEXT_PUBLIC_ORCID_CLIENT_ID
+        sync: false

@@ -1,0 +1,180 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  animation: fadeIn 0.3s ease forwards;
+}
+
+.modal {
+  background: var(--bg-primary);
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  overflow-y: auto;
+  position: relative;
+  padding: var(--space-2xl);
+  animation: slideUp 0.3s ease forwards;
+}
+
+.closeButton {
+  position: absolute;
+  top: var(--space-lg);
+  right: var(--space-lg);
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+.closeButton:hover { color: var(--text-primary); }
+
+.title {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-md);
+  padding-right: var(--space-2xl);
+}
+
+.infoGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-lg);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.infoLine strong {
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-right: var(--space-xs);
+}
+
+.descriptionSection {
+  margin-bottom: var(--space-xl);
+}
+.descriptionSection h4 {
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+  margin-bottom: var(--space-sm);
+}
+.descriptionP {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.divider {
+  height: 1px;
+  background: var(--border-light);
+  margin: var(--space-xl) 0;
+}
+
+.candidaturaSection h4 {
+  font-size: var(--font-size-lg);
+  color: var(--text-primary);
+  margin-bottom: var(--space-md);
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-md);
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.input {
+  padding: 0.75rem var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: var(--font-size-base);
+}
+.input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-100);
+}
+
+.fileInputWrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.fileInput {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+/* Style the default file input button */
+.fileInput::file-selector-button {
+  padding: 0.5rem var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-weight: 500;
+  transition: background var(--transition-fast);
+  margin-right: var(--space-sm);
+}
+.fileInput::file-selector-button:hover {
+  background: var(--border-light);
+}
+
+.submitBtn {
+  width: 100%;
+  padding: 1rem;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  font-size: var(--font-size-base);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.submitBtn:hover:not(:disabled) {
+  background: var(--primary-dark);
+}
+.submitBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.successMessage {
+  padding: var(--space-md);
+  background: #ecfdf5;
+  color: var(--success);
+  border-radius: var(--radius-md);
+  text-align: center;
+  font-weight: 500;
+  margin-top: var(--space-md);
+}
+
+.errorMessage {
+  padding: var(--space-md);
+  background: #fef2f2;
+  color: var(--error);
+  border-radius: var(--radius-md);
+  text-align: center;
+  font-weight: 500;
+  margin-top: var(--space-md);
+}

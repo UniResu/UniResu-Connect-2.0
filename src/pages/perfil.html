@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Perfil - UniResu</title>
+    <link rel="stylesheet" href="../assets/css/reset.css">
+    <link rel="stylesheet" href="../assets/css/perfil.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+</head>
+
+<body>
+
+    <header class="navbar">
+        <div class="logo">
+            <img src="../assets/img/uniresulogo.png" alt="Logo UniResu">
+        </div>
+        <ul class="nav-links">
+            <li><a href="/UniResu-main/index.html#home">Home</a></li>
+            <li><a href="/UniResu-main/index.html#quem-somos">Quem Somos</a></li>
+            <li><a href="./projetos.html#projetos">Projetos Acadêmicos</a></li>
+            <li><a href="./forum.html#forum">Fórum</a></li>
+        </ul>
+    </header>
+
+    <main>
+        <h1>Meu Perfil</h1>
+
+        <article class="profile-card">
+            <header class="profile-card-header">
+                <h2 class="profile-name" id="profileNameValue">João Silva Pereira</h2>
+                <button id="openModalBtn" class="edit-button">EDITAR INFORMAÇÕES</button>
+            </header>
+
+            <section class="profile-summary">
+                <h3>Resumo Profissional</h3>
+                <div class="summary-box">
+                    <div id="profileSummaryText" class="summary-display">
+                        Sou João Silva Pereira, estudante de Medicina, atualmente cursando o 2º período na Universidade
+                        do Estado do Rio de Janeiro, possuo um grande interesse em estudos nas áreas de Política,
+                        Planejamento, Gestão e Avaliação em Saúde, que envolvem a administração de sistemas de saúde e a
+                        formulação de políticas públicas....
+                    </div>
+                    <textarea id="professionalSummaryTextarea" class="summary-edit" style="display: none;"></textarea>
+                    <button id="saveSummaryBtn" class="save-summary-button" style="display: none;">Salvar</button>
+                </div>
+            </section>
+
+            <section class="profile-details">
+                <p><strong>Curso:</strong> <span id="profileCourseValue">Medicina</span></p>
+                <p><strong>Período:</strong> <span id="profilePeriodValue">2º</span></p>
+                <p><strong>E-mail:</strong> <span id="profileEmailValue">joaosilvapereira.aluno@uerj.br</span></p>
+                <p><strong>Instituição:</strong> <span id="profileInstitutionValue">Universidade do Estado do Rio de
+                        Janeiro</span></p>
+                <p><strong>Vínculo Institucional:</strong> <span id="profileLinkValue">Aluno</span></p>
+                <p><strong>Grau de Instrução:</strong> <span id="profileDegreeValue">Graduação</span></p>
+                <p><strong>Currículo:</strong> <a href="#" id="profileCvLink">CV_João Silva</a></p>
+            </section>
+        </article>
+    </main>
+
+    <div id="editProfileModal" class="modal-overlay">
+        <div class="modal-content">
+            <form id="editProfileForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nome:</label>
+                        <p>João Silva Pereira</p>
+                    </div>
+                    <div class="form-group social-name">
+                        <input type="text" id="editSocialName" placeholder="Nome Social">
+                    </div>
+                </div>
+                <div class="form-row single-item">
+                    <label>E-mail:</label>
+                    <p>joaosilvapereira.aluno@uerj.br</p>
+                </div>
+                <div class="form-row single-item">
+                    <label>Instituição:</label>
+                    <p>Universidade do Estado do Rio de Janeiro</p>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Vínculo Institucional:</label>
+                        <p>Aluno</p>
+                    </div>
+                    <div class="form-group">
+                        <label>Período:</label>
+                        <input type="text" id="editPeriod" value="2 Período">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Grau de Instrução:</label>
+                        <input type="text" id="editDegree" value="Graduação">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Curso:</label>
+                        <input type="text" id="editCourse" value="Medicina">
+                    </div>
+                </div>
+                <div class="form-row-upload">
+                    <label>Anexar Currículo:</label>
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-feedback">
+                            <i class="fas fa-paperclip"></i>
+                            <span>Arraste e solte ou clique aqui</span>
+                        </div>
+                        <input type="file" id="cv-upload" hidden accept=".pdf,.docx">
+                    </div>
+                    <button type="submit" class="save-button">Salvar</button>
+                </div>
+            </form>
+            <button id="closeModalBtn" class="close-button">&times;</button>
+        </div>
+    </div>
+
+    <script src="../assets/js/perfil.js"></script>
+</body>
+
+</html>

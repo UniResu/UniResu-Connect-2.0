@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar - UniResu</title>
+    <link rel="stylesheet" href="../assets/css/reset.css">
+    <link rel="stylesheet" href="../assets/css/register.css">
+</head>
+
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="logo">
+                <img src="../assets/img/uniresulogo.png" alt="Logo UniResu">
+            </div>
+            <ul class="nav-links">
+                <li><a href="/UniResu-main/index.html#home">Home</a></li>
+                <li><a href="/UniResu-main/index.html#quem-somos">Quem Somos</a></li>
+                <li><a href="./projetos.html#projetos">Projetos Acadêmicos</a></li>
+                <li><a href="./forum.html#forum">Fórum</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="register-page">
+        <div class="register-container">
+            <div class="register-header">
+                <h2>Registre-se</h2>
+                <a href="./login.html" class="login-btn">Login</a>
+            </div>
+
+            <form class="register-form">
+                <label for="email">E-mail</label>
+                <input type="email" id="email" placeholder="Digite seu e-mail" required>
+
+                <label for="senha">Crie uma senha</label>
+                <input type="text" id="senha" placeholder="Crie uma senha" required>
+
+                <label for="instituicao">Instituição</label>
+                <input type="text" id="instituicao" placeholder="Ex: UERJ, USP..." required>
+
+                <label for="nome">Nome Completo</label>
+                <input type="text" id="nome" placeholder="Digite seu nome completo" required>
+
+                <label for="vinculo">Vínculo Institucional</label>
+                <select id="vinculo" required>
+                    <option value="professor">Professor</option>
+                    <option value="aluno">Aluno</option>
+                    <option value="pesquisador">Pesquisador</option>
+                </select>
+
+                <div class="checkbox-group">
+                    <label><input type="checkbox" required> Declaro estar ciente das regras de utilização da
+                        plataforma</label>
+                    <label><input type="checkbox" required> Declaro estar ciente do compartilhamento de dados</label>
+                </div>
+
+                <button type="submit" class="btn-primary">Registrar</button>
+            </form>
+        </div>
+    </main>
+</body>
+
+</html>

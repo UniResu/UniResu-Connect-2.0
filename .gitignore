@@ -1,0 +1,24 @@
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# --- Dependências (Python) ---
+venv/
+__pycache__/
+*.pyc
+
+# --- Dependências (Node.js) ---
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+
+# --- IDEs / Sistema ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.tsbuildinfo

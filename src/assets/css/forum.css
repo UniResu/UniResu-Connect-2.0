@@ -1,0 +1,123 @@
+body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    margin: 0;
+    background: #fdfcff;
+    color: #333;
+}
+
+.navbar {
+    background-color: #4c0568;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 60px;
+}
+
+.logo img {
+    width: 60px;
+}
+
+.nav-links {
+    list-style: none;
+    display: flex;
+    gap: 25px;
+}
+
+.nav-links a {
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.nav-links a.active,
+.nav-links a:hover {
+    border-bottom: 2px solid white;
+}
+
+.btn-register {
+    background: white;
+    color: #4b007d;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: 0.2s;
+}
+
+.btn-register:hover {
+    background: #e8d7ff;
+}
+
+.forum-container {
+    width: 80%;
+    max-width: 900px;
+    margin: 40px auto;
+    text-align: left;
+}
+
+.forum-container h1 {
+    color: #4b007d;
+    margin-bottom: 20px;
+}
+
+.search-bar {
+    margin-bottom: 25px;
+}
+
+.search-bar input {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #c2a6ff;
+    border-radius: 8px;
+}
+
+.topics-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.topic {
+    background: white;
+    padding: 16px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.topic h3 {
+    margin: 0;
+    color: #4b007d;
+}
+
+.topic p {
+    margin: 6px 0 0;
+    font-size: 14px;
+    color: #555;
+}
+
+.new-topic-btn {
+    margin-top: 25px;
+    background: #4b007d;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.new-topic-btn:hover {
+    background: #6b00b5;
+}
+
+.footer {
+    background-color: #000000;
+    color: white;
+    text-align: center;
+    padding: 15px;
+    font-size: 14px;
+    margin-top: 50px;
+}

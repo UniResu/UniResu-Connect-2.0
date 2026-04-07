@@ -1,0 +1,108 @@
+"""
+Rotas de autenticação — ORCID OAuth2 e sessão.
+
+Endpoints:
+    GET  /api/auth/orcid/authorize    → Gera URL de autorização ORCID
+    POST /api/auth/orcid/callback     → Processa callback OAuth
+    GET  /api/auth/me                 → Retorna usuário da sessão atual
+    POST /api/auth/sincronizar-orcid  → Re-importa dados do ORCID
+"""
+
+from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel
+from models.usuario_model import UsuarioResponse, LoginResponse, LoginRequest
+from controllers.orcid_controller import (
+    gerar_url_autorizacao,
+    processar_callback_orcid,
+    sincronizar_perfil_orcid,
+)
+from controllers.usuario_controller import login_usuario_controller
+from auth.autenticacao import create_access_token, get_usuario_atual
+
+router = APIRouter()
+
+
+# ── Schemas ──
+
+class OrcidAuthorizeResponse(BaseModel):
+    authorize_url: str
+    state: str
+
+
+class OrcidCallbackRequest(BaseModel):
+    code: str
+    state: str
+
+
+# ── Rotas ORCID ──
+
+
+@router.get("/auth/orcid/authorize", response_model=OrcidAuthorizeResponse)
+async def orcid_authorize():
+    """Retorna a URL para redirecionar o usuário ao login ORCID."""
+    return await gerar_url_autorizacao()
+
+
+@router.post("/auth/orcid/callback", response_model=LoginResponse)
+async def orcid_callback(payload: OrcidCallbackRequest):
+    """Processa o callback do ORCID após o usuário autorizar.
+
+    Cria ou atualiza o usuário no banco de dados e retorna
+    um token JWT para uso no frontend.
+    """
+    usuario = await processar_callback_orcid(payload.code, payload.state)
+
+    # Gerar JWT interno
+    access_token = create_access_token(
+        data={"sub": usuario["email"], "papel": usuario.get("papel", "pesquisador")}
+    )
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "usuario": usuario,
+    }
+
+
+# ── Rotas de Sessão ──
+
+
+@router.post("/auth/login", response_model=LoginResponse)
+async def login_email_senha(login: LoginRequest):
+    """Login alternativo com email + senha.
+
+    Usado por alunos que não possuem ORCID.
+    """
+    usuario = await login_usuario_controller(login.email, login.senha)
+
+    access_token = create_access_token(
+        data={"sub": usuario["email"], "papel": usuario.get("papel", "aluno")}
+    )
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "usuario": usuario,
+    }
+
+
+@router.get("/auth/me", response_model=UsuarioResponse)
+async def obter_usuario_atual(
+    usuario_logado: dict = Depends(get_usuario_atual),
+):
+    """Retorna os dados do usuário autenticado (via token JWT).
+
+    Usado pelo frontend para verificar se existe sessão ativa.
+    """
+    return usuario_logado
+
+
+@router.post("/auth/sincronizar-orcid", response_model=UsuarioResponse)
+async def sincronizar_orcid(
+    usuario_logado: dict = Depends(get_usuario_atual),
+):
+    """Re-importa dados do ORCID (publicações, educação, afiliação).
+
+    Requer autenticação. O usuário deve ter um ORCID vinculado.
+    """
+    return await sincronizar_perfil_orcid(usuario_logado["id"])

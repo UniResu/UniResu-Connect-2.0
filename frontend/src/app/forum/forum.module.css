@@ -1,0 +1,206 @@
+.page { max-width: var(--max-width); margin: 0 auto; padding: var(--space-2xl) var(--space-lg); }
+.header { margin-bottom: var(--space-2xl); animation: fadeIn 0.4s ease; }
+.headerTop { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-lg); flex-wrap: wrap; }
+.title { font-size: var(--font-size-3xl); font-weight: 700; color: var(--text-primary); margin-bottom: var(--space-xs); }
+.subtitle { color: var(--text-secondary); font-size: var(--font-size-lg); }
+
+.newTopicButton {
+  padding: 0.75rem var(--space-xl);
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  font-size: var(--font-size-sm);
+}
+.newTopicButton:hover { background: var(--primary-dark); transform: translateY(-1px); }
+
+/* ── Create Form ── */
+
+.createForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  background: var(--bg-secondary);
+  padding: var(--space-xl);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-light);
+  margin-bottom: var(--space-2xl);
+  animation: slideUp 0.3s ease;
+}
+
+.formInput, .formTextarea {
+  padding: 0.75rem var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  font-family: var(--font-family);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color var(--transition-fast);
+  resize: vertical;
+}
+.formInput:focus, .formTextarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-100); }
+
+.submitBtn {
+  align-self: flex-end;
+  padding: 0.625rem var(--space-xl);
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  border: none;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.submitBtn:hover:not(:disabled) { background: var(--primary-dark); }
+.submitBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── Topics List ── */
+
+.topicosList { display: flex; flex-direction: column; gap: var(--space-sm); }
+
+.topicoCard {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  transition: all var(--transition-fast);
+}
+.topicoCard:hover { border-color: var(--primary-200); }
+
+.topicoHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: var(--space-lg) var(--space-xl);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-family);
+}
+
+.topicoInfo { flex: 1; }
+.topicoTitulo { font-size: var(--font-size-base); font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-xs); }
+.topicoMeta { display: flex; gap: var(--space-sm); font-size: var(--font-size-xs); color: var(--text-muted); flex-wrap: wrap; }
+
+.chevron {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  transition: transform var(--transition-fast);
+  flex-shrink: 0;
+}
+.chevronOpen { transform: rotate(180deg); }
+
+/* ── Topic Body (expanded) ── */
+
+.topicoBody {
+  padding: 0 var(--space-xl) var(--space-xl);
+  border-top: 1px solid var(--border-light);
+  animation: fadeIn 0.3s ease;
+}
+
+.topicoConteudoOriginal {
+  padding: var(--space-xl) 0 var(--space-lg);
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+.divider {
+  border: none;
+  height: 1px;
+  background: var(--border-light);
+  margin: var(--space-md) 0;
+}
+
+.respostasList { display: flex; flex-direction: column; gap: var(--space-md); padding-top: var(--space-lg); }
+
+.respostaItem {
+  background: var(--bg-card);
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-lg);
+}
+
+.respostaAutor { display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-sm); }
+
+.respostaAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  background: var(--primary-200);
+  color: var(--primary-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.respostaEmail { font-size: var(--font-size-sm); font-weight: 500; color: var(--text-primary); }
+.respostaData { font-size: var(--font-size-xs); color: var(--text-muted); margin-left: var(--space-sm); }
+.respostaConteudo { font-size: var(--font-size-sm); color: var(--text-secondary); line-height: 1.6; }
+
+/* ── Reply Form ── */
+
+.responderForm {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-lg);
+  align-items: flex-end;
+}
+
+.responderTextarea {
+  flex: 1;
+  padding: 0.625rem var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  color: var(--text-primary);
+  outline: none;
+  resize: none;
+  transition: border-color var(--transition-fast);
+}
+.responderTextarea:focus { border-color: var(--primary); }
+
+.responderBtn {
+  padding: 0.625rem var(--space-lg);
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+.responderBtn:hover:not(:disabled) { background: var(--primary-dark); }
+.responderBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Empty & Loading ── */
+
+.emptyState { text-align: center; padding: var(--space-3xl); color: var(--text-muted); }
+.emptyIcon { font-size: 3rem; display: block; margin-bottom: var(--space-md); }
+.emptyState h3 { font-size: var(--font-size-xl); color: var(--text-secondary); margin-bottom: var(--space-xs); }
+
+.loadingList { display: flex; flex-direction: column; gap: var(--space-sm); }
+.skeletonRow {
+  height: 80px;
+  background: linear-gradient(90deg, var(--bg-card) 25%, var(--border-light) 50%, var(--bg-card) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-xl);
+}
+
+@media (max-width: 640px) {
+  .headerTop { flex-direction: column; }
+  .responderForm { flex-direction: column; }
+}
