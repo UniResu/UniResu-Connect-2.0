@@ -102,11 +102,45 @@ class UsuarioCreate(BaseModel):
     @field_validator('email')
     @classmethod
     def email_deve_ser_institucional(cls, email: str) -> str:
-        dominios_proibidos = {"gmail.com", "hotmail.com", "yahoo.com", "outlook.com", "protonmail.com"}
-        dominio = email.split('@')[-1].lower()
-        if dominio in dominios_proibidos:
-            raise ValueError('Apenas e-mails institucionais são permitidos')
-        return email
+        """Valida por whitelist de domínios acadêmicos (aceita subdomínios).
+
+        Regra:
+          - Aceita qualquer domínio terminado em '.edu.br' ou '.edu'.
+          - Aceita domínios listados em `dominios_permitidos`, inclusive
+            quaisquer subdomínios (ex.: 'sga.pucminas.br' → OK porque
+            termina em '.pucminas.br').
+        """
+        dominio = email.split('@')[-1].lower().strip()
+        if not dominio:
+            raise ValueError('E-mail inválido.')
+
+        # Regra geral: qualquer instituição acadêmica (.edu.br / .edu)
+        if dominio.endswith('.edu.br') or dominio == 'edu.br' \
+                or dominio.endswith('.edu') or dominio == 'edu':
+            return email
+
+        dominios_permitidos = {
+            # Federais
+            'ufrj.br', 'ufmg.br', 'unb.br', 'ufrgs.br', 'ufsc.br',
+            'ufpr.br', 'ufpe.br', 'ufba.br', 'ufg.br', 'ufrn.br',
+            'ufv.br', 'ufscar.br', 'unifesp.br', 'ufc.br', 'ufu.br',
+            # Estaduais
+            'usp.br', 'unicamp.br', 'unesp.br', 'uerj.br', 'udesc.br',
+            'uems.br', 'unemat.br', 'uenp.br',
+            # PUCs
+            'pucminas.br', 'puc-rio.br', 'pucsp.br', 'pucpr.br',
+            'pucrs.br', 'puccampinas.edu.br',
+            # Privadas e institutos
+            'fgv.br', 'insper.edu.br', 'mackenzie.br', 'einstein.br',
+            'fia.com.br', 'senai.br', 'itajuba.edu.br', 'ita.br',
+            'ime.eb.mil.br',
+        }
+
+        for alvo in dominios_permitidos:
+            if dominio == alvo or dominio.endswith('.' + alvo):
+                return email
+
+        raise ValueError('Apenas e-mails institucionais acadêmicos são permitidos.')
 
 
 class PerfilUpdate(BaseModel):

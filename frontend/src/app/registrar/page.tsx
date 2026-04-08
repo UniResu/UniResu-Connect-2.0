@@ -28,10 +28,42 @@ export default function RegistrarPage() {
     e.preventDefault();
     setError("");
 
-    const dominiosProibidos = ["gmail.com", "hotmail.com", "yahoo.com", "outlook.com", "protonmail.com"];
-    const dominio = email.split("@")[1]?.toLowerCase();
-    
-    if (dominio && dominiosProibidos.includes(dominio)) {
+    // Validação por whitelist de domínios acadêmicos (aceita subdomínios).
+    // Regra:
+    //  - Aceita qualquer domínio terminado em .edu.br ou .edu.
+    //  - Aceita qualquer subdomínio das instituições listadas
+    //    (ex.: sga.pucminas.br, diretoria.uerj.br, aluno.unb.br).
+    const dominio = email.split("@")[1]?.toLowerCase().trim();
+    if (!dominio) {
+      setError("Por favor, informe um e-mail válido.");
+      return;
+    }
+
+    const dominiosPermitidos = [
+      // Federais
+      "ufrj.br", "ufmg.br", "unb.br", "ufrgs.br", "ufsc.br",
+      "ufpr.br", "ufpe.br", "ufba.br", "ufg.br", "ufrn.br",
+      "ufv.br", "ufscar.br", "unifesp.br", "ufc.br", "ufu.br",
+      // Estaduais
+      "usp.br", "unicamp.br", "unesp.br", "uerj.br", "udesc.br",
+      "uems.br", "unemat.br", "uenp.br",
+      // PUCs
+      "pucminas.br", "puc-rio.br", "pucsp.br", "pucpr.br",
+      "pucrs.br", "puccampinas.edu.br",
+      // Privadas e institutos
+      "fgv.br", "insper.edu.br", "mackenzie.br", "einstein.br",
+      "fia.com.br", "senai.br", "itajuba.edu.br", "ita.br",
+      "ime.eb.mil.br",
+    ];
+
+    const ehEduGenerico =
+      dominio.endsWith(".edu.br") || dominio === "edu.br" ||
+      dominio.endsWith(".edu") || dominio === "edu";
+    const ehDominioPermitido = dominiosPermitidos.some(
+      (alvo) => dominio === alvo || dominio.endsWith("." + alvo)
+    );
+
+    if (!ehEduGenerico && !ehDominioPermitido) {
       setError("Por favor, utilize o seu e-mail institucional acadêmico.");
       return;
     }
@@ -251,6 +283,8 @@ export default function RegistrarPage() {
               >
                 {isSubmitting ? "Criando conta..." : "Criar conta"}
               </button>
+
+              <p className="text-sm text-gray-500 mt-4">Problemas com o e-mail institucional? <a href="https://docs.google.com/forms/d/e/1FAIpQLSeW8URrJsHN4S-d7k-bOvmibn99fMgMLpB-ynxs9QKKCSvkug/viewform?usp=header" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">Solicite acesso manual enviando o seu comprovante de vínculo.</a></p>
             </form>
           </>
         )}

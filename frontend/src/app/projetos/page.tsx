@@ -96,8 +96,14 @@ export default function ProjetosPage() {
 
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+      // IMPORTANTE: não definir Content-Type manualmente — o browser precisa
+      // setá-lo automaticamente como "multipart/form-data; boundary=..." a
+      // partir do FormData. Só injetamos o Authorization do contexto de auth.
       const res = await fetch(`${baseUrl}/api/projetos/${selectedProjeto.id}/candidatar`, {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         body: formData,
       });
 
