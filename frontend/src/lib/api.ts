@@ -50,6 +50,12 @@ async function request<T>(
     throw error;
   }
 
+  // 204 No Content (ex.: DELETE) não tem body — chamar res.json() lançaria
+  // SyntaxError. Também cobrimos Content-Length: 0 por precaução.
+  if (res.status === 204 || res.headers.get("content-length") === "0") {
+    return undefined as T;
+  }
+
   return res.json();
 }
 

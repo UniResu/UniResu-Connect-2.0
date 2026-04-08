@@ -120,71 +120,6 @@
   margin: var(--space-md) 0;
 }
 
-.respostasList { display: flex; flex-direction: column; gap: var(--space-md); padding-top: var(--space-lg); }
-
-.respostaItem {
-  background: var(--bg-card);
-  padding: var(--space-md) var(--space-lg);
-  border-radius: var(--radius-lg);
-}
-
-.respostaAutor { display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-sm); }
-
-.respostaAvatar {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-full);
-  background: var(--primary-200);
-  color: var(--primary-dark);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--font-size-xs);
-  font-weight: 700;
-}
-
-.respostaEmail { font-size: var(--font-size-sm); font-weight: 500; color: var(--text-primary); }
-.respostaData { font-size: var(--font-size-xs); color: var(--text-muted); margin-left: var(--space-sm); }
-.respostaConteudo { font-size: var(--font-size-sm); color: var(--text-secondary); line-height: 1.6; }
-
-/* ── Reply Form ── */
-
-.responderForm {
-  display: flex;
-  gap: var(--space-sm);
-  margin-top: var(--space-lg);
-  align-items: flex-end;
-}
-
-.responderTextarea {
-  flex: 1;
-  padding: 0.625rem var(--space-md);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  font-family: var(--font-family);
-  color: var(--text-primary);
-  outline: none;
-  resize: none;
-  transition: border-color var(--transition-fast);
-}
-.responderTextarea:focus { border-color: var(--primary); }
-
-.responderBtn {
-  padding: 0.625rem var(--space-lg);
-  background: var(--primary);
-  color: white;
-  font-weight: 600;
-  font-size: var(--font-size-sm);
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  white-space: nowrap;
-}
-.responderBtn:hover:not(:disabled) { background: var(--primary-dark); }
-.responderBtn:disabled { opacity: 0.5; cursor: not-allowed; }
-
 /* ── Empty & Loading ── */
 
 .emptyState { text-align: center; padding: var(--space-3xl); color: var(--text-muted); }
@@ -202,5 +137,199 @@
 
 @media (max-width: 640px) {
   .headerTop { flex-direction: column; }
-  .responderForm { flex-direction: column; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   ADICIONE estes blocos ao final do seu forum.module.css existente.
+   Os seletores que já existem (como .page, .header, etc.) NÃO precisam
+   ser copiados — apenas os novos abaixo.
+──────────────────────────────────────────────────────────────────────────── */
+
+/* ── Botões de autoria (Editar / Excluir) ── */
+
+.autorActions {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: flex-end;
+  padding-top: var(--space-md);
+  padding-bottom: var(--space-sm);
+}
+
+.editBtn {
+  padding: 0.35rem 0.85rem;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.editBtn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-100);
+}
+
+.deleteBtn {
+  padding: 0.35rem 0.85rem;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: #fff1f0;
+  color: #cf1322;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.deleteBtn:hover {
+  background: #ffa39e;
+  color: #820014;
+}
+
+/* ── Formulário de edição inline ── */
+
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-md) 0 var(--space-lg);
+  animation: slideUp 0.25s ease;
+}
+
+.editFormActions {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: flex-end;
+}
+
+.cancelEditBtn {
+  padding: 0.5rem var(--space-lg);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.cancelEditBtn:hover {
+  border-color: var(--text-muted);
+  color: var(--text-primary);
+}
+
+/* ── Barra de Reações (Like / Dislike) ── */
+
+.reactionBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding-top: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.reactionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.9rem;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  line-height: 1;
+}
+.reactionBtn:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-100);
+  transform: scale(1.04);
+}
+.reactionBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Estado ativo — Like */
+.reactionActive {
+  border-color: var(--primary);
+  background: var(--primary-100);
+  color: var(--primary-dark);
+}
+
+/* Estado ativo — Dislike */
+.reactionActiveNeg {
+  border-color: #cf1322;
+  background: #fff1f0;
+  color: #820014;
+}
+
+.reactionCount {
+  font-variant-numeric: tabular-nums;
+  min-width: 1.2ch;
+  text-align: center;
+}
+
+/* Reações para visitantes (read-only) */
+.reactionReadOnly {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.reactionBtnDisabled {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.9rem;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  border: 1.5px solid var(--border-light);
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  opacity: 0.75;
+  cursor: default;
+  line-height: 1;
+}
+
+/* Hint de login */
+.loginHint {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+.loginHint a,
+.loginHintSmall a {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+.loginHint a:hover,
+.loginHintSmall a:hover {
+  text-decoration: underline;
+}
+
+.loginHintSmall {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  margin-left: var(--space-xs);
+}
+
+/* ── Animações (se não existirem no seu CSS global) ── */
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
