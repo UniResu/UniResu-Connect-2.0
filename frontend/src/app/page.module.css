@@ -7,23 +7,27 @@
 .sectionTitle {
   font-size: 2.5rem;
   font-weight: 700;
-  color: var(--primary);
+  color: #ffffff;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
   margin-bottom: var(--space-xl);
   text-align: center;
 }
 
 .sectionSubtitle {
-  color: var(--primary-light);
-  font-size: 1.1rem;
-  margin-bottom: var(--space-3xl);
+  color: #d8b4e2;
+  font-size: 1.15rem;
+  margin-bottom: 3rem;
   text-align: center;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* ── Hero ── */
 
 .hero {
   min-height: calc(100vh - var(--navbar-height));
-  background-image: linear-gradient(#3c0453, #4c05687f), url('https://uniresu.org/wp-content/uploads/2023/04/imagem-banner.jpg');
+  background: linear-gradient(135deg, rgba(21, 0, 32, 0.9) 0%, rgba(41, 1, 60, 0.92) 50%, rgba(13, 0, 20, 0.95) 100%), url('https://uniresu.org/wp-content/uploads/2023/04/imagem-banner.jpg');
   background-size: cover;
   background-position: center;
   display: flex;
@@ -71,52 +75,158 @@
   justify-content: center;
 }
 
-.btnPrimary {
-  padding: 10px 40px;
-  background-color: var(--primary-light);
-  color: white;
-  font-weight: 600;
-  font-size: var(--font-size-base);
-  border-radius: var(--radius-md);
-  text-decoration: none;
-  transition: background-color 0.3s ease;
-}
-
-.btnPrimary:hover {
-  background-color: var(--accent-hover);
-}
-
+.btnPrimary,
 .btnSecondary {
-  padding: 0.8rem 1.8rem;
-  background-color: var(--primary-light);
-  color: white;
-  font-weight: 600;
-  font-size: var(--font-size-base);
-  border-radius: var(--radius-md);
+  padding: 1rem 3rem;
+  background: linear-gradient(90deg, #b224ef, #00d084);
+  color: #ffffff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border-radius: 9999px;
   text-decoration: none;
+  text-align: center;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 4px 20px rgba(0, 208, 132, 0.3);
+  transition: all 0.3s ease;
   margin-top: 2rem;
-  display: inline-block;
-  transition: background-color 0.3s ease;
 }
 
+.btnPrimary:hover,
 .btnSecondary:hover {
-  background-color: var(--accent-hover);
+  transform: scale(1.05);
+  box-shadow: 0 8px 30px rgba(0, 208, 132, 0.6);
 }
 
 /* ── Content Sections ── */
 
 .quemSomosSection {
-  background-color: rgb(198, 192, 199);
-  padding: 5rem 5%;
+  background: linear-gradient(135deg, #150020 0%, #29013c 50%, #0d0014 100%);
+  padding: 8rem 5%;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
+/* Swiper Customizations & Avatars */
+.swiperContainer {
+  width: 100%;
+  max-width: var(--max-width);
+  padding-bottom: 4rem !important;
+  /* Respiro para os bullets sob o swiper */
+}
+
+.swiperSlideCustom {
+  display: flex;
+  height: auto;
+  /* Garante alturas uniformes em todos os cards no carrossel */
+  justify-content: center;
+}
+
+.swiperSlideCustom .card {
+  width: 100%;
+  height: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+.swiperContainer :global(.swiper-pagination-bullet) {
+  background: #ffffff;
+  opacity: 0.4;
+  width: 10px;
+  height: 10px;
+  transition: all 0.3s ease;
+}
+
+.swiperContainer :global(.swiper-pagination-bullet-active) {
+  background: #00d084;
+  box-shadow: 0 0 10px #00d084, 0 0 20px #b224ef;
+  opacity: 1;
+  width: 30px;
+  border-radius: 9999px;
+}
+
+.institutionalGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+@media (min-width: 900px) {
+  .institutionalGrid {
+    flex-direction: row;
+    align-items: stretch;
+  }
+}
+
+.institutionalGrid .card {
+  width: 100%;
+  height: auto;
+  max-width: none;
+}
+
+.avatarGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 30px;
+  justify-content: center;
+  align-items: start;
+  margin-top: 3rem;
+  width: 100%;
+}
+
+.teamMember {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.avatar {
+  background: linear-gradient(135deg, #b224ef, #00d084);
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 1.5rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  margin: 0 auto 1.2rem auto;
+}
+
+.memberInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.memberName {
+  color: #ffffff;
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.memberRole {
+  color: #00d084;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-shadow: 0 0 10px rgba(0, 208, 132, 0.4);
+  margin: 0;
+}
+
 .projetosSection {
-  background-color: #ffffff;
-  padding: 5rem 5%;
+  background: linear-gradient(135deg, #150020 0%, #29013c 50%, #0d0014 100%);
+  padding: 8rem 5%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -124,12 +234,148 @@
 }
 
 .forumSection {
-  background-color: #f4f4f4;
-  padding: 5rem 5%;
+  background: linear-gradient(135deg, #1f012b 0%, #3c0453 50%, #150020 100%);
+  padding: 6rem 5%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+.forumTitle {
+  color: #ffffff !important;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+  z-index: 2;
+  margin-bottom: 0.5rem;
+}
+
+.forumSubtitle {
+  color: #d8b4e2;
+  font-size: 1.15rem;
+  margin-bottom: 3rem;
+  text-align: center;
+  z-index: 2;
+  max-width: 600px;
+}
+
+.ufoContainer {
+  position: absolute;
+  top: 60px;
+  right: 15%;
+  width: 150px;
+  height: auto;
+  z-index: 1;
+  pointer-events: none;
+  animation: floatUFO 6s ease-in-out infinite, thrustUFO 3s infinite alternate;
+}
+
+.ufoImage {
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 0 30px rgba(0, 255, 255, 0.8));
+  mix-blend-mode: screen;
+}
+
+@keyframes floatUFO {
+
+  0%,
+  100% {
+    transform: translateY(0) rotate(5deg);
+  }
+
+  50% {
+    transform: translateY(-25px) rotate(-5deg);
+  }
+}
+
+@keyframes thrustUFO {
+  0% {
+    filter: drop-shadow(0 0 15px rgba(0, 255, 255, 0.5));
+  }
+
+  100% {
+    filter: drop-shadow(0 0 35px rgba(255, 0, 255, 0.9));
+  }
+}
+
+/* Glassmorphism Cards */
+.forumCard {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: var(--space-xl) var(--space-lg);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  width: 320px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal), border var(--transition-normal);
+  z-index: 2;
+}
+
+.forumCard:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 15px 40px 0 rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.forumCard h3 {
+  margin-bottom: var(--space-md);
+  color: #ffffff;
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
+.forumCard p {
+  color: #e5d9f2;
+  line-height: 1.6;
+  margin-bottom: var(--space-xl);
+  flex-grow: 1;
+}
+
+.forumLinkAccent {
+  text-decoration: none;
+  color: #ff8df8;
+  font-weight: 600;
+  margin-top: auto;
+  padding: var(--space-sm) var(--space-xl);
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(255, 141, 248, 0.4);
+  transition: all var(--transition-fast);
+  background: transparent;
+}
+
+.forumLinkAccent:hover {
+  background-color: rgba(255, 141, 248, 0.15);
+  color: #ffffff;
+  border-color: #ff8df8;
+  box-shadow: 0 0 15px rgba(255, 141, 248, 0.4);
+}
+
+.btnForum {
+  margin-top: 3rem;
+  padding: 1rem 2.5rem;
+  background: linear-gradient(90deg, #b224ef, #00d084);
+  color: #ffffff;
+  font-size: 1.1rem;
+  font-weight: 800;
+  border-radius: var(--radius-full);
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 15px rgba(0, 208, 132, 0.4);
+  transition: all 0.3s ease;
+  z-index: 2;
+}
+
+.btnForum:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 25px rgba(0, 208, 132, 0.6);
 }
 
 /* ── Cards Containers ── */
@@ -155,34 +401,48 @@
 /* ── General Cards ── */
 
 .card {
-  background: white;
-  padding: 30px;
-  border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  width: 300px;
+  background: rgba(91, 5, 137, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 3rem 2rem;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  width: 320px;
   text-align: center;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal), border var(--transition-normal);
+}
+
+.card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 15px 40px 0 rgba(0, 0, 0, 0.6);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .card h3 {
-  margin-bottom: 15px;
-  color: #5b0589;
-  font-size: 1.2rem;
+  margin-bottom: 1.5rem;
+  color: #ffffff;
+  font-size: var(--font-size-xl);
   font-weight: 700;
+  text-align: center;
 }
 
 .card p {
-  color: var(--text-primary);
-  line-height: 1.5;
-  margin-bottom: 1rem;
+  color: #ffffff;
+  line-height: 1.7;
+  margin-bottom: var(--space-xl);
+  flex-grow: 1;
 }
 
 .card ul {
   text-align: left;
   padding-left: 1.5rem;
-  color: var(--text-primary);
-  line-height: 1.5;
+  color: #ffffff;
+  line-height: 1.7;
+  flex-grow: 1;
 }
 
 .card ul li {
@@ -191,14 +451,19 @@
 
 .linkAccent {
   text-decoration: none;
-  color: #5c058a;
-  font-weight: bold;
+  color: var(--primary);
+  font-weight: 600;
   margin-top: auto;
-  padding-top: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+  /* Expandindo o target da área de clique e adicionando micro-interação (HCI: Lei de Fitts e Feedback) */
 }
 
 .linkAccent:hover {
-  text-decoration: underline;
+  text-decoration: none;
+  background-color: var(--primary-50);
+  color: var(--primary-dark);
 }
 
 /* ── Projeto Cards ── */
@@ -207,18 +472,21 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  background-color: #f9f9f9;
-  border: 1px solid #e5e5e5;
-  border-radius: 10px;
-  padding: 20px 25px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-  transition: all 0.2s ease;
+  background: rgba(91, 5, 137, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem 2rem;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal), border var(--transition-normal);
   text-align: left;
 }
 
 .projetoCard:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+  transform: translateY(-5px);
+  box-shadow: 0 15px 40px 0 rgba(0, 0, 0, 0.6);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .projetoInfo {
@@ -226,29 +494,30 @@
 }
 
 .projetoInfo h3 {
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 700;
-  color: #222;
-  margin-bottom: 8px;
+  color: #ffffff;
+  margin-bottom: 12px;
 }
 
 .projetoInfo p {
-  font-size: 0.9rem;
-  color: #555;
+  font-size: 1rem;
+  color: #d8b4e2;
 }
 
 .projetoDetalhes {
   text-align: right;
-  font-size: 0.85rem;
-  color: #555;
+  font-size: 0.9rem;
+  color: #e5d9f2;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
 .projetoDetalhes .tipo {
-  color: #e15cff;
-  font-weight: 600;
+  color: #00d084;
+  font-weight: 700;
+  text-shadow: 0 0 10px rgba(0, 208, 132, 0.3);
 }
 
 @media (max-width: 768px) {

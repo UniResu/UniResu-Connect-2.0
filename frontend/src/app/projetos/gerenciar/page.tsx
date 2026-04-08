@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import styles from "./gerenciar.module.css";
@@ -57,6 +58,7 @@ const AREAS = [
 
 export default function GerenciarProjetosPage() {
   const { user, token, isLoading: authLoading } = useAuth();
+  const router = useRouter();
   const [projetos, setProjetos] = useState<Projeto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -85,12 +87,14 @@ export default function GerenciarProjetosPage() {
   }, [token]);
 
   useEffect(() => {
-    if (token && podeCriar) {
+    if (!authLoading && !token) {
+      router.push("/login"); // Route Guard Master
+    } else if (token && podeCriar) {
       carregarMeusProjetos();
     } else if (!authLoading) {
       setIsLoading(false);
     }
-  }, [token, podeCriar, authLoading, carregarMeusProjetos]);
+  }, [token, podeCriar, authLoading, carregarMeusProjetos, router]);
 
   function abrirFormNovo() {
     setForm(FORM_VAZIO);

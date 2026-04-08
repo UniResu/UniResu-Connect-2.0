@@ -16,8 +16,11 @@ async def enviar_candidatura(
     email_aluno: str, 
     curriculo_bytes: bytes, 
     curriculo_filename: str, 
-    curriculo_content_type: str
+    curriculo_content_type: str,
+    usuario_atual: dict
 ):
+    if not usuario_atual:
+        raise HTTPException(status_code=401, detail="Usuário não autenticado.")
     try:
         obj_id = ObjectId(projeto_id)
     except Exception:

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import styles from "./projetos.module.css";
@@ -23,6 +24,7 @@ interface Projeto {
 
 export default function ProjetosPage() {
   const { token } = useAuth();
+  const router = useRouter();
   const [projetos, setProjetos] = useState<Projeto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [busca, setBusca] = useState("");
@@ -75,6 +77,10 @@ export default function ProjetosPage() {
 
   async function handleCandidatar(e: React.FormEvent) {
     e.preventDefault();
+    if (!token) {
+      router.push("/login");
+      return;
+    }
     if (!selectedProjeto) return;
     if (!emailCandidato || !curriculo) {
       setFormError("Preencha o e-mail e anexe o currículo.");
@@ -292,11 +298,19 @@ export default function ProjetosPage() {
                   )}
 
                   <button
-                    type="submit"
+                    type={token ? "submit" : "button"}
                     className={modalStyles.submitBtn}
                     disabled={formStatus === "submitting"}
+                    onClick={(e) => {
+                      if (!token) {
+                        e.preventDefault();
+                        router.push("/login");
+                      }
+                    }}
                   >
-                    {formStatus === "submitting" ? "Enviando..." : "Candidatar-se"}
+                    {!token 
+                      ? "Faça login para se candidatar" 
+                      : formStatus === "submitting" ? "Enviando..." : "Candidatar-se"}
                   </button>
                 </form>
               )}

@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Form, File, UploadFile, HTTPException
+from fastapi import APIRouter, Form, File, UploadFile, HTTPException, Depends
 from controllers.candidatura_controller import enviar_candidatura
+from auth.autenticacao import get_usuario_atual
 
 router = APIRouter()
 
@@ -7,7 +8,8 @@ router = APIRouter()
 async def candidatar_projeto(
     id: str,
     email: str = Form(...),
-    curriculo: UploadFile = File(...)
+    curriculo: UploadFile = File(...),
+    usuario_atual: dict = Depends(get_usuario_atual)
 ):
     """
     Recebe os dados da candidatura (e-mail do aluno e o currículo em PDF/DOCX)
@@ -28,5 +30,6 @@ async def candidatar_projeto(
         email_aluno=email,
         curriculo_bytes=conteudo,
         curriculo_filename=curriculo.filename,
-        curriculo_content_type=curriculo.content_type or "application/octet-stream"
+        curriculo_content_type=curriculo.content_type or "application/octet-stream",
+        usuario_atual=usuario_atual
     )

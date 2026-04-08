@@ -1,5 +1,10 @@
+"use client";
 import styles from "./page.module.css";
 import Link from "next/link";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Pagination, Autoplay } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/pagination";
 
 export default function HomePage() {
   return (
@@ -21,25 +26,159 @@ export default function HomePage() {
       {/* ── Quem Somos ── */}
       <section className={styles.quemSomosSection} id="quem-somos">
         <h2 className={styles.sectionTitle}>Quem Somos</h2>
-        <div className={styles.cardsContainer}>
-          <div className={styles.card}>
-            <h3>Quem Somos</h3>
-            <p>Somos estudantes, docentes e colaboradores que acreditam na autonomia, na colaboração e na circulação aberta do saber, buscando formas práticas de integrar essas ideias à vida universitária.</p>
-          </div>
-          <div className={styles.card}>
-            <h3>Objetivos</h3>
-            <p>Conectar pessoas, ideias e produções acadêmicas de forma acessível, organizada e contínua, promovendo uma cultura de colaboração e protagonismo universitário.</p>
-          </div>
-          <div className={styles.card}>
-            <h3>O que promovemos</h3>
-            <ul>
-              <li>Espaços de discussão por áreas temáticas e interesses acadêmicos;</li>
-              <li>Publicações de eventos, chamadas e oportunidades;</li>
-              <li>Organização de projetos, produções e atividades da comunidade;</li>
-              <li>Abertura para contribuições — desde sugestões até desenvolvimento técnico e editorial.</li>
-            </ul>
-          </div>
-        </div>
+        
+        <Swiper
+          modules={[Pagination, Autoplay]}
+          spaceBetween={30}
+          slidesPerView={1}
+          pagination={{ clickable: true }}
+          autoplay={{ delay: 8000, disableOnInteraction: false }}
+          className={styles.swiperContainer}
+        >
+          {/* Slide 1 - Textos Institucionais */}
+          <SwiperSlide className={styles.swiperSlideCustom}>
+            <div className={styles.institutionalGrid}>
+              <div className={styles.card}>
+                <h3>Quem Somos</h3>
+                <p>O UniResu Connect é uma plataforma de integração acadêmica que conecta estudantes e professores de diferentes instituições para desenvolvimento científico colaborativo, ampliando acesso a oportunidades de pesquisa e produção acadêmica.</p>
+              </div>
+              <div className={styles.card}>
+                <h3>Objetivos</h3>
+                <p>Nosso objetivo é conectar pessoas, ideias e produções acadêmicas de forma acessível, organizada e contínua, promovendo uma cultura de colaboração e protagonismo universitário.</p>
+              </div>
+              <div className={styles.card}>
+                <h3>O que promovemos</h3>
+                <p>Oferecemos espaços de discussão por áreas temáticas e interesses acadêmicos, além de publicações de eventos e oportunidades acadêmicas. Organizamos projetos, produções e atividades da comunidade, e mantemos abertura para contribuições, desde sugestões até desenvolvimento técnico e editorial.</p>
+              </div>
+            </div>
+          </SwiperSlide>
+
+          {/* Slide 2 - Equipe de Alunos */}
+          <SwiperSlide className={styles.swiperSlideCustom}>
+            <div className={styles.card} style={{ maxWidth: '800px' }}>
+              <h3>Equipe de Alunos</h3>
+              <div className={styles.avatarGrid}>
+                <div className={styles.teamMember}>
+                  <div className={styles.avatar}>DP</div>
+                  <div className={styles.memberInfo}>
+                    <p className={styles.memberName}>Daniel Pereira Santos da Silva</p>
+                  </div>
+                </div>
+                <div className={styles.teamMember}>
+                  <div className={styles.avatar}>JG</div>
+                  <div className={styles.memberInfo}>
+                    <p className={styles.memberName}>Juliana Gimenes Müller</p>
+                  </div>
+                </div>
+                <div className={styles.teamMember}>
+                  <div className={styles.avatar}>LC</div>
+                  <div className={styles.memberInfo}>
+                    <p className={styles.memberName}>Lucas Eduardo Sanches Cordeiro</p>
+                  </div>
+                </div>
+                <div className={styles.teamMember}>
+                  <div className={styles.avatar}>ME</div>
+                  <div className={styles.memberInfo}>
+                    <p className={styles.memberName}>Maria Eduarda Siqueira de Medeiros</p>
+                  </div>
+                </div>
+                <div className={styles.teamMember}>
+                  <div className={styles.avatar}>MG</div>
+                  <div className={styles.memberInfo}>
+                    <p className={styles.memberName}>Matheus Gabriel Ramos de Melo</p>
+                  </div>
+                </div>
+                <div className={styles.teamMember}>
+                  <div className={styles.avatar}>PM</div>
+                  <div className={styles.memberInfo}>
+                    <p className={styles.memberName}>Pedro de Magalhães Leitão</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </SwiperSlide>
+
+          {/* Slide 3 - Equipe de Desenvolvimento */}
+          <SwiperSlide className={styles.swiperSlideCustom}>
+            <div className={styles.card} style={{ maxWidth: '800px' }}>
+              <h3>Equipe de Desenvolvimento</h3>
+              <div className={styles.avatarGrid}>
+                <div className={styles.teamMember}>
+                  <div className={styles.avatar}>DP</div>
+                  <div className={styles.memberInfo}>
+                    <p className={styles.memberName}>Daniel Pereira Santos da Silva</p>
+                    <p className={styles.memberRole}>Engenheiro de Software</p>
+                  </div>
+                </div>
+                <div className={styles.teamMember}>
+                  <div className={styles.avatar}>JG</div>
+                  <div className={styles.memberInfo}>
+                    <p className={styles.memberName}>Juliana Gimenes Müller</p>
+                    <p className={styles.memberRole}>Tech Lead, Arquiteta de Soluções & Engenheira de Software</p>
+                  </div>
+                </div>
+                <div className={styles.teamMember}>
+                  <div className={styles.avatar}>PM</div>
+                  <div className={styles.memberInfo}>
+                    <p className={styles.memberName}>Pedro de Magalhães Leitão</p>
+                    <p className={styles.memberRole}>Engenheiro de Software</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </SwiperSlide>
+          
+          {/* Slide 4 - Equipe de Gerenciamento */}
+          <SwiperSlide className={styles.swiperSlideCustom}>
+            <div className={styles.card} style={{ maxWidth: '800px' }}>
+              <h3>Equipe de Gerenciamento</h3>
+              <div className={styles.avatarGrid}>
+                <div className={styles.teamMember}>
+                  <div className={styles.avatar}>LC</div>
+                  <div className={styles.memberInfo}>
+                    <p className={styles.memberName}>Lucas Eduardo Sanches Cordeiro</p>
+                    <p className={styles.memberRole}>Co-fundador & CEO</p>
+                  </div>
+                </div>
+                <div className={styles.teamMember}>
+                  <div className={styles.avatar}>ME</div>
+                  <div className={styles.memberInfo}>
+                    <p className={styles.memberName}>Maria Eduarda Siqueira de Medeiros</p>
+                    <p className={styles.memberRole}>Co-fundadora & COO</p>
+                  </div>
+                </div>
+                <div className={styles.teamMember}>
+                  <div className={styles.avatar}>MG</div>
+                  <div className={styles.memberInfo}>
+                    <p className={styles.memberName}>Matheus Gabriel Ramos de Melo</p>
+                    <p className={styles.memberRole}>Co-fundador, CTO & Consultor Estratégico</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </SwiperSlide>
+
+          {/* Slide 5 - Orientadores */}
+          <SwiperSlide className={styles.swiperSlideCustom}>
+            <div className={styles.card} style={{ maxWidth: '800px' }}>
+              <h3>Orientadores</h3>
+              <div className={styles.avatarGrid}>
+                <div className={styles.teamMember}>
+                  <div className={styles.avatar}>CR</div>
+                  <div className={styles.memberInfo}>
+                    <p className={styles.memberName}>Prof. Dr. Carlos Eduardo Raymundo</p>
+                  </div>
+                </div>
+                <div className={styles.teamMember}>
+                  <div className={styles.avatar}>TM</div>
+                  <div className={styles.memberInfo}>
+                    <p className={styles.memberName}>Prof. Dr. Thayse Moraes de Moraes</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </SwiperSlide>
+        </Swiper>
       </section>
 
       {/* ── Projetos ── */}
@@ -86,25 +225,28 @@ export default function HomePage() {
 
       {/* ── Fórum ── */}
       <section className={styles.forumSection} id="forum">
-        <h2 className={styles.sectionTitle}>Forum</h2>
+        <div className={styles.ufoContainer}>
+          <img src="/ufo.png" alt="Nave Espacial Flutuante" className={styles.ufoImage} />
+        </div>
+        
+        <h2 className={`${styles.sectionTitle} ${styles.forumTitle}`}>Forum</h2>
+        <p className={styles.forumSubtitle}>Embarque na nossa rede de conhecimento e descubra um universo de novas oportunidades de integração!</p>
+
         <div className={styles.cardsContainer}>
-          <div className={styles.card}>
+          <div className={styles.forumCard}>
             <h3>Conecte-se com a Comunidade</h3>
-            <p>Fique por dentro das novidades! Visualize Artigos, Eventos, Seminários e muito mais!</p>
-            <Link href="/forum" className={styles.linkAccent}>Leia mais</Link>
+            <p>Fique por dentro das novidades! Visualize Artigos, Eventos, Seminários e muito mais na plataforma.</p>
           </div>
-          <div className={styles.card}>
+          <div className={styles.forumCard}>
             <h3>Vida Universitária</h3>
-            <p>Saiba como aproveitar ao máximo seus anos na faculdade!</p>
-            <Link href="/forum" className={styles.linkAccent}>Leia mais</Link>
+            <p>Saiba como aproveitar ao máximo seus anos na faculdade e se engajar ativamente em projetos!</p>
           </div>
-          <div className={styles.card}>
+          <div className={styles.forumCard}>
             <h3>Histórias de Sucesso</h3>
-            <p>Inspire-se com as trajetórias de nossos alunos.</p>
-            <Link href="/forum" className={styles.linkAccent}>Leia mais</Link>
+            <p>Inspire-se com as trajetórias de nossos alunos brilhantes e pesquisadores do campus.</p>
           </div>
         </div>
-        <Link href="/forum" className={styles.btnSecondary}>Ir para o Fórum</Link>
+        <Link href="/forum" className={styles.btnForum}>Explorar Fórum</Link>
       </section>
     </div>
   );
