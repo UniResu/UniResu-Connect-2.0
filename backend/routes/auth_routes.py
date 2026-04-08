@@ -10,13 +10,23 @@ Endpoints:
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
-from models.usuario_model import UsuarioResponse, LoginResponse, LoginRequest
+from models.usuario_model import (
+    UsuarioResponse, 
+    LoginResponse, 
+    LoginRequest,
+    RecuperarSenhaRequest,
+    ResetarSenhaRequest
+)
 from controllers.orcid_controller import (
     gerar_url_autorizacao,
     processar_callback_orcid,
     sincronizar_perfil_orcid,
 )
-from controllers.usuario_controller import login_usuario_controller
+from controllers.usuario_controller import (
+    login_usuario_controller,
+    solicitar_recuperacao_senha_controller,
+    resetar_senha_controller
+)
 from auth.autenticacao import create_access_token, get_usuario_atual
 
 router = APIRouter()
@@ -106,3 +116,18 @@ async def sincronizar_orcid(
     Requer autenticação. O usuário deve ter um ORCID vinculado.
     """
     return await sincronizar_perfil_orcid(usuario_logado["id"])
+
+
+# ── Rotas de Recuperação de Senha ──
+
+@router.post("/auth/recuperar-senha")
+async def recuperar_senha(req: RecuperarSenhaRequest):
+    """Dispara o envio de e-mail com token temporário de recuperação."""
+    await solicitar_recuperacao_senha_controller(req.email)
+    return {"message": "Se o e-mail estiver cadastrado, um link de recuperação será enviado."}
+
+@router.post("/auth/resetar-senha")
+async def resetar_senha(req: ResetarSenhaRequest):
+    """Verifica o token recebido no e-mail e aplica a nova senha informada."""
+    await resetar_senha_controller(req.token, req.nova_senha)
+    return {"message": "Sua senha foi redefinida com sucesso. Faça login novamente."}

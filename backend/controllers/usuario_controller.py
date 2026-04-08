@@ -6,7 +6,12 @@ Usa Motor (async) para todas as operações com o banco.
 """
 
 from typing import Dict, Any
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+import os
+import smtplib
+import secrets
+import asyncio
+from email.message import EmailMessage
 from fastapi import HTTPException, status
 from passlib.context import CryptContext
 from database.connection import Database
@@ -140,3 +145,90 @@ async def login_usuario_controller(email: str, senha: str) -> Dict[str, Any]:
     )
 
     return formatar_usuario(usuario)
+
+# ═══════════════════════════════════════════
+#  Recuperação de Senha
+# ═══════════════════════════════════════════
+
+def _enviar_smtp_sync(msg: EmailMessage, remetente: str, senha: str):
+    """Envia email sincronicamente. Deve ser chamado em thread separada."""
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        server.login(remetente, senha)
+        server.send_message(msg)
+
+async def solicitar_recuperacao_senha_controller(email: str) -> None:
+    db = Database.get_db()
+    usuario = await db.usuarios.find_one({"email": email})
+    
+    # Retorno silencioso p/ não vazar informações (enumeração de bad actors)
+    if not usuario or "senha_hash" not in usuario:
+        return
+        
+    token = secrets.token_urlsafe(48)
+    expiracao = datetime.now(timezone.utc) + timedelta(hours=1)
+    
+    await db.usuarios.update_one(
+        {"_id": usuario["_id"]},
+        {"$set": {
+            "reset_token": token,
+            "reset_token_expira": expiracao
+        }}
+    )
+    
+    email_remetente = os.getenv("EMAIL_REMETENTE")
+    email_senha = os.getenv("EMAIL_SENHA_APP")
+    
+    if not email_remetente or not email_senha:
+        print("⚠️ Email não configurado no .env, bypassando recuperação.")
+        return
+        
+    msg = EmailMessage()
+    msg['Subject'] = "Recuperação de Senha - UniResu Connect"
+    msg['From'] = email_remetente
+    msg['To'] = email
+    
+    base_url = os.getenv("NEXT_PUBLIC_SITE_URL", "http://localhost:3000")
+    link = f"{base_url}/resetar-senha?token={token}"
+    
+    nome = usuario.get("nome", "Usuário")
+    corpo = (
+        f"Olá, {nome}.\n\n"
+        f"Recebemos uma solicitação para redefinir a senha da sua conta.\n"
+        f"Para cadastrar uma nova senha, acesse o link abaixo (válido por 1 hora):\n\n"
+        f"{link}\n\n"
+        f"Se você não solicitou, simplesmente ignore este e-mail.\n\n"
+        f"Atenciosamente,\nPlataforma UniResu Connect"
+    )
+    msg.set_content(corpo)
+    
+    try:
+        await asyncio.to_thread(_enviar_smtp_sync, msg, email_remetente, email_senha)
+    except Exception as e:
+        print(f"❌ Erro log SMTP (rec. senha): {e}")
+
+async def resetar_senha_controller(token: str, nova_senha: str) -> bool:
+    db = Database.get_db()
+    agora = datetime.now(timezone.utc)
+    
+    usuario = await db.usuarios.find_one({
+        "reset_token": token,
+        "reset_token_expira": {"$gt": agora}
+    })
+    
+    if not usuario:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="O link de recuperação é inválido ou expirou."
+        )
+        
+    nova_senha_hash = hash_password(nova_senha)
+    
+    await db.usuarios.update_one(
+        {"_id": usuario["_id"]},
+        {
+            "$set": {"senha_hash": nova_senha_hash, "atualizado_em": agora},
+            "$unset": {"reset_token": "", "reset_token_expira": ""}
+        }
+    )
+    
+    return True

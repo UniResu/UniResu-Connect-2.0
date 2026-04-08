@@ -130,6 +130,15 @@ class LoginRequest(BaseModel):
     email: EmailStr
     senha: str
 
+class RecuperarSenhaRequest(BaseModel):
+    """Schema para solicitar recuperação de senha."""
+    email: EmailStr
+
+class ResetarSenhaRequest(BaseModel):
+    """Schema para redefinir a senha com o token recebido."""
+    token: str
+    nova_senha: str = Field(min_length=6)
+
 
 # ═══════════════════════════════════════════
 #  Schemas de saída (response)

@@ -2,8 +2,9 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  background: var(--primary);
-  border-bottom: 1px solid var(--primary-dark);
+  background: linear-gradient(180deg, #150020 0%, #0d0014 100%);
+  border-bottom: 2px solid #a242b5;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
 }
 
 .navbar {
@@ -19,10 +20,12 @@
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  font-weight: 700;
+  font-weight: 800;
   font-size: var(--font-size-xl);
-  color: var(--primary);
+  color: white;
   text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .logoIcon {
@@ -96,6 +99,7 @@
   border-radius: var(--radius-md);
   transition: background var(--transition-fast);
 }
+
 .btnLogin:hover {
   background: var(--primary-dark);
 }
@@ -110,6 +114,7 @@
   border-radius: var(--radius-md);
   transition: all var(--transition-fast);
 }
+
 .btnRegister:hover {
   background: var(--primary-dark);
   transform: translateY(-1px);
@@ -139,6 +144,7 @@
   border-radius: var(--radius-md);
   transition: background var(--transition-fast);
 }
+
 .avatarButton:hover {
   background: rgba(255, 255, 255, 0.1);
 }
@@ -174,10 +180,11 @@
   top: calc(100% + 8px);
   right: 0;
   min-width: 200px;
-  background: white;
+  background: rgba(26, 0, 41, 0.95);
+  backdrop-filter: blur(12px);
   border-radius: var(--radius-lg);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-  border: 1px solid var(--border-light);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   padding: var(--space-xs) 0;
   animation: dropdownSlide 0.2s ease;
   z-index: 200;
@@ -188,6 +195,7 @@
     opacity: 0;
     transform: translateY(-6px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -199,20 +207,21 @@
   align-items: center;
   gap: var(--space-sm);
   padding: 0.65rem 1.25rem;
-  color: var(--text-primary);
+  color: white;
   font-size: var(--font-size-sm);
   font-weight: 500;
   text-decoration: none;
   transition: background var(--transition-fast);
 }
+
 .dropdownItem:hover {
-  background: var(--primary-50);
-  color: var(--primary);
+  background: rgba(255, 255, 255, 0.1);
+  color: #cb89e0;
 }
 
 .dropdownDivider {
   height: 1px;
-  background: var(--border-light);
+  background: rgba(255, 255, 255, 0.1);
   margin: var(--space-xs) 0;
 }
 
@@ -231,8 +240,9 @@
   transition: background var(--transition-fast);
   text-align: left;
 }
+
 .dropdownItemLogout:hover {
-  background: #fef2f2;
+  background: rgba(239, 68, 68, 0.1);
 }
 
 /* ── Hamburger ── */
@@ -266,11 +276,11 @@
     left: 0;
     right: 0;
     flex-direction: column;
-    background: var(--primary);
+    background: #0d0014;
     padding: var(--space-lg);
     gap: var(--space-md);
-    border-bottom: 1px solid var(--primary-dark);
-    box-shadow: var(--shadow-lg);
+    border-bottom: 2px solid #a242b5;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
     margin-top: 0;
   }
 

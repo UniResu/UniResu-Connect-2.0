@@ -100,6 +100,9 @@ export default function LoginPage() {
               required
               className={styles.input}
             />
+            <Link href="/recuperar-senha" className={styles.forgotPassword}>
+              Perdi minha senha
+            </Link>
           </div>
 
           <button

@@ -168,3 +168,16 @@
   color: var(--primary);
   font-weight: 600;
 }
+
+.forgotPassword {
+  font-size: var(--font-size-sm);
+  color: var(--primary);
+  text-decoration: none;
+  align-self: flex-end;
+  margin-top: -0.25rem;
+  font-weight: 500;
+}
+
+.forgotPassword:hover {
+  text-decoration: underline;
+}
