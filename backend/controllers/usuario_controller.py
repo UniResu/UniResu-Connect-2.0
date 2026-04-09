@@ -8,16 +8,30 @@ Usa Motor (async) para todas as operações com o banco.
 from typing import Dict, Any
 from datetime import datetime, timezone, timedelta
 import os
-import smtplib
 import secrets
 import asyncio
-from email.message import EmailMessage
+import logging
+
+import resend
 from fastapi import HTTPException, status
 from passlib.context import CryptContext
 from database.connection import Database
 from models.usuario_model import UsuarioCreate
 
+logger = logging.getLogger(__name__)
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Envio de e-mail agora é feito via API do Resend (domínio uniresu.org
+# verificado). EMAIL_REMETENTE é o "from" exibido; EMAIL_SUPORTE recebe
+# as respostas dos usuários via reply_to.
+EMAIL_REMETENTE = os.getenv("EMAIL_REMETENTE", "UniResu <contato@uniresu.org>")
+EMAIL_SUPORTE = os.getenv("EMAIL_SUPORTE", "uniresuconnect@gmail.com")
+
+# A chave da API do Resend já é configurada em candidatura_controller no
+# momento da importação; repetimos aqui para garantir que este módulo
+# funcione mesmo se for carregado primeiro.
+resend.api_key = os.getenv("RESEND_API_KEY")
 
 
 def hash_password(password: str) -> str:
@@ -150,23 +164,17 @@ async def login_usuario_controller(email: str, senha: str) -> Dict[str, Any]:
 #  Recuperação de Senha
 # ═══════════════════════════════════════════
 
-def _enviar_smtp_sync(msg: EmailMessage, remetente: str, senha: str):
-    """Envia email sincronicamente. Deve ser chamado em thread separada."""
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-        server.login(remetente, senha)
-        server.send_message(msg)
-
 async def solicitar_recuperacao_senha_controller(email: str) -> None:
     db = Database.get_db()
     usuario = await db.usuarios.find_one({"email": email})
-    
+
     # Retorno silencioso p/ não vazar informações (enumeração de bad actors)
     if not usuario or "senha_hash" not in usuario:
         return
-        
+
     token = secrets.token_urlsafe(48)
     expiracao = datetime.now(timezone.utc) + timedelta(hours=1)
-    
+
     await db.usuarios.update_one(
         {"_id": usuario["_id"]},
         {"$set": {
@@ -174,37 +182,57 @@ async def solicitar_recuperacao_senha_controller(email: str) -> None:
             "reset_token_expira": expiracao
         }}
     )
-    
-    email_remetente = os.getenv("EMAIL_REMETENTE")
-    email_senha = os.getenv("EMAIL_SENHA_APP")
-    
-    if not email_remetente or not email_senha:
-        print("⚠️ Email não configurado no .env, bypassando recuperação.")
+
+    if not resend.api_key:
+        logger.warning(
+            "RESEND_API_KEY ausente — e-mail de recuperação de senha NÃO enviado."
+        )
         return
-        
-    msg = EmailMessage()
-    msg['Subject'] = "Recuperação de Senha - UniResu Connect"
-    msg['From'] = email_remetente
-    msg['To'] = email
-    
-    base_url = os.getenv("NEXT_PUBLIC_SITE_URL", "http://localhost:3000")
+
+    base_url = os.getenv("NEXT_PUBLIC_SITE_URL", "https://uniresu.org")
     link = f"{base_url}/resetar-senha?token={token}"
-    
+
     nome = usuario.get("nome", "Usuário")
-    corpo = (
+    corpo_texto = (
         f"Olá, {nome}.\n\n"
-        f"Recebemos uma solicitação para redefinir a senha da sua conta.\n"
+        f"Recebemos uma solicitação para redefinir a senha da sua conta "
+        f"na plataforma UniResu Connect.\n"
         f"Para cadastrar uma nova senha, acesse o link abaixo (válido por 1 hora):\n\n"
         f"{link}\n\n"
-        f"Se você não solicitou, simplesmente ignore este e-mail.\n\n"
-        f"Atenciosamente,\nPlataforma UniResu Connect"
+        f"Se você não solicitou esta recuperação, simplesmente ignore este e-mail.\n\n"
+        f"Atenciosamente,\n"
+        f"Equipe UniResu Connect"
     )
-    msg.set_content(corpo)
-    
+    corpo_html = (
+        f"<p>Olá, {nome}.</p>"
+        f"<p>Recebemos uma solicitação para redefinir a senha da sua conta "
+        f"na plataforma <strong>UniResu Connect</strong>.</p>"
+        f"<p>Para cadastrar uma nova senha, acesse o link abaixo "
+        f"(válido por 1 hora):</p>"
+        f"<p><a href=\"{link}\">{link}</a></p>"
+        f"<p>Se você não solicitou esta recuperação, simplesmente ignore "
+        f"este e-mail.</p>"
+        f"<p>Atenciosamente,<br><strong>Equipe UniResu Connect</strong></p>"
+    )
+
+    params: "resend.Emails.SendParams" = {
+        "from": EMAIL_REMETENTE,
+        "to": [email],
+        "reply_to": EMAIL_SUPORTE,
+        "subject": "Recuperação de Senha - UniResu Connect",
+        "text": corpo_texto,
+        "html": corpo_html,
+    }
+
     try:
-        await asyncio.to_thread(_enviar_smtp_sync, msg, email_remetente, email_senha)
+        # SDK do Resend é síncrono; rodamos em thread para não bloquear o loop.
+        await asyncio.to_thread(resend.Emails.send, params)
     except Exception as e:
-        print(f"❌ Erro log SMTP (rec. senha): {e}")
+        logger.error(
+            "Falha ao enviar e-mail de recuperação de senha via Resend: %s",
+            e,
+            exc_info=True,
+        )
 
 async def resetar_senha_controller(token: str, nova_senha: str) -> bool:
     db = Database.get_db()

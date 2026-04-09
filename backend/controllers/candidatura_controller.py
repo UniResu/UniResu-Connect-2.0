@@ -29,11 +29,12 @@ from database.connection import Database
 logger = logging.getLogger(__name__)
 
 # Remetente oficial (domínio uniresu.org verificado no Resend).
-RESEND_FROM = "UniResu <contato@uniresu.org>"
+# Lido de EMAIL_REMETENTE; fallback cobre ambientes sem env configurado.
+EMAIL_REMETENTE = os.getenv("EMAIL_REMETENTE", "UniResu <contato@uniresu.org>")
 
-# Caixa institucional que recebe as respostas dos professores quando
-# utilizam o botão "Responder" no cliente de e-mail.
-RESEND_REPLY_TO = "uniresuconnect@gmail.com"
+# Caixa institucional de suporte que recebe as respostas (reply_to) quando
+# o destinatário clica em "Responder" no cliente de e-mail.
+EMAIL_SUPORTE = os.getenv("EMAIL_SUPORTE", "uniresuconnect@gmail.com")
 
 # Configura a API key do Resend uma única vez, na importação do módulo.
 resend.api_key = os.getenv("RESEND_API_KEY")
@@ -166,9 +167,9 @@ async def _tentar_enviar_email_resend(
         )
 
         params: "resend.Emails.SendParams" = {
-            "from": RESEND_FROM,
+            "from": EMAIL_REMETENTE,
             "to": [email_professor],
-            "reply_to": RESEND_REPLY_TO,
+            "reply_to": EMAIL_SUPORTE,
             "subject": f"Nova Candidatura Recebida: {titulo_projeto}",
             "text": corpo_texto,
             "html": corpo_html,
