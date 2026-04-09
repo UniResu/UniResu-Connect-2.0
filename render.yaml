@@ -65,26 +65,13 @@ services:
     region: ohio
     plan: free
     rootDir: frontend
-    # NEXT_PUBLIC_API_URL precisa estar presente em tempo de build, pois o
-    # Next.js "congela" variáveis NEXT_PUBLIC_* no bundle. Montamos o valor
-    # final "https://<host>" no próprio buildCommand usando UNIRESU_API_HOST.
-    buildCommand: >
-      npm install &&
-      NEXT_PUBLIC_API_URL="https://${UNIRESU_API_HOST}" npm run build
+    # NEXT_PUBLIC_API_URL precisa existir em tempo de build: o Next.js
+    # congela variaveis NEXT_PUBLIC_* no bundle. Usamos a URL estatica do
+    # servico de API no Render para garantir que o valor certo seja injetado.
+    buildCommand: npm install && NEXT_PUBLIC_API_URL=https://uniresu-api.onrender.com npm run build
     startCommand: npm run start -- -p $PORT
     envVars:
       - key: NODE_VERSION
         value: "20"
-      # Host puro (ex.: uniresu-api.onrender.com) — consumido pelo buildCommand
-      # acima para compor o NEXT_PUBLIC_API_URL final.
-      - key: UNIRESU_API_HOST
-        fromService:
-          name: uniresu-api
-          type: web
-          property: host
-      # Também exposto em runtime (ex.: server components, route handlers)
-      # caso alguma parte do app precise reconstruir a URL dinamicamente.
-      - key: NEXT_PUBLIC_API_URL
-        sync: false  # Sobrescrito em build time pelo buildCommand acima.
       - key: NEXT_PUBLIC_ORCID_CLIENT_ID
         sync: false
