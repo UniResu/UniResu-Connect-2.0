@@ -20,18 +20,35 @@ from routes.candidatura_routes import router as router_candidatura
 
 load_dotenv()
 
-# Domínios permitidos — carregados do ambiente para flexibilidade no Render
-_origins_env = os.getenv("ALLOWED_ORIGINS", "")
-ALLOWED_ORIGINS = [
-    origin.strip()
-    for origin in _origins_env.split(",")
-    if origin.strip()
-] if _origins_env else [
+# Domínios permitidos — carregados do ambiente para flexibilidade no Render.
+#
+# Estratégia:
+#   1. Origens de desenvolvimento local sempre permitidas (localhost/127.0.0.1).
+#   2. FRONTEND_URL: variável principal usada no Render para injetar
+#      dinamicamente a URL pública do front-end (ex.: https://uniresu-frontend.onrender.com).
+#   3. ALLOWED_ORIGINS: lista separada por vírgula, opcional, para cenários
+#      com múltiplos domínios (staging, domínio customizado, etc).
+_DEFAULT_DEV_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:5500",
     "http://127.0.0.1:5500",
 ]
+
+_frontend_url = os.getenv("FRONTEND_URL", "").strip()
+_extra_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+_extra_origins = [
+    origin.strip()
+    for origin in _extra_origins_env.split(",")
+    if origin.strip()
+]
+
+# Monta a lista final sem duplicatas, preservando a ordem.
+ALLOWED_ORIGINS = list(dict.fromkeys(
+    _DEFAULT_DEV_ORIGINS
+    + ([_frontend_url] if _frontend_url else [])
+    + _extra_origins
+))
 
 
 @asynccontextmanager

@@ -1,15 +1,31 @@
-# render.yaml — Infrastructure as Code para o Render
+# render.yaml — Infrastructure as Code (Blueprint) para o Render
 # Docs: https://render.com/docs/blueprint-spec
+#
+# Monorepo:
+#   - backend/  → FastAPI (Python) servido por Uvicorn
+#   - frontend/ → Next.js (Node) servido pelo `next start`
+#
+# Deploy:
+#   1. Conectar o repo no Render como "Blueprint".
+#   2. O Render lê este arquivo e provisiona os dois Web Services.
+#   3. Definir segredos (MONGO_URI, ORCID_*, etc.) no dashboard.
 
 services:
-  # ── Backend FastAPI ──
+  # ────────────────────────────────────────────────────────────
+  # Backend — FastAPI / Uvicorn
+  # ────────────────────────────────────────────────────────────
   - type: web
     name: uniresu-api
-    runtime: docker
+    env: python
     region: ohio
     plan: free
+    rootDir: backend
     healthCheckPath: /health
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.5
       - key: MONGO_URI
         sync: false  # Definir manualmente no dashboard (segredo)
       - key: MONGO_DB_NAME
@@ -30,19 +46,28 @@ services:
         value: https://orcid.org
       - key: ORCID_API_URL
         value: https://pub.orcid.org/v3.0
-      - key: ALLOWED_ORIGINS
-        value: https://uniresu-frontend.onrender.com,http://localhost:3000
+      # CORS — URL pública do front-end é injetada dinamicamente pelo Render
+      - key: FRONTEND_URL
+        fromService:
+          name: uniresu-frontend
+          type: web
+          property: url
 
-  # ── Frontend Next.js ──
+  # ────────────────────────────────────────────────────────────
+  # Frontend — Next.js
+  # ────────────────────────────────────────────────────────────
   - type: web
     name: uniresu-frontend
-    runtime: node
+    env: node
     region: ohio
     plan: free
     rootDir: frontend
     buildCommand: npm install && npm run build
-    startCommand: npm start
+    startCommand: npm run start -- -p $PORT
     envVars:
+      - key: NODE_VERSION
+        value: "20"
+      # URL da API injetada a partir do serviço backend
       - key: NEXT_PUBLIC_API_URL
         fromService:
           name: uniresu-api

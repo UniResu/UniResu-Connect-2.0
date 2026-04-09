@@ -13,7 +13,9 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Instala dependências Python
-COPY requirements.txt .
+# (requirements.txt vive dentro de backend/ para manter o monorepo compatível
+#  com o rootDir: backend usado no render.yaml)
+COPY backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
