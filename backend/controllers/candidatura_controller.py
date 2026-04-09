@@ -9,6 +9,7 @@ candidatura — o aluno sempre recebe a confirmação de sucesso.
 
 import os
 import smtplib
+import socket
 import asyncio
 import logging
 from email.message import EmailMessage
@@ -17,6 +18,23 @@ from bson import ObjectId
 from database.connection import Database
 
 logger = logging.getLogger(__name__)
+
+# Porta 587 + STARTTLS é mais resiliente em ambientes cloud (Render, etc.)
+# do que a porta 465 (SMTPS), que fica bloqueada com frequência.
+SMTP_HOST = "smtp.gmail.com"
+SMTP_PORT = 587
+
+
+def _resolver_ipv4(host: str) -> str:
+    """
+    Resolve o host para um endereço IPv4. O Render tem problemas
+    conhecidos de rota com IPv6 ao conectar no Gmail ("Network is
+    unreachable"), então forçamos IPv4 antes de abrir o socket SMTP.
+    """
+    infos = socket.getaddrinfo(host, SMTP_PORT, socket.AF_INET, socket.SOCK_STREAM)
+    if not infos:
+        raise OSError(f"Não foi possível resolver {host} em IPv4")
+    return infos[0][4][0]
 
 async def enviar_candidatura(
     projeto_id: str,
@@ -128,6 +146,16 @@ async def _tentar_enviar_email(
 
 
 def _enviar_smtp(msg: EmailMessage, remetente: str, senha: str):
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=15) as server:
+    # Resolve explicitamente em IPv4 para evitar "Network is unreachable"
+    # quando o host (ex.: Render) tenta rota IPv6 contra o Gmail.
+    ipv4 = _resolver_ipv4(SMTP_HOST)
+    logger.info("Conectando ao SMTP %s (%s) na porta %s", SMTP_HOST, ipv4, SMTP_PORT)
+
+    with smtplib.SMTP(ipv4, SMTP_PORT, timeout=30) as server:
+        # ehlo com o hostname real para que o Gmail aceite o handshake,
+        # mesmo tendo conectado via IP literal.
+        server.ehlo(SMTP_HOST)
+        server.starttls()
+        server.ehlo(SMTP_HOST)
         server.login(remetente, senha)
         server.send_message(msg)
