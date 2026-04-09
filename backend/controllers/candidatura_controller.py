@@ -1,40 +1,40 @@
 """
-Controller de candidatura. Valida o projeto, monta e dispara um e-mail
-via SMTP padrão para o professor anexando o currículo.
+Controller de candidatura.
 
-O envio de e-mail é isolado: qualquer falha SMTP (credenciais inválidas,
-bloqueio, timeout) é apenas registrada em log e NÃO interrompe a
-candidatura — o aluno sempre recebe a confirmação de sucesso.
+Persiste a candidatura no banco e dispara um e-mail de notificação via
+API do Resend (substitui o antigo envio SMTP via smtplib).
+
+Regras importantes:
+- O envio do e-mail é totalmente isolado: qualquer falha (rede, chave
+  inválida, limite do Resend) é registrada em log e NÃO interrompe a
+  candidatura. O aluno sempre recebe confirmação de sucesso.
+- A candidatura é gravada no banco ANTES da chamada ao Resend — portanto
+  permanece salva mesmo se a API falhar.
+- Estamos em modo "Onboarding" do Resend, então o remetente é fixo
+  (onboarding@resend.dev) e o destinatário real é o e-mail pessoal do
+  dono da conta Resend, configurado via env (RESEND_TEST_RECIPIENT).
 """
 
 import os
-import smtplib
-import socket
+import base64
 import asyncio
 import logging
-from email.message import EmailMessage
+from datetime import datetime, timezone
+
+import resend
 from fastapi import HTTPException
 from bson import ObjectId
 from database.connection import Database
 
 logger = logging.getLogger(__name__)
 
-# Porta 587 + STARTTLS é mais resiliente em ambientes cloud (Render, etc.)
-# do que a porta 465 (SMTPS), que fica bloqueada com frequência.
-SMTP_HOST = "smtp.gmail.com"
-SMTP_PORT = 587
+# Modo Onboarding do Resend: remetente precisa ser exatamente este domínio,
+# e só é possível entregar para o e-mail pessoal cadastrado na conta.
+RESEND_FROM = "onboarding@resend.dev"
 
+# Configura a API key do Resend uma única vez, na importação do módulo.
+resend.api_key = os.getenv("RESEND_API_KEY")
 
-def _resolver_ipv4(host: str) -> str:
-    """
-    Resolve o host para um endereço IPv4. O Render tem problemas
-    conhecidos de rota com IPv6 ao conectar no Gmail ("Network is
-    unreachable"), então forçamos IPv4 antes de abrir o socket SMTP.
-    """
-    infos = socket.getaddrinfo(host, SMTP_PORT, socket.AF_INET, socket.SOCK_STREAM)
-    if not infos:
-        raise OSError(f"Não foi possível resolver {host} em IPv4")
-    return infos[0][4][0]
 
 async def enviar_candidatura(
     projeto_id: str,
@@ -42,7 +42,7 @@ async def enviar_candidatura(
     curriculo_bytes: bytes,
     curriculo_filename: str,
     curriculo_content_type: str,
-    usuario_atual: dict
+    usuario_atual: dict,
 ):
     if not usuario_atual:
         raise HTTPException(status_code=401, detail="Usuário não autenticado.")
@@ -59,14 +59,33 @@ async def enviar_candidatura(
 
     email_professor = projeto.get("email_professor")
     if not email_professor:
-        raise HTTPException(status_code=400, detail="Este projeto não possui um contato de professor configurado.")
+        raise HTTPException(
+            status_code=400,
+            detail="Este projeto não possui um contato de professor configurado.",
+        )
 
     titulo_projeto = projeto.get("titulo", "Projeto Acadêmico")
     nome_professor = projeto.get("nome_professor", "Professor(a)")
 
-    # Dispara o e-mail de forma totalmente isolada. Qualquer falha é
-    # capturada aqui dentro — nunca propaga para o cliente.
-    email_enviado = await _tentar_enviar_email(
+    # 1) Persiste a candidatura no banco ANTES do disparo de e-mail,
+    #    para que a candidatura fique salva mesmo se a API do Resend falhar.
+    candidatura_doc = {
+        "projeto_id": obj_id,
+        "titulo_projeto": titulo_projeto,
+        "email_professor_destino": email_professor,
+        "email_aluno": email_aluno,
+        "usuario_id": usuario_atual.get("_id") or usuario_atual.get("id"),
+        "curriculo_filename": curriculo_filename,
+        "curriculo_content_type": curriculo_content_type,
+        "criada_em": datetime.now(timezone.utc),
+        "email_enviado": False,
+        "email_provider_id": None,
+    }
+    insert_result = await db.candidaturas.insert_one(candidatura_doc)
+    candidatura_id = insert_result.inserted_id
+
+    # 2) Tenta disparar o e-mail via Resend. Nunca propaga exceção.
+    email_enviado, provider_id = await _tentar_enviar_email_resend(
         email_professor=email_professor,
         email_aluno=email_aluno,
         titulo_projeto=titulo_projeto,
@@ -76,14 +95,25 @@ async def enviar_candidatura(
         curriculo_content_type=curriculo_content_type,
     )
 
+    # 3) Atualiza o registro com o resultado do envio (best-effort).
+    if email_enviado:
+        try:
+            await db.candidaturas.update_one(
+                {"_id": candidatura_id},
+                {"$set": {"email_enviado": True, "email_provider_id": provider_id}},
+            )
+        except Exception as e:
+            logger.warning("Não foi possível atualizar status de envio da candidatura %s: %s", candidatura_id, e)
+
     return {
         "status": "success",
         "message": "Candidatura enviada com sucesso!",
+        "candidatura_id": str(candidatura_id),
         "email_enviado": email_enviado,
     }
 
 
-async def _tentar_enviar_email(
+async def _tentar_enviar_email_resend(
     email_professor: str,
     email_aluno: str,
     titulo_projeto: str,
@@ -91,71 +121,87 @@ async def _tentar_enviar_email(
     curriculo_bytes: bytes,
     curriculo_filename: str,
     curriculo_content_type: str,
-) -> bool:
+):
     """
-    Tenta enviar o e-mail de notificação ao professor. Nunca levanta
-    exceção: em caso de erro apenas registra no log e devolve False.
+    Dispara o e-mail de candidatura via API do Resend.
+
+    Retorna uma tupla (enviado: bool, provider_id: Optional[str]).
+    Nunca levanta exceção — falhas são apenas logadas.
     """
     try:
-        email_remetente = os.getenv("EMAIL_REMETENTE")
-        email_senha = os.getenv("EMAIL_SENHA_APP")
-
-        if not email_remetente or not email_senha:
+        if not resend.api_key:
             logger.warning(
-                "Credenciais de e-mail ausentes (EMAIL_REMETENTE/EMAIL_SENHA_APP). "
-                "Candidatura confirmada sem envio de e-mail."
+                "RESEND_API_KEY ausente. Candidatura persistida no banco, "
+                "mas e-mail NÃO foi disparado."
             )
-            return False
+            return False, None
 
-        msg = EmailMessage()
-        msg['Subject'] = f"Nova Candidatura: {titulo_projeto}"
-        msg['From'] = email_remetente
-        msg['To'] = email_professor
-        msg.set_content(
+        # No modo Onboarding o Resend só entrega para o e-mail pessoal
+        # cadastrado na conta. Esse endereço fica em env var para não
+        # hardcodar dados pessoais no código.
+        destinatario_real = os.getenv("RESEND_TEST_RECIPIENT")
+        if not destinatario_real:
+            logger.warning(
+                "RESEND_TEST_RECIPIENT ausente. No modo Onboarding do Resend "
+                "é obrigatório definir o e-mail pessoal da conta. "
+                "Candidatura salva sem envio."
+            )
+            return False, None
+
+        corpo_texto = (
             f"Olá, {nome_professor}.\n\n"
-            f"Você recebeu uma nova candidatura para o projeto '{titulo_projeto}'.\n"
-            f"E-mail de contato do candidato: {email_aluno}\n\n"
-            f"O currículo do candidato foi anexado a esta mensagem.\n\n"
+            f"Você recebeu uma nova candidatura para o projeto "
+            f"'{titulo_projeto}'.\n"
+            f"E-mail de contato do candidato: {email_aluno}\n"
+            f"(Destinatário original pretendido: {email_professor})\n\n"
+            f"O currículo do candidato segue em anexo.\n\n"
             f"Atenciosamente,\nPlataforma UniResu Connect"
         )
 
-        try:
-            maintype, subtype = curriculo_content_type.split("/", 1)
-        except ValueError:
-            maintype, subtype = "application", "octet-stream"
-
-        msg.add_attachment(
-            curriculo_bytes,
-            maintype=maintype,
-            subtype=subtype,
-            filename=curriculo_filename,
+        corpo_html = (
+            f"<p>Olá, {nome_professor}.</p>"
+            f"<p>Você recebeu uma nova candidatura para o projeto "
+            f"<strong>{titulo_projeto}</strong>.</p>"
+            f"<p><strong>E-mail de contato do candidato:</strong> {email_aluno}<br>"
+            f"<em>Destinatário original pretendido: {email_professor}</em></p>"
+            f"<p>O currículo do candidato segue em anexo.</p>"
+            f"<p>Atenciosamente,<br>Plataforma UniResu Connect</p>"
         )
 
-        await asyncio.to_thread(_enviar_smtp, msg, email_remetente, email_senha)
-        logger.info("E-mail de candidatura enviado para %s", email_professor)
-        return True
+        params: "resend.Emails.SendParams" = {
+            "from": RESEND_FROM,
+            "to": [destinatario_real],
+            "subject": f"Nova Candidatura: {titulo_projeto}",
+            "text": corpo_texto,
+            "html": corpo_html,
+            "attachments": [
+                {
+                    "filename": curriculo_filename,
+                    "content": base64.b64encode(curriculo_bytes).decode("ascii"),
+                    "content_type": curriculo_content_type or "application/octet-stream",
+                }
+            ],
+        }
+
+        # O SDK do Resend é síncrono (requests); rodamos em thread para
+        # não bloquear o event loop do FastAPI.
+        resposta = await asyncio.to_thread(resend.Emails.send, params)
+
+        provider_id = None
+        if isinstance(resposta, dict):
+            provider_id = resposta.get("id")
+
+        logger.info(
+            "E-mail de candidatura enviado via Resend (id=%s) para %s",
+            provider_id,
+            destinatario_real,
+        )
+        return True, provider_id
 
     except Exception as e:
-        # Falha de SMTP, autenticação, rede, etc. Apenas registra e segue.
         logger.error(
-            "Falha ao enviar e-mail de candidatura (candidatura confirmada mesmo assim): %s",
+            "Falha ao enviar e-mail via Resend (candidatura confirmada mesmo assim): %s",
             e,
             exc_info=True,
         )
-        return False
-
-
-def _enviar_smtp(msg: EmailMessage, remetente: str, senha: str):
-    # Resolve explicitamente em IPv4 para evitar "Network is unreachable"
-    # quando o host (ex.: Render) tenta rota IPv6 contra o Gmail.
-    ipv4 = _resolver_ipv4(SMTP_HOST)
-    logger.info("Conectando ao SMTP %s (%s) na porta %s", SMTP_HOST, ipv4, SMTP_PORT)
-
-    with smtplib.SMTP(ipv4, SMTP_PORT, timeout=30) as server:
-        # ehlo com o hostname real para que o Gmail aceite o handshake,
-        # mesmo tendo conectado via IP literal.
-        server.ehlo(SMTP_HOST)
-        server.starttls()
-        server.ehlo(SMTP_HOST)
-        server.login(remetente, senha)
-        server.send_message(msg)
+        return False, None
