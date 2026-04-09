@@ -35,10 +35,26 @@ _DEFAULT_DEV_ORIGINS = [
     "http://127.0.0.1:5500",
 ]
 
-_frontend_url = os.getenv("FRONTEND_URL", "").strip()
+def _normalize_origin(raw: str) -> str:
+    """
+    Garante que uma origem tenha scheme (http/https).
+
+    No Render, `fromService.property: host` devolve apenas o hostname
+    (ex.: "uniresu-frontend.onrender.com"). Como CORS exige scheme, prefixamos
+    https:// quando ausente.
+    """
+    value = raw.strip()
+    if not value:
+        return ""
+    if "://" in value:
+        return value
+    return f"https://{value}"
+
+
+_frontend_url = _normalize_origin(os.getenv("FRONTEND_URL", ""))
 _extra_origins_env = os.getenv("ALLOWED_ORIGINS", "")
 _extra_origins = [
-    origin.strip()
+    _normalize_origin(origin)
     for origin in _extra_origins_env.split(",")
     if origin.strip()
 ]
