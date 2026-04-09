@@ -20,11 +20,14 @@ from routes.candidatura_routes import router as router_candidatura
 load_dotenv()
 
 # Origens permitidas pelo CORS.
-# Lista explícita — inclui dev local e as URLs públicas do Render.
+# Lista explícita — inclui dev local, o domínio oficial de produção
+# (uniresu.org e www.uniresu.org) e a URL legada do Render.
 origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "https://uniresu-frontend.onrender.com",  # Mantendo a produção que já funciona
+    "https://uniresu.org",
+    "https://www.uniresu.org",
+    "https://uniresu-frontend.onrender.com",  # URL legada do Render
 ]
 
 
