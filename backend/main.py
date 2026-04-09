@@ -5,7 +5,6 @@ Usa o lifespan context manager (padrão moderno do FastAPI) para gerenciar
 inicialização e encerramento da conexão com o banco de dados.
 """
 
-import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,51 +19,13 @@ from routes.candidatura_routes import router as router_candidatura
 
 load_dotenv()
 
-# Domínios permitidos — carregados do ambiente para flexibilidade no Render.
-#
-# Estratégia:
-#   1. Origens de desenvolvimento local sempre permitidas (localhost/127.0.0.1).
-#   2. FRONTEND_URL: variável principal usada no Render para injetar
-#      dinamicamente a URL pública do front-end (ex.: https://uniresu-frontend.onrender.com).
-#   3. ALLOWED_ORIGINS: lista separada por vírgula, opcional, para cenários
-#      com múltiplos domínios (staging, domínio customizado, etc).
-_DEFAULT_DEV_ORIGINS = [
+# Origens permitidas pelo CORS.
+# Lista explícita — inclui dev local e as URLs públicas do Render.
+origins = [
     "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:5500",
-    "http://127.0.0.1:5500",
+    "https://uniresu-frontend.onrender.com",
+    "https://uniresu-connect-2-0.onrender.com",  # Adicione variações se houver
 ]
-
-def _normalize_origin(raw: str) -> str:
-    """
-    Garante que uma origem tenha scheme (http/https).
-
-    No Render, `fromService.property: host` devolve apenas o hostname
-    (ex.: "uniresu-frontend.onrender.com"). Como CORS exige scheme, prefixamos
-    https:// quando ausente.
-    """
-    value = raw.strip()
-    if not value:
-        return ""
-    if "://" in value:
-        return value
-    return f"https://{value}"
-
-
-_frontend_url = _normalize_origin(os.getenv("FRONTEND_URL", ""))
-_extra_origins_env = os.getenv("ALLOWED_ORIGINS", "")
-_extra_origins = [
-    _normalize_origin(origin)
-    for origin in _extra_origins_env.split(",")
-    if origin.strip()
-]
-
-# Monta a lista final sem duplicatas, preservando a ordem.
-ALLOWED_ORIGINS = list(dict.fromkeys(
-    _DEFAULT_DEV_ORIGINS
-    + ([_frontend_url] if _frontend_url else [])
-    + _extra_origins
-))
 
 
 @asynccontextmanager
@@ -84,12 +45,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# IMPORTANTE: o middleware de CORS deve ser registrado ANTES da inclusão
+# de qualquer router, para que se aplique a todas as rotas abaixo.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
