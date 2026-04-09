@@ -10,9 +10,9 @@ Regras importantes:
   candidatura. O aluno sempre recebe confirmação de sucesso.
 - A candidatura é gravada no banco ANTES da chamada ao Resend — portanto
   permanece salva mesmo se a API falhar.
-- Estamos em modo "Onboarding" do Resend, então o remetente é fixo
-  (onboarding@resend.dev) e o destinatário real é o e-mail pessoal do
-  dono da conta Resend, configurado via env (RESEND_TEST_RECIPIENT).
+- Produção: domínio uniresu.org verificado no Resend. O remetente usa
+  contato@uniresu.org e o reply_to aponta para a caixa institucional no
+  Gmail, permitindo que respostas dos professores cheguem à equipe.
 """
 
 import os
@@ -28,9 +28,12 @@ from database.connection import Database
 
 logger = logging.getLogger(__name__)
 
-# Modo Onboarding do Resend: remetente precisa ser exatamente este domínio,
-# e só é possível entregar para o e-mail pessoal cadastrado na conta.
-RESEND_FROM = "onboarding@resend.dev"
+# Remetente oficial (domínio uniresu.org verificado no Resend).
+RESEND_FROM = "UniResu <contato@uniresu.org>"
+
+# Caixa institucional que recebe as respostas dos professores quando
+# utilizam o botão "Responder" no cliente de e-mail.
+RESEND_REPLY_TO = "uniresuconnect@gmail.com"
 
 # Configura a API key do Resend uma única vez, na importação do módulo.
 resend.api_key = os.getenv("RESEND_API_KEY")
@@ -136,42 +139,37 @@ async def _tentar_enviar_email_resend(
             )
             return False, None
 
-        # No modo Onboarding o Resend só entrega para o e-mail pessoal
-        # cadastrado na conta. Esse endereço fica em env var para não
-        # hardcodar dados pessoais no código.
-        destinatario_real = os.getenv("RESEND_TEST_RECIPIENT")
-        if not destinatario_real:
-            logger.warning(
-                "RESEND_TEST_RECIPIENT ausente. No modo Onboarding do Resend "
-                "é obrigatório definir o e-mail pessoal da conta. "
-                "Candidatura salva sem envio."
-            )
-            return False, None
-
         corpo_texto = (
-            f"Olá, {nome_professor}.\n\n"
+            f"Prezado(a) {nome_professor},\n\n"
             f"Você recebeu uma nova candidatura para o projeto "
-            f"'{titulo_projeto}'.\n"
-            f"E-mail de contato do candidato: {email_aluno}\n"
-            f"(Destinatário original pretendido: {email_professor})\n\n"
-            f"O currículo do candidato segue em anexo.\n\n"
-            f"Atenciosamente,\nPlataforma UniResu Connect"
+            f"\"{titulo_projeto}\" através da plataforma UniResu Connect.\n\n"
+            f"Dados do candidato:\n"
+            f"- E-mail para contato: {email_aluno}\n\n"
+            f"O currículo do candidato segue em anexo a este e-mail.\n\n"
+            f"Para responder diretamente ao candidato, utilize o endereço "
+            f"informado acima.\n\n"
+            f"Atenciosamente,\n"
+            f"Equipe UniResu Connect"
         )
 
         corpo_html = (
-            f"<p>Olá, {nome_professor}.</p>"
+            f"<p>Prezado(a) {nome_professor},</p>"
             f"<p>Você recebeu uma nova candidatura para o projeto "
-            f"<strong>{titulo_projeto}</strong>.</p>"
-            f"<p><strong>E-mail de contato do candidato:</strong> {email_aluno}<br>"
-            f"<em>Destinatário original pretendido: {email_professor}</em></p>"
-            f"<p>O currículo do candidato segue em anexo.</p>"
-            f"<p>Atenciosamente,<br>Plataforma UniResu Connect</p>"
+            f"<strong>{titulo_projeto}</strong> através da plataforma "
+            f"<strong>UniResu Connect</strong>.</p>"
+            f"<p><strong>Dados do candidato:</strong><br>"
+            f"E-mail para contato: <a href=\"mailto:{email_aluno}\">{email_aluno}</a></p>"
+            f"<p>O currículo do candidato segue em anexo a este e-mail.</p>"
+            f"<p>Para responder diretamente ao candidato, utilize o endereço "
+            f"informado acima.</p>"
+            f"<p>Atenciosamente,<br><strong>Equipe UniResu Connect</strong></p>"
         )
 
         params: "resend.Emails.SendParams" = {
             "from": RESEND_FROM,
-            "to": [destinatario_real],
-            "subject": f"Nova Candidatura: {titulo_projeto}",
+            "to": [email_professor],
+            "reply_to": RESEND_REPLY_TO,
+            "subject": f"Nova Candidatura Recebida: {titulo_projeto}",
             "text": corpo_texto,
             "html": corpo_html,
             "attachments": [
@@ -194,7 +192,7 @@ async def _tentar_enviar_email_resend(
         logger.info(
             "E-mail de candidatura enviado via Resend (id=%s) para %s",
             provider_id,
-            destinatario_real,
+            email_professor,
         )
         return True, provider_id
 
