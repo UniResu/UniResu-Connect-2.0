@@ -23,8 +23,8 @@ load_dotenv()
 # Lista explícita — inclui dev local e as URLs públicas do Render.
 origins = [
     "http://localhost:3000",
-    "https://uniresu-frontend.onrender.com",
-    "https://uniresu-connect-2-0.onrender.com",  # Adicione variações se houver
+    "http://127.0.0.1:3000",
+    "https://uniresu-frontend.onrender.com",  # Mantendo a produção que já funciona
 ]
 
 
