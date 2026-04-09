@@ -3,7 +3,7 @@
 export const APP_NAME = "UniResu Connect";
 export const APP_DESCRIPTION = "Conectando a Comunidade Acadêmica";
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.uniresu.org";
 
 /** Chave do token no localStorage */
 export const TOKEN_KEY = "uniresu_token";

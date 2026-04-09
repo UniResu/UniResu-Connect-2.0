@@ -95,7 +95,7 @@ export default function ProjetosPage() {
     formData.append("curriculo", curriculo);
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.uniresu.org";
       // IMPORTANTE: não definir Content-Type manualmente — o browser precisa
       // setá-lo automaticamente como "multipart/form-data; boundary=..." a
       // partir do FormData. Só injetamos o Authorization do contexto de auth.

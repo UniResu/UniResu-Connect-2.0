@@ -7,7 +7,7 @@
  * - Trata erros de forma consistente
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.uniresu.org";
 
 interface ApiOptions extends RequestInit {
   token?: string;
