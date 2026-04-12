@@ -16,7 +16,6 @@ A presente plataforma web, **UniResu Connect**, propõe-se a ser um ecossistema 
 
 ### **Integrantes**
 
-* Ana Laura Santos Romagnoli Pires
 * Daniel Pereira Santos da Silva
 * Davi Lopes Rodrigues
 * José Murilo Almeida do Nascimento
