@@ -48,6 +48,14 @@ services:
         value: https://orcid.org
       - key: ORCID_API_URL
         value: https://pub.orcid.org/v3.0
+      - key: NEXT_PUBLIC_SITE_URL
+        value: https://uniresu.org
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_REMETENTE
+        value: "UniResu <contato@uniresu.org>"
+      - key: EMAIL_SUPORTE
+        value: uniresuconnect@gmail.com
       # CORS — host público do front-end injetado dinamicamente pelo Render.
       # main.py normaliza o valor para https://<host> antes de aplicar no CORS.
       - key: FRONTEND_URL
