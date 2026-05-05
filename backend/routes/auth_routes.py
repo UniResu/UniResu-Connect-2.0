@@ -11,11 +11,12 @@ Endpoints:
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from models.usuario_model import (
-    UsuarioResponse, 
-    LoginResponse, 
+    UsuarioResponse,
+    LoginResponse,
     LoginRequest,
     RecuperarSenhaRequest,
-    ResetarSenhaRequest
+    ResetarSenhaRequest,
+    ReenviarVerificacaoRequest,
 )
 from controllers.orcid_controller import (
     gerar_url_autorizacao,
@@ -25,7 +26,9 @@ from controllers.orcid_controller import (
 from controllers.usuario_controller import (
     login_usuario_controller,
     solicitar_recuperacao_senha_controller,
-    resetar_senha_controller
+    resetar_senha_controller,
+    verificar_email_controller,
+    reenviar_verificacao_controller,
 )
 from auth.autenticacao import create_access_token, get_usuario_atual
 
@@ -116,6 +119,22 @@ async def sincronizar_orcid(
     Requer autenticação. O usuário deve ter um ORCID vinculado.
     """
     return await sincronizar_perfil_orcid(usuario_logado["id"])
+
+
+# ── Rotas de Verificação de E-mail ──
+
+@router.get("/auth/verificar-email")
+async def verificar_email(token: str = Query(..., min_length=1)):
+    """Verifica o token recebido no e-mail e ativa a conta do usuário."""
+    await verificar_email_controller(token)
+    return {"message": "E-mail verificado com sucesso! Você já pode fazer login."}
+
+
+@router.post("/auth/reenviar-verificacao")
+async def reenviar_verificacao(req: ReenviarVerificacaoRequest):
+    """Reenvia o e-mail de verificação com um novo token."""
+    await reenviar_verificacao_controller(req.email)
+    return {"message": "Se o e-mail estiver cadastrado e pendente, um novo link será enviado."}
 
 
 # ── Rotas de Recuperação de Senha ──

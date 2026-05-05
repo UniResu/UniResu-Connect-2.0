@@ -1,16 +1,13 @@
 "use client";
 
 import { useState, FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { TOKEN_KEY } from "@/lib/constants";
-import type { LoginResponse, PapelUsuario } from "@/types/user";
+import type { PapelUsuario } from "@/types/user";
 import { useAuth } from "@/contexts/AuthContext";
 import styles from "./registrar.module.css";
 
 export default function RegistrarPage() {
-  const router = useRouter();
   const { loginWithOrcid } = useAuth();
 
   const [nome, setNome] = useState("");
@@ -22,7 +19,8 @@ export default function RegistrarPage() {
   const [curso, setCurso] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [step, setStep] = useState(1); // 1 = role, 2 = form
+  const [step, setStep] = useState(1); // 1 = role, 2 = form, 3 = email enviado
+  const [emailEnviado, setEmailEnviado] = useState("");
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -79,7 +77,7 @@ export default function RegistrarPage() {
 
     setIsSubmitting(true);
     try {
-      // 1. Registrar
+      // Registrar (conta criada como pendente — e-mail de verificação enviado)
       await api.post("/api/usuarios/registrar", {
         nome,
         email,
@@ -89,14 +87,9 @@ export default function RegistrarPage() {
         curso: curso || null,
       });
 
-      // 2. Login automático
-      const loginRes = await api.post<LoginResponse>("/api/auth/login", {
-        email,
-        senha,
-      });
-
-      localStorage.setItem(TOKEN_KEY, loginRes.access_token);
-      router.push("/perfil");
+      // Mostrar tela de confirmação (não faz login automático)
+      setEmailEnviado(email);
+      setStep(3);
     } catch (err: unknown) {
       const apiErr = err as { detail?: string };
       setError(apiErr.detail || "Erro ao criar conta. Tente novamente.");
@@ -287,6 +280,44 @@ export default function RegistrarPage() {
               <p className="text-sm text-gray-500 mt-4">Problemas com o e-mail institucional? <a href="https://docs.google.com/forms/d/e/1FAIpQLSeW8URrJsHN4S-d7k-bOvmibn99fMgMLpB-ynxs9QKKCSvkug/viewform?usp=header" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">Solicite acesso manual enviando o seu comprovante de vínculo.</a></p>
             </form>
           </>
+        )}
+
+        {/* Step 3: confirmação de e-mail enviado */}
+        {step === 3 && (
+          <div className={styles.emailConfirmation}>
+            <div className={styles.emailIcon}>✉️</div>
+            <h2 className={styles.emailTitle}>Verifique seu e-mail</h2>
+            <p className={styles.emailText}>
+              Enviamos um link de confirmação para{" "}
+              <strong>{emailEnviado}</strong>.
+            </p>
+            <p className={styles.emailText}>
+              Clique no link recebido para ativar sua conta. O link é válido por 24 horas.
+            </p>
+            <p className={styles.emailHint}>
+              Não recebeu? Verifique a pasta de spam ou{" "}
+              <button
+                type="button"
+                className={styles.resendLink}
+                onClick={async () => {
+                  try {
+                    await api.post("/api/auth/reenviar-verificacao", {
+                      email: emailEnviado,
+                    });
+                    setError("");
+                    alert("E-mail reenviado com sucesso!");
+                  } catch {
+                    alert("Erro ao reenviar. Tente novamente em alguns minutos.");
+                  }
+                }}
+              >
+                reenvie o e-mail
+              </button>.
+            </p>
+            <Link href="/login" className={styles.loginButton}>
+              Ir para o Login
+            </Link>
+          </div>
         )}
 
         <p className={styles.footer}>

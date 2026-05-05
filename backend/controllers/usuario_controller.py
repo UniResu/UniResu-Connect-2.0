@@ -63,6 +63,10 @@ def formatar_usuario(doc: Dict[str, Any]) -> Dict[str, Any]:
 async def registrar_usuario_controller(user: UsuarioCreate) -> Dict[str, Any]:
     """Registra um novo usuário no banco de dados.
 
+    A conta é criada com email_verificado=False. Um token de verificação
+    é gerado e enviado por e-mail. O usuário só poderá fazer login após
+    confirmar o e-mail.
+
     Args:
         user: Dados do novo usuário.
 
@@ -79,6 +83,10 @@ async def registrar_usuario_controller(user: UsuarioCreate) -> Dict[str, Any]:
             detail="Este email já está cadastrado.",
         )
 
+    # Gerar token de verificação de e-mail
+    token_verificacao = secrets.token_urlsafe(48)
+    token_verificacao_expira = datetime.now(timezone.utc) + timedelta(hours=24)
+
     # Construir documento do usuário
     novo_usuario_doc: Dict[str, Any] = {
         "email": user.email,
@@ -91,6 +99,9 @@ async def registrar_usuario_controller(user: UsuarioCreate) -> Dict[str, Any]:
         "criado_em": datetime.now(timezone.utc),
         "atualizado_em": datetime.now(timezone.utc),
         "ativo": True,
+        "email_verificado": False,
+        "token_verificacao_email": token_verificacao,
+        "token_verificacao_expira": token_verificacao_expira,
     }
 
     # Hash da senha (opcional — se usando ORCID como método principal)
@@ -122,6 +133,9 @@ async def registrar_usuario_controller(user: UsuarioCreate) -> Dict[str, Any]:
                 detail="Erro ao criar o usuário.",
             )
 
+        # Disparar e-mail de verificação (não bloqueia o response)
+        await _enviar_email_verificacao(user.email, user.nome, token_verificacao)
+
         return formatar_usuario(usuario_criado)
 
     except HTTPException:
@@ -135,6 +149,8 @@ async def registrar_usuario_controller(user: UsuarioCreate) -> Dict[str, Any]:
 
 async def login_usuario_controller(email: str, senha: str) -> Dict[str, Any]:
     """Valida as credenciais de login por email+senha.
+
+    Bloqueia login se o e-mail não estiver verificado.
 
     Args:
         email: Email do usuário.
@@ -150,6 +166,13 @@ async def login_usuario_controller(email: str, senha: str) -> Dict[str, Any]:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email ou senha inválidos.",
+        )
+
+    # Bloquear login de contas com e-mail não verificado
+    if not usuario.get("email_verificado", True):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="E-mail não verificado. Verifique sua caixa de entrada para ativar a conta.",
         )
 
     # Atualizar último login
@@ -233,6 +256,141 @@ async def solicitar_recuperacao_senha_controller(email: str) -> None:
             e,
             exc_info=True,
         )
+
+# ═══════════════════════════════════════════
+#  Verificação de E-mail
+# ═══════════════════════════════════════════
+
+async def _enviar_email_verificacao(email: str, nome: str, token: str) -> None:
+    """Envia o e-mail de confirmação com link de verificação."""
+    if not resend.api_key:
+        logger.warning(
+            "RESEND_API_KEY ausente — e-mail de verificação NÃO enviado."
+        )
+        return
+
+    base_url = os.getenv("NEXT_PUBLIC_SITE_URL", "https://uniresu.org")
+    link = f"{base_url}/verificar-email?token={token}"
+
+    corpo_texto = (
+        f"Olá, {nome}.\n\n"
+        f"Bem-vindo(a) à UniResu Connect!\n\n"
+        f"Para ativar sua conta, confirme seu e-mail clicando no link abaixo "
+        f"(válido por 24 horas):\n\n"
+        f"{link}\n\n"
+        f"Se você não se cadastrou na plataforma, ignore este e-mail.\n\n"
+        f"Atenciosamente,\n"
+        f"Equipe UniResu Connect"
+    )
+    corpo_html = (
+        f"<p>Olá, <strong>{nome}</strong>.</p>"
+        f"<p>Bem-vindo(a) à <strong>UniResu Connect</strong>!</p>"
+        f"<p>Para ativar sua conta, confirme seu e-mail clicando no link abaixo "
+        f"(válido por 24 horas):</p>"
+        f'<p><a href="{link}" style="display:inline-block;padding:12px 24px;'
+        f"background-color:#7c3aed;color:#ffffff;text-decoration:none;"
+        f'border-radius:6px;font-weight:bold;">Confirmar meu e-mail</a></p>'
+        f"<p style=\"color:#666;font-size:12px;\">Ou copie e cole este link no navegador:<br>"
+        f"{link}</p>"
+        f"<p>Se você não se cadastrou na plataforma, ignore este e-mail.</p>"
+        f"<p>Atenciosamente,<br><strong>Equipe UniResu Connect</strong></p>"
+    )
+
+    params: "resend.Emails.SendParams" = {
+        "from": EMAIL_REMETENTE,
+        "to": [email],
+        "reply_to": EMAIL_SUPORTE,
+        "subject": "Confirme seu e-mail - UniResu Connect",
+        "text": corpo_texto,
+        "html": corpo_html,
+    }
+
+    try:
+        await asyncio.to_thread(resend.Emails.send, params)
+        logger.info("E-mail de verificação enviado para %s", email)
+    except Exception as e:
+        logger.error(
+            "Falha ao enviar e-mail de verificação via Resend: %s",
+            e,
+            exc_info=True,
+        )
+
+
+async def verificar_email_controller(token: str) -> bool:
+    """Valida o token de verificação e ativa a conta do usuário.
+
+    Args:
+        token: Token recebido via link no e-mail.
+
+    Returns:
+        True se a verificação foi bem-sucedida.
+
+    Raises:
+        HTTPException 400: Se o token for inválido ou expirado.
+    """
+    db = Database.get_db()
+    agora = datetime.now(timezone.utc)
+
+    usuario = await db.usuarios.find_one({
+        "token_verificacao_email": token,
+        "token_verificacao_expira": {"$gt": agora},
+    })
+
+    if not usuario:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="O link de confirmação é inválido ou expirou.",
+        )
+
+    # Ativar a conta e limpar tokens de verificação
+    await db.usuarios.update_one(
+        {"_id": usuario["_id"]},
+        {
+            "$set": {
+                "email_verificado": True,
+                "atualizado_em": agora,
+            },
+            "$unset": {
+                "token_verificacao_email": "",
+                "token_verificacao_expira": "",
+            },
+        },
+    )
+
+    return True
+
+
+async def reenviar_verificacao_controller(email: str) -> None:
+    """Reenvia o e-mail de verificação com um novo token.
+
+    Útil caso o token original tenha expirado ou o e-mail não chegou.
+    """
+    db = Database.get_db()
+    usuario = await db.usuarios.find_one({"email": email})
+
+    if not usuario:
+        return  # Retorno silencioso (segurança)
+
+    if usuario.get("email_verificado", True):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Este e-mail já foi verificado.",
+        )
+
+    # Gerar novo token
+    novo_token = secrets.token_urlsafe(48)
+    nova_expiracao = datetime.now(timezone.utc) + timedelta(hours=24)
+
+    await db.usuarios.update_one(
+        {"_id": usuario["_id"]},
+        {"$set": {
+            "token_verificacao_email": novo_token,
+            "token_verificacao_expira": nova_expiracao,
+        }},
+    )
+
+    await _enviar_email_verificacao(email, usuario.get("nome", "Usuário"), novo_token)
+
 
 async def resetar_senha_controller(token: str, nova_senha: str) -> bool:
     db = Database.get_db()

@@ -272,6 +272,68 @@
   font-weight: 600;
 }
 
+/* Step 3: Confirmação de e-mail */
+.emailConfirmation {
+  text-align: center;
+  padding: var(--space-lg) 0;
+}
+
+.emailIcon {
+  font-size: 3rem;
+  margin-bottom: var(--space-md);
+}
+
+.emailTitle {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-sm);
+}
+
+.emailText {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-sm);
+  line-height: 1.5;
+}
+
+.emailHint {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  margin-top: var(--space-md);
+}
+
+.resendLink {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: inherit;
+  padding: 0;
+}
+
+.resendLink:hover {
+  color: var(--primary-hover);
+}
+
+.loginButton {
+  display: inline-block;
+  margin-top: var(--space-xl);
+  padding: 12px 32px;
+  background: #7c3aed;
+  color: white;
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.loginButton:hover {
+  background: #6d28d9;
+}
+
 @media (max-width: 640px) {
   .roleGrid {
     grid-template-columns: 1fr;

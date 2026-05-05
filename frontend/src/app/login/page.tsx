@@ -4,6 +4,7 @@ import { useState, FormEvent } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { api } from "@/lib/api";
 import styles from "./login.module.css";
 
 export default function LoginPage() {
@@ -13,6 +14,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [error, setError] = useState("");
+  const [emailNaoVerificado, setEmailNaoVerificado] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
@@ -21,10 +23,14 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
+      setEmailNaoVerificado(false);
       await login(email, senha);
       router.push("/perfil");
     } catch (err: unknown) {
-      const apiError = err as { detail?: string };
+      const apiError = err as { detail?: string; status?: number };
+      if (apiError.status === 403) {
+        setEmailNaoVerificado(true);
+      }
       setError(apiError.detail || "Erro ao fazer login. Tente novamente.");
     } finally {
       setIsSubmitting(false);
@@ -70,7 +76,28 @@ export default function LoginPage() {
 
         {/* Email + Senha */}
         <form onSubmit={handleSubmit} className={styles.form}>
-          {error && <div className={styles.errorMessage}>{error}</div>}
+          {error && (
+            <div className={styles.errorMessage}>
+              {error}
+              {emailNaoVerificado && (
+                <button
+                  type="button"
+                  className={styles.resendLink}
+                  onClick={async () => {
+                    try {
+                      await api.post("/api/auth/reenviar-verificacao", { email });
+                      setError("Novo e-mail de verificação enviado! Verifique sua caixa de entrada.");
+                      setEmailNaoVerificado(false);
+                    } catch {
+                      setError("Erro ao reenviar e-mail. Tente novamente.");
+                    }
+                  }}
+                >
+                  Reenviar e-mail de verificação
+                </button>
+              )}
+            </div>
+          )}
 
           <div className={styles.fieldGroup}>
             <label htmlFor="email" className={styles.label}>

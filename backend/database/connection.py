@@ -47,7 +47,7 @@ class Database:
         # Verifica conectividade
         await cls.client.admin.command("ping")
         cls.db = cls.client[MONGO_DB_NAME]
-        print(f"✅ Conectado ao MongoDB Atlas (Banco: {cls.db.name}) — Driver: Motor (async)")
+        print(f"[OK] Conectado ao MongoDB Atlas (Banco: {cls.db.name}) - Driver: Motor (async)")
 
     @classmethod
     async def disconnect(cls):
@@ -56,7 +56,7 @@ class Database:
             cls.client.close()
             cls.client = None
             cls.db = None
-            print("🔌 Conexão com MongoDB fechada.")
+            print("[CLOSED] Conexao com MongoDB fechada.")
 
     @classmethod
     def get_db(cls):

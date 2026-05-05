@@ -84,6 +84,13 @@ async def get_usuario_atual(token: str = Depends(oauth2_scheme)) -> dict:
     if usuario is None:
         raise credentials_exception
 
+    # Bloquear acesso de contas com e-mail não verificado
+    if not usuario.get("email_verificado", True):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="E-mail não verificado. Verifique sua caixa de entrada para ativar a conta.",
+        )
+
     # Formata resposta (sem dados sensíveis)
     usuario["id"] = str(usuario["_id"])
     del usuario["_id"]

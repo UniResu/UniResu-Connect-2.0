@@ -181,3 +181,20 @@
 .forgotPassword:hover {
   text-decoration: underline;
 }
+
+.resendLink {
+  display: block;
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: var(--font-size-sm);
+  padding: 0;
+  margin-top: var(--space-xs);
+}
+
+.resendLink:hover {
+  color: var(--primary-hover);
+}

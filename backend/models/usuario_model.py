@@ -174,6 +174,11 @@ class ResetarSenhaRequest(BaseModel):
     nova_senha: str = Field(min_length=6)
 
 
+class ReenviarVerificacaoRequest(BaseModel):
+    """Schema para reenviar e-mail de verificação."""
+    email: EmailStr
+
+
 # ═══════════════════════════════════════════
 #  Schemas de saída (response)
 # ═══════════════════════════════════════════
