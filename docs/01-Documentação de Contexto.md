@@ -13,17 +13,9 @@ Contudo, para a maioria dos universitários, o acesso a essas oportunidades tran
 
 Cria-se, assim, uma grave falha de acessibilidade no coração da vida acadêmica. De um lado, existem inúmeros projetos e pesquisadores em busca de novos talentos para contribuir com seus trabalhos. Do outro, há uma vasta população de estudantes motivados e com grande potencial que não conseguem encontrar um caminho claro e equitativo para essas oportunidades. Essa desconexão não apenas subaproveita o capital humano da universidade, mas também aprofunda desigualdades, impedindo que todos os alunos, independentemente de seu círculo social, possam vivenciar a experiência universitária em sua plenitude.
 
-> **Links Úteis**:
-> - [Objetivos, Problema de pesquisa e Justificativa](https://medium.com/@versioparole/objetivos-problema-de-pesquisa-e-justificativa-c98c8233b9c3)
-> - [Matriz Certezas, Suposições e Dúvidas](https://medium.com/educa%C3%A7%C3%A3o-fora-da-caixa/matriz-certezas-suposi%C3%A7%C3%B5es-e-d%C3%BAvidas-fa2263633655)
-> - [Brainstorming](https://www.euax.com.br/2018/09/brainstorming/)
-
 ## Objetivos
 
 Desenvolver e consolidar um ecossistema digital integrado que sirva como a principal ponte entre o corpo discente e as oportunidades de engajamento em pesquisa e extensão, com o propósito de erradicar as barreiras informacionais e a dependência de redes de contato informais que atualmente dificultam o acesso. O projeto visa substituir o modelo fragmentado e desigual por um ambiente centralizado, transparente e **equitativo**, empoderando cada estudante com ferramentas para descobrir e se conectar a projetos alinhados aos seus interesses e potencial. Em última instância, busca-se transformar a cultura de acesso a oportunidades dentro da universidade, fomentando uma comunidade acadêmica mais dinâmica, justa e colaborativa, onde o talento e a motivação sejam os únicos critérios para o pleno aproveitamento da vida científica e social que a instituição oferece.
- 
-> **Links Úteis**:
-> - [Objetivo geral e objetivo específico: como fazer e quais verbos utilizar](https://blog.mettzer.com/diferenca-entre-objetivo-geral-e-objetivo-especifico/)
 
 ## Justificativa
 
@@ -33,29 +25,10 @@ No entanto, o modelo atual de acesso a essas oportunidades na maioria das instit
 
 Este projeto se justifica, primeiramente, pela urgente necessidade de promover a equidade. Como defendia o educador Paulo Freire, ensinar não é apenas transferir conhecimento, mas "criar as possibilidades para a sua própria produção ou a sua construção". Ao criar um canal de acesso universal e transparente, a plataforma materializa esse princípio, democratizando as oportunidades e garantindo que o interesse e a capacidade do aluno sejam os verdadeiros critérios de seleção. Isso não apenas torna o ambiente acadêmico mais justo, mas também enriquece os próprios projetos com uma maior diversidade de perfis e ideias.
 
-## Público-Alvo
+# Público-Alvo
 
-A aplicação proposta será utilizada principalmente por dois perfis distintos de usuários: Estudantes Universitários e Docentes/Coordenadores
-
-
-* Estudantes Universitários 
-
-Perfil: Alunos de graduação e pós-graduação de todas as áreas do conhecimento da instituição. Abrange desde calouros, que buscam suas primeiras experiências acadêmicas, até veteranos, que procuram oportunidades mais especializadas para complementar sua formação e direcionar sua carreira.
-
-Necessidade: Buscam uma forma centralizada, transparente e eficiente de encontrar e se candidatar a projetos de extensão e pesquisa que correspondam aos seus interesses, habilidades e objetivos acadêmicos.
-
-* Docentes e Coordenadores de Projeto:
-
-Perfil: Professores, pesquisadores e coordenadores responsáveis por projetos de extensão e iniciação científica que necessitam recrutar estudantes.
-
-Necessidade: Precisam de um canal eficaz para divulgar suas vagas a um público amplo e diverso, facilitando o processo de seleção e permitindo encontrar alunos com o perfil mais adequado para as demandas de seus projetos, otimizando seu tempo e esforço.
-
-*Público Secundário*
-
-Este grupo é composto por stakeholders que, embora não sejam os usuários finais do dia a dia, se beneficiam dos resultados e dados gerados pela plataforma.
-
-* Gestão Acadêmica e Administrativa da Universidade:
-
-Perfil: Pró-reitorias de Extensão e Pesquisa, coordenações de curso e outros órgãos administrativos da universidade.
-
-Necessidade: Têm interesse em monitorar o engajamento dos estudantes, mensurar o alcance dos projetos, gerar relatórios e indicadores de desempenho, além de fortalecer a imagem da instituição como um polo de inovação e inclusão, garantindo que as oportunidades sejam distribuídas de forma equitativa.
+| Categoria | Perfil | Descrição do Perfil | Necessidade |
+|-----------|--------|---------------------|-------------|
+| *Público Principal* | Estudantes Universitários | Alunos de graduação e pós-graduação de todas as áreas, desde calouros até veteranos | Forma centralizada, transparente e eficiente de encontrar e se candidatar a projetos de extensão e pesquisa alinhados aos seus interesses, habilidades e objetivos acadêmicos |
+| *Público Principal* | Docentes e Coordenadores de Projeto | Professores, pesquisadores e coordenadores responsáveis por projetos de extensão e iniciação científica | Canal eficaz para divulgar vagas a um público amplo, facilitando a seleção e encontrando alunos com perfil adequado, otimizando tempo e esforço |
+| *Público Secundário* | Gestão Acadêmica e Administrativa | Pró-reitorias de Extensão e Pesquisa, coordenações de curso e órgãos administrativos da universidade | Monitorar engajamento, mensurar alcance dos projetos, gerar relatórios e indicadores, além de fortalecer a imagem institucional e garantir distribuição equitativa das oportunidades |
