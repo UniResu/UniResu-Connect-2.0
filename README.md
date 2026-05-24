@@ -6,9 +6,9 @@
 <br>
 **2025.2**
 
-![Auto Assign](https://github.com/UniResu-Connect/demo-repository/actions/workflows/auto-assign.yml/badge.svg)
+![Auto Assign](https://github.com/UniResu/UniResu-Connect-2.0/demo-repository/actions/workflows/auto-assign.yml/badge.svg)
 
-![Proof HTML](https://github.com/UniResu-Connect/demo-repository/actions/workflows/proof-html.yml/badge.svg)
+![Proof HTML](https://github.com/UniResu/UniResu-Connect-2.0/demo-repository/actions/workflows/proof-html.yml/badge.svg)
 
 ---
 
@@ -51,19 +51,19 @@ A presente plataforma web, **UniResu Connect**, propõe-se a ser um ecossistema 
 
 ### **Documentação**
 
-* [Documentação de Contexto](https://github.com/UniResu-Connect/UniResu/blob/main/UniResu-main/docs/01-Documenta%C3%A7%C3%A3o%20de%20Contexto.md)
-* [Especificação do Projeto](https://github.com/UniResu-Connect/UniResu/blob/main/UniResu-main/docs/02-Especifica%C3%A7%C3%A3o%20do%20Projeto.md)
-* [Metodologia (Scrum)](https://github.com/UniResu-Connect/UniResu/blob/main/UniResu-main/docs/03-Metodologia.md)
-* [Projeto de Interface (UI/UX)](https://github.com/UniResu-Connect/UniResu/blob/main/UniResu-main/docs/04-Projeto%20de%20Interface.md)
-* [Arquitetura da Solução](https://github.com/UniResu-Connect/UniResu/blob/main/UniResu-main/docs/05-Arquitetura%20da%20Solu%C3%A7%C3%A3o.md)
-* [Template Padrão da Aplicação](https://github.com/UniResu-Connect/UniResu/blob/main/UniResu-main/docs/06-Template%20Padr%C3%A3o%20da%20Aplica%C3%A7%C3%A3o.md)
-* [Programação de Funcionalidades](https://github.com/UniResu-Connect/UniResu/blob/main/UniResu-main/docs/07-Programa%C3%A7%C3%A3o%20de%20Funcionalidades.md)
-* [Plano de Testes de Software](https://github.com/UniResu-Connect/UniResu/blob/main/UniResu-main/docs/08-Plano%20de%20Testes%20de%20Software.md)
-* [Registro de Testes de Software](https://github.com/UniResu-Connect/UniResu/blob/main/UniResu-main/docs/09-Registro%20de%20Testes%20de%20Software.md)
-* [Plano de Testes de Usabilidade](https://github.com/UniResu-Connect/UniResu/blob/main/UniResu-main/docs/10-Plano%20de%20Testes%20de%20Usabilidade.md)
-* [Registro de Testes de Usabilidade](https://github.com/UniResu-Connect/UniResu/blob/main/UniResu-main/docs/11-Registro%20de%20Testes%20de%20Usabilidade.md)
-* [Apresentação do Projeto](https://github.com/UniResu-Connect/UniResu/blob/main/UniResu-main/docs/12-Apresenta%C3%A7%C3%A3o%20do%20Projeto.md)
-* [Referências](https://github.com/UniResu-Connect/UniResu/blob/main/UniResu-main/docs/13-Refer%C3%AAncias.md)
+* [Documentação de Contexto](https://github.com/UniResu/UniResu-Connect-2.0/blob/main/docs/01-Documenta%C3%A7%C3%A3o%20de%20Contexto.md)
+* [Especificação do Projeto](https://github.com/UniResu/UniResu-Connect-2.0/blob/main/docs/02-Especifica%C3%A7%C3%A3o%20do%20Projeto.md)
+* [Metodologia (Scrum)](https://github.com/UniResu/UniResu-Connect-2.0/blob/main/docs/03-Metodologia.md)
+* [Projeto de Interface (UI/UX)](https://github.com/UniResu/UniResu-Connect-2.0/blob/main/docs/04-Projeto%20de%20Interface.md)
+* [Arquitetura da Solução](https://github.com/UniResu/UniResu-Connect-2.0/blob/main/docs/05-Arquitetura%20da%20Solu%C3%A7%C3%A3o.md)
+* [Template Padrão da Aplicação](https://github.com/UniResu/UniResu-Connect-2.0/blob/main/docs/06-Template%20Padr%C3%A3o%20da%20Aplica%C3%A7%C3%A3o.md)
+* [Programação de Funcionalidades](https://github.com/UniResu/UniResu-Connect-2.0/blob/main/docs/07-Programa%C3%A7%C3%A3o%20de%20Funcionalidades.md)
+* [Plano de Testes de Software](https://github.com/UniResu/UniResu-Connect-2.0/blob/main/docs/08-Plano%20de%20Testes%20de%20Software.md)
+* [Registro de Testes de Software](https://github.com/UniResu/UniResu-Connect-2.0/blob/main/docs/09-Registro%20de%20Testes%20de%20Software.md)
+* [Plano de Testes de Usabilidade](https://github.com/UniResu/UniResu-Connect-2.0/blob/main/docs/10-Plano%20de%20Testes%20de%20Usabilidade.md)
+* [Registro de Testes de Usabilidade](https://github.com/UniResu/UniResu-Connect-2.0/blob/main/docs/11-Registro%20de%20Testes%20de%20Usabilidade.md)
+* [Apresentação do Projeto](https://github.com/UniResu/UniResu-Connect-2.0/blob/main/docs/12-Apresenta%C3%A7%C3%A3o%20do%20Projeto.md)
+* [Referências](https://github.com/UniResu/UniResu-Connect-2.0/blob/main/docs/13-Refer%C3%AAncias.md)
 
 ### **Código**
 
@@ -75,4 +75,4 @@ A presente plataforma web, **UniResu Connect**, propõe-se a ser um ecossistema 
 
 # 📝 Licença
 
-Distribuído sob a Licença MIT. Veja [LICENSE](https://github.com/UniResu/UniResu-Connect/blob/main/LICENSE) para mais informações.
+Distribuído sob a Licença MIT. Veja [LICENSE](https://github.com/UniResu/UniResu-Connect-2.0/blob/main/LICENSE) para mais informações.
