@@ -6,10 +6,6 @@
 <br>
 **2025.2**
 
-![Auto Assign](https://github.com/UniResu/UniResu-Connect-2.0/demo-repository/actions/workflows/auto-assign.yml/badge.svg)
-
-![Proof HTML](https://github.com/UniResu/UniResu-Connect-2.0/demo-repository/actions/workflows/proof-html.yml/badge.svg)
-
 ---
 
 A presente plataforma web, **UniResu Connect**, propõe-se a ser um ecossistema digital para otimizar a conexão entre o corpo discente e as oportunidades de pesquisa e extensão universitária. O sistema permite que docentes e coordenadores de projeto divulguem suas vagas de forma transparente e estruturada, alcançando um público amplo e diversificado de talentos. Simultaneamente, estudantes de todos os períodos podem descobrir e se candidatar a oportunidades alinhadas com seus interesses e perfil acadêmico, quebrando as barreiras de acesso impostas pela informalidade e pela dispersão de informações. Dessa forma, a aplicação busca aliar tecnologia, equidade e gestão acadêmica eficiente, contribuindo para a democratização do acesso ao conhecimento e para a plena valorização do potencial humano da universidade.
