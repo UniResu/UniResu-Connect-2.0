@@ -127,79 +127,80 @@ Com base na análise das personas, foram identificadas as seguintes histórias d
 
 As tabelas que se seguem apresentam os requisitos funcionais e não funcionais que detalham o escopo do projeto.
 
-### Requisitos Funcionais
+## Requisitos Funcionais
 
-|ID    | Descrição do Requisito  | Prioridade |
-|------|-------------------------|----|
-|RF-001| O sistema deve permitir que um novo usuário (alunos, professores, pesquisadores) se cadastre na plataforma | ALTA |
-|RF-002| A aplicação deve permitir a **autenticação** do usuário (login/logout) | ALTA |
-|RF-003| Deve haver um sistema para recuperação de senha | ALTA N-X|
-|RF-004| O sistema deve permitir que o usuário tenha um perfil, possivelmente com informações acadêmicas | ALTA N-X|
-|RF-005| Professores e pesquisadores devem poder cadastrar e publicar oportunidades de vagas em projetos acadêmicos | ALTA |
-|RF-006| O usuário pode visualizar uma lista de projetos disponíveis | ALTA |
-|RF-007| O sistema deve permitir a busca e a filtragem de projetos (por área de interesse, por universidade, etc.) | ALTA |
-|RF-008| O usuário pode se candidatar aos projetos | ALTA |
-|RF-009| O sistema deve possuir um fórum com tópicos de discussão | ALTA N-X|
-|RF-010| O usuário pode responder a tópicos existentes | ALTA N-X|
-|RF-011| Deve ser possível pesquisar por tópicos ou palavras-chave no fórum | ALTA N-X|
-|RF-012| O sistema deve exibir uma seção "Quem Somos" com informações sobre a iniciativa UniResu | Baixa N-X-R|
-|RF-013| O sistema deve disponibilizar uma área com materiais e informações sobre escrita científica | ALTA N-X|
-|RF-014| O sistema deve possuir uma página inicial (Homepage) que destaque as principais funcionalidades e oportunidades | ALTA |
-|RF-015| O sistema deve possiblitar o usuário abrir os projetos e candidatar-se à vagas | ALTA |
-|RF-016|  | MÉDIA |
-|RF-017|  | MÉDIA |
-|RF-018|  | MÉDIA |
-|RF-019|  | MÉDIA |
-|RF-020|  | MÉDIA |
+| ID     | Descrição do Requisito | Prioridade |
+|--------|------------------------|------------|
+| RF-001 | O sistema deve permitir que novos usuários (alunos, professores, pesquisadores) se cadastrem na plataforma utilizando email institucional | ALTA |
+| RF-002 | A aplicação deve permitir a **autenticação** do usuário (login/logout) com geração de token JWT | ALTA |
+| RF-003 | O sistema deve permitir que professores e pesquisadores realizem login e cadastro via **ORCID OAuth**, vinculando seu identificador ORCID ao perfil na plataforma | ALTA |
+| RF-004 | Deve haver um sistema para recuperação de senha via email | ALTA |
+| RF-005 | O sistema deve permitir que os usuários tenham um perfil com informações acadêmicas (curso, período, área de interesse, currículo) | ALTA |
+| RF-006 | O sistema deve sincronizar automaticamente dados públicos do perfil ORCID (nome, afiliação, publicações) com o perfil do professor/pesquisador na plataforma | ALTA |
+| RF-007 | Professores e pesquisadores devem poder cadastrar e publicar projetos de pesquisa, extensão e grupos de estudo | ALTA |
+| RF-008 | Os usuários devem poder visualizar uma lista de projetos disponíveis com paginação | ALTA |
+| RF-009 | O sistema deve permitir a busca e a filtragem de projetos (por área de interesse, por universidade, por tipo de vaga, etc.) | ALTA |
+| RF-010 | Os usuários devem poder se candidatar aos projetos anexando seu currículo | ALTA |
+| RF-011 | O sistema deve possuir um fórum onde os usuários podem criar tópicos de discussão com título e conteúdo | ALTA |
+| RF-012 | Os usuários devem poder responder a tópicos existentes no fórum | ALTA |
+| RF-013 | Deve ser possível pesquisar por tópicos ou palavras-chave no fórum | ALTA |
+| RF-014 | O sistema deve exibir uma seção "Quem Somos" com informações sobre a iniciativa UniResu | BAIXA |
+| RF-015 | O sistema deve disponibilizar uma área com materiais e informações sobre escrita científica | ALTA |
+| RF-016 | O sistema deve possuir uma página inicial (Homepage) que destaque as principais funcionalidades e oportunidades | ALTA |
+| RF-017 | O sistema deve possibilitar que o usuário abra os detalhes de um projeto e candidate-se à vaga | ALTA |
+| RF-018 | O sistema deve permitir que professores editem e removam seus próprios projetos publicados | MÉDIA |
+| RF-019 | O sistema deve exibir o histórico de candidaturas enviadas pelo aluno, com status (Pendente, Aprovado, Recusado) | MÉDIA |
+| RF-020 | O sistema deve enviar notificação por email ao professor quando um aluno se candidatar a um projeto | MÉDIA |
+| RF-021 | O sistema deve permitir que usuários expressem reações (like/dislike) em tópicos do fórum | MÉDIA |
+| RF-022 | O sistema deve adaptar as opções de navegação conforme o estado de autenticação e o papel do usuário (aluno, professor) | MÉDIA |
 
-# Requisitos não Funcionais
+---
 
-|ID     | Descrição do Requisito  | Prioridade |
-|-------|-------------------------|----|
-|RNF-001| A interface do site deve ser intuitiva e de fácil navegação para que o usuário encontre rapidamente as informações que procura | ALTA |
-|RNF-002| **Desempenho**: páginas de listagem (ofertas) devem responder em até **2 s** em condições normais (até 100 usuários simultâneos). | ALTA |
-|RNF-003| O design deve ser responsivo, adaptando-se a diferentes tamanhos de tela, como desktops, tablets e smartphones | ALTA |
-|RNF-004| O site deve utilizar o protocolo HTTPS para garantir a comunicação segura e a proteção dos dados do usuário | ALTA |
-|RNF-005| A senha do usuário deve ser armazenada de forma criptografada no banco de dados | MÉDIA |
-|RNF-006| O sistema deve ser protegido contra ataques comuns, como injeção de SQL e Cross-Site Scripting (XSS) | MÉDIA |
-|RNF-007| **Proteção contra abuso**: limitar **tamanho do comentário** (ex.: 200 caracteres) e aplicar **rate-limit** para avaliações/edições. | BAIXA | **N-X-REVISAR**
-|RNF-008| O sistema deve suportar um número crescente de usuários e postagens simultâneas sem degradação significativa da performance | BAIXA| **N-X-REVISAR**
-|RNF-009| O site deve ser compatível e funcionar corretamente nas versões mais recentes dos principais navegadores (Google Chrome, Mozilla Firefox, Safari, Microsoft Edge) | MÉDIA | 
-|RNF-010|A plataforma deve estar disponível para acesso 24 horas por dia, 7 dias por semana, com um tempo de inatividade mínimo | MÉDIA | 
-|RNF-011| O site deve seguir as diretrizes de acessibilidade (WCAG) para ser utilizável por pessoas com deficiência, permitindo, por exemplo, a navegação via teclado e o uso de leitores de tela | MÉDIA N-X| 
+## Requisitos Não Funcionais
 
-Com base nas Histórias de Usuário, enumere os requisitos da sua solução. Classifique esses requisitos em dois grupos:
+| ID      | Descrição do Requisito | Prioridade |
+|---------|------------------------|------------|
+| RNF-001 | A interface do site deve ser intuitiva e de fácil navegação para que os usuários encontrem rapidamente as informações que procuram | ALTA |
+| RNF-002 | **Desempenho**: páginas de listagem (projetos) devem responder em até **2 s** em condições normais (até 100 usuários simultâneos) | ALTA |
+| RNF-003 | O design deve ser responsivo, adaptando-se a diferentes tamanhos de tela, como desktops, tablets e smartphones | ALTA |
+| RNF-004 | O site deve utilizar o protocolo HTTPS para garantir a comunicação segura e a proteção dos dados dos usuários | ALTA |
+| RNF-005 | As senhas dos usuários devem ser armazenadas de forma criptografada (bcrypt) no banco de dados | MÉDIA |
+| RNF-006 | A integração ORCID OAuth deve utilizar fluxo seguro com redirect URI validada e armazenamento seguro do client_secret no backend | MÉDIA |
+| RNF-007 | O sistema deve ser protegido contra ataques comuns, como injeção de SQL (NoSQL Injection), Cross-Site Scripting (XSS) e CSRF | MÉDIA |
+| RNF-008 | **Proteção contra abuso**: limitar **tamanho de comentários/tópicos** e aplicar **rate-limit** para ações como candidaturas e criação de tópicos | BAIXA |
+| RNF-009 | O sistema deve suportar um número crescente de usuários e postagens simultâneas sem degradação significativa da performance | BAIXA |
+| RNF-010 | O site deve ser compatível e funcionar corretamente nas versões mais recentes dos principais navegadores (Google Chrome, Mozilla Firefox, Safari, Microsoft Edge) | MÉDIA |
+| RNF-011 | A plataforma deve estar disponível para acesso 24 horas por dia, 7 dias por semana, com tempo de inatividade mínimo (uptime de 99%) | MÉDIA |
+| RNF-012 | O site deve seguir as diretrizes de acessibilidade (WCAG) para ser utilizável por pessoas com deficiência, permitindo, por exemplo, a navegação via teclado e o uso de leitores de tela | MÉDIA |
 
-# Restrições
+---
+
+## Restrições
 
 O projeto está restrito pelos itens apresentados na tabela a seguir.
 
-|ID| Restrição                                             |
-|--|-------------------------------------------------------|
-|RST-001| O sistema será desenvolvido inicialmente como aplicação web; aplicativos móveis nativos não estão contemplados nesta fase |
-|RST-002| Nessa fase, o acesso à plataforma será limitado a usuários com vínculo acadêmico verificado (login institucional)    |
-|RST-003| O sistema não contemplará integração com plataformas externas de pagamento ou bolsas nesta versão    |
-|RST-004| O processo de candidatura será interno à plataforma (sem envio de e-mails diretos)    |
-|RST-005| O sistema não proverá gestão de documentos acadêmicos (como submissão de artigos ou relatórios finais)    |
-|RST-006| O sistema não terá moderação automatizada de conteúdo no fórum; a moderação será inicial e manual    |
-|RST-007| A comunicação inicial entre professores e alunos será restrita a interações dentro da plataforma    |
-|RST-008| A plataforma não garante a oferta de bolsas ou financiamento; essa informação dependerá do cadastramento feito pelos professores    |
-|RST-009| A plataforma não permitirá qualquer tipo de violência e preconceito, esses atos ocasionarão a expulsão permanente do usuário na plataforma  |
-|RST-010| O sistema não terá integração direta com sistemas acadêmicos de matrícula ou secretaria  |
-|RST-011| O sistema não realizará validação automática da disponibilidade real dos orientadores  |
-|RST-012| A plataforma não fornecerá serviços de chat em tempo real (apenas mensagens assíncronas)  |
-|RST-013| O sistema não oferecerá recomendações automáticas baseadas em inteligência artificial na versão inicial  |
-|RST-014| A autenticação será limitada a usuários internos de universidades cadastradas; pessoas externas não poderão acessar  |
-|RST-015| O sistema não realizará análise automática de currículos ou perfis dos alunos  |
-|RST-016| O sistema não mediará interações entre os participantes fora do forum, como mensagens privadas diretas |
-|RST-017| O sistema não fará validação automática da veracidade de projetos cadastrados  |
-|RST-018|   |
-|RST-019|   |
-|RST-020|   |
-
-# Alterações futuras
-
-Poderão ocorrer alterações futuras nas funcionalidades e restrições do projeto.
+| ID      | Restrição |
+|---------|-----------|
+| RST-001 | O sistema será desenvolvido inicialmente como aplicação web; aplicativos móveis nativos não estão contemplados nesta fase |
+| RST-002 | O acesso à plataforma será limitado a usuários com vínculo acadêmico verificado (email institucional de universidades cadastradas) |
+| RST-003 | O sistema não contemplará integração com plataformas externas de pagamento ou bolsas nesta versão |
+| RST-004 | O processo de candidatura será interno à plataforma (sem envio de e-mails diretos entre aluno e professor para candidatura) |
+| RST-005 | O sistema não proverá gestão de documentos acadêmicos (como submissão de artigos ou relatórios finais) |
+| RST-006 | O sistema não terá moderação automatizada de conteúdo no fórum; a moderação será inicial e manual |
+| RST-007 | A comunicação inicial entre professores e alunos será restrita a interações dentro da plataforma |
+| RST-008 | A plataforma não garante a oferta de bolsas ou financiamento; essa informação dependerá do cadastramento feito pelos professores |
+| RST-009 | A plataforma não permitirá qualquer tipo de violência e preconceito; esses atos ocasionarão a expulsão permanente do usuário |
+| RST-010 | O sistema não terá integração direta com sistemas acadêmicos de matrícula ou secretaria |
+| RST-011 | O sistema não realizará validação automática da disponibilidade real dos orientadores |
+| RST-012 | A plataforma não fornecerá serviços de chat em tempo real (apenas mensagens assíncronas via fórum) |
+| RST-013 | O sistema não oferecerá recomendações automáticas baseadas em inteligência artificial na versão inicial |
+| RST-014 | A autenticação será limitada a usuários internos de universidades cadastradas; pessoas externas não poderão acessar |
+| RST-015 | O sistema não realizará análise automática de currículos ou perfis dos alunos |
+| RST-016 | O sistema não mediará interações entre os participantes fora do fórum, como mensagens privadas diretas |
+| RST-017 | O sistema não fará validação automática da veracidade de projetos cadastrados |
+| RST-018 | Não haverá funcionalidade de agendamento de reuniões ou entrevistas na plataforma |
+| RST-019 | O sistema não emitirá certificados ou comprovantes de participação em projetos |
+| RST-020 | Não haverá integração com redes sociais para compartilhamento de projetos nesta versão |
 
 # Diagrama de Casos de Uso
 
