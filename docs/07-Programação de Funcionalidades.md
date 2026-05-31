@@ -1,43 +1,54 @@
-# Programação de Funcionalidades (INCLUIR A PROGRAMAÇAÕ DE FUNCIONALIDADE EM PROFUNDIDADE)
+# Programação de Funcionalidades
 
-<span style="color:red">Pré-requisitos: <a href="2-Especificação do Projeto.md"> Especificação do Projeto</a></span>, <a href="3-Projeto de Interface.md"> Projeto de Interface</a>, <a href="4-Metodologia.md"> Metodologia</a>, <a href="3-Projeto de Interface.md"> Projeto de Interface</a>, <a href="5-Arquitetura da Solução.md"> Arquitetura da Solução</a>
+<span style="color:red">Pré-requisitos: <a href="2-Especificação do Projeto.md">Especificação do Projeto</a>, <a href="4-Metodologia.md">Metodologia</a>, <a href="3-Projeto de Interface.md">Projeto de Interface</a>, <a href="5-Arquitetura da Solução.md">Arquitetura da Solução</a>, <a href="UniResu_Connect_Documentacao_Tecnica.md">UniResu_Connect_Documentacao_Tecnica</a></span>
 
-Nesta seção, a implementação do sistema descrita por meio dos requisitos funcionais e/ou não funcionais. Nesta seção, é essencial relacionar os requisitos atendidos com os artefatos criados (código fonte) e com o(s) responsável(is) pelo desenvolvimento de cada artefato a cada etapa. Nesta seção também deverão ser apresentadas, se necessário, as instruções para acesso e verificação da **implementação que deve estar funcional no ambiente de hospedagem, OBRIGATORIAMENTE, a partir da Etapa 03**.
+Esta seção descreve a implementação do **UniResu Connect 2.0** e relaciona os requisitos atendidos com os artefatos de código. A aplicação está estruturada em duas camadas principais: **frontend (Next.js)** e **backend (FastAPI)**, com persistência em **MongoDB Atlas** e integrações externas (ORCID e Resend).
 
-**O que DEVE ser utilizado para o desenvolvimento da aplicação:**
-- Microsoft Visual Studio (IDE de Codificação)
-- HTML e CSS (frontend)
-- Javascript (frontend)
-- C# (backend)
-- MySQL ou SQLServer(Base de Dados)
-- Bootstrap (template responsivo para frontend)
-- Github (documentação e controle de versão)
+## Visão geral da implementação
 
-**O que NÃO PODE ser utilizado:**
-- Template React (e qualquer outro template - exceto o Bootstrap)
-- Qualquer outra liguagem de programação diferente de C#
+- **Frontend (Next.js + React 19)**: rotas em App Router, páginas de login, cadastro, recuperação de senha, listagem/gestão de projetos, candidaturas, fórum e perfis públicos.
+- **Backend (FastAPI)**: API REST com autenticação JWT, módulos de usuários, projetos, candidaturas, fórum e perfis.
+- **Integrações**: OAuth 2.0 via ORCID e envio de emails via Resend.
+- **Infraestrutura**: deploy em Render.com, CDN Cloudflare e suporte opcional a Redis.
 
-A tabela a seguir é um exemplo de como ela deverá ser preenchida considerando os artefatos desenvolvidos.
+## Stack utilizada
 
-|ID    | Descrição do Requisito  | Artefatos produzidos | Aluno(a) responsável |
-|------|-----------------------------------------|----|----|
-|RF-001| A aplicação deve permitir que o usuário avalie uma agência de intercâmbio com base na sua experiência| |  |
-|RF-002| A aplicação deve permitir que o usuário inclua comentários ao fazer uma avaliação de uma agência de intercâmbio     |  |  |
-|RF-003| A aplicação deve permitir que o usuário consulte todas as agências de intercâmbio cadastradas ordenando-as com base em suas notas |  |  |
+| Camada         | Tecnologias                                                        |
+| -------------- | ------------------------------------------------------------------ |
+| Frontend       | Next.js 16.2.2, React 19.2.4, TypeScript 5.x, CSS Modules          |
+| Backend        | FastAPI, Uvicorn, Gunicorn, Motor (MongoDB), Pydantic, python-jose |
+| Banco de Dados | MongoDB Atlas                                                      |
+| Integrações    | ORCID OAuth 2.0, Resend (email)                                    |
+| Infraestrutura | Docker, Docker Compose, Render.com, Cloudflare                     |
 
+## Mapeamento de requisitos, artefatos e responsáveis
 
-# Instruções de acesso
+| ID | Descrição do Requisito | Artefatos produzidos | Aluno(a) responsável |
+|----|-------------------------|----------------------|----------------------|
+| RF-01 | Autenticar usuários com email institucional e senha, com sessão via JWT | `backend/auth/autenticacao.py`, `backend/routes/auth_routes.py`, `frontend/src/app/login/`, `frontend/src/app/registrar/`, `frontend/src/contexts/AuthContext.tsx` | Equipe |
+| RF-02 | Autenticar pesquisadores via ORCID (OAuth 2.0) e sincronizar perfil | `backend/controllers/orcid_controller.py`, `backend/routes/auth_routes.py`, `frontend/src/app/callback/orcid/`, `frontend/src/app/u/[orcidId]/` | Equipe |
+| RF-03 | Gerenciar perfis de usuários (visualização e edição) | `backend/controllers/perfil_controller.py`, `backend/routes/perfil_routes.py`, `frontend/src/app/perfil/`, `frontend/src/app/perfil/editar/` | Equipe |
+| RF-04 | CRUD de projetos com filtros e paginação | `backend/controllers/projeto_controller.py`, `backend/routes/projeto_routes.py`, `backend/models/projeto_model.py`, `frontend/src/app/projetos/`, `frontend/src/app/projetos/gerenciar/` | Equipe |
+| RF-05 | Candidatar-se a projetos com envio de currículo e prevenção de duplicidade | `backend/controllers/candidatura_controller.py`, `backend/routes/candidatura_routes.py`, `backend/models/candidatura_model.py`, `frontend/src/app/candidaturas/` | Equipe |
+| RF-06 | Fórum de discussão com criação e busca de tópicos | `backend/routes/forum_routes.py`, `backend/models/forum_model.py`, `frontend/src/app/forum/` | Equipe |
+| RF-07 | Notificar professores por email ao receber candidaturas | `backend/controllers/candidatura_controller.py`, integração Resend | Equipe |
 
-Não deixe de informar o link onde a aplicação estiver disponível para acesso (por exemplo: https://adota-pet.herokuapp.com/src/index.html).
+## Instruções de acesso e verificação
 
-Se houver usuário de teste, o login e a senha também deverão ser informados aqui (por exemplo: usuário - admin / senha - admin).
+- **Aplicação (produção)**: https://uniresu.org  
+- **API (Swagger/OpenAPI)**: https://api.uniresu.org/docs  
+- **Usuário de teste**: não há credenciais públicas; utilizar cadastro.
 
-O link e o usuário/senha descritos acima são apenas exemplos de como tais informações deverão ser apresentadas.
+### Comandos locais (verificação da implementação)
 
-> **Links Úteis**:
->
-> - [Trabalhando com HTML5 Local Storage e JSON](https://www.devmedia.com.br/trabalhando-com-html5-local-storage-e-json/29045)
-> - [JSON Tutorial](https://www.w3resource.com/JSON)
-> - [JSON Data Set Sample](https://opensource.adobe.com/Spry/samples/data_region/JSONDataSetSample.html)
-> - [JSON - Introduction (W3Schools)](https://www.w3schools.com/js/js_json_intro.asp)
-> - [JSON Tutorial (TutorialsPoint)](https://www.tutorialspoint.com/json/index.htm)
+```bash
+# Backend
+cd backend
+pip install -r requirements.txt
+uvicorn main:app --reload --host 127.0.0.1 --port 8000
+
+# Frontend
+cd frontend
+npm install
+npm run dev
+```
