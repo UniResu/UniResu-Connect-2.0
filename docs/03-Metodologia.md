@@ -39,7 +39,8 @@ Equipe de Desenvolvimento: Pedro Magalhães, Daniel Pereira, Juliana Gimenes Mü
 
 ### Processo
 
-Coloque  informações sobre detalhes da implementação do Scrum seguido pelo grupo. O grupo poderá fazer uso de ferramentas on-line para acompanhar o andamento do projeto, a execução das tarefas e o status de desenvolvimento da solução.
+O processo foi marcado por reuniões semanais para distribuição de funções, reportes detalhados e supervisão geral do desenvolvimento. 
+Alem da utilização de scrum para monitoramento durante a semana.
  
 
 ### Ferramentas
@@ -50,10 +51,10 @@ As ferramentas empregadas no projeto são:
 - Ferramentas de comunicação
 - Photoshop e Figma (_wireframing_)
 
-O editor de código foi escolhido porque ele possui uma integração com o
+O VS Code foi escolhido porque ele possui uma integração com o
 sistema de versão. As ferramentas de comunicação utilizadas possuem
 integração semelhante e por isso foram selecionadas. Por fim, para criar
-diagramas utilizamos essa ferramenta por melhor captar as
+diagramas utilizamos Figma por melhor captar as
 necessidades da nossa solução.
 
 Liste quais ferramentas foram empregadas no desenvolvimento do projeto, justificando a escolha delas, sempre que possível.
