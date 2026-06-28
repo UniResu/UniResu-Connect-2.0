@@ -1,22 +1,12 @@
 # Arquitetura da Solução
 
-<span style="color:red">Pré-requisitos: <a href="3-Projeto de Interface.md"> Projeto de Interface</a></span>
-
-Definição de como o software é estruturado em termos dos componentes que fazem parte da solução e do ambiente de hospedagem da aplicação.
-
 ## Diagrama de Classes
 
 ![Diagrama de classes](https://raw.githubusercontent.com/UniResu/UniResu-Connect-2.0/29ce2bdf916914f74e922aff7347f0967fb6590b/docs/diagrama-de-classes-png.png)
 
 ## Modelo ER (Projeto Conceitual)
 
-O Modelo ER representa através de um diagrama como as entidades (coisas, objetos) se relacionam entre si na aplicação interativa.
-
-Sugestão de ferramentas para geração deste artefato: LucidChart e Draw.io.
-
-A referência abaixo irá auxiliá-lo na geração do artefato “Modelo ER”.
-
-> - [Como fazer um diagrama entidade relacionamento | Lucidchart](https://www.lucidchart.com/pages/pt/como-fazer-um-diagrama-entidade-relacionamento)
+<img width="4054" height="2261" alt="Diagrama em branco" src="https://github.com/user-attachments/assets/9114865d-18b3-4b6a-b9d8-fff28513e6f9" />
 
 ## Projeto da Base de Dados
 
