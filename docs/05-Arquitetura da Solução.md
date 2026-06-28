@@ -7,7 +7,6 @@ Definição de como o software é estruturado em termos dos componentes que faze
 ## Diagrama de Classes
 
 ![Diagrama de classes](https://raw.githubusercontent.com/UniResu/UniResu-Connect-2.0/29ce2bdf916914f74e922aff7347f0967fb6590b/docs/diagrama-de-classes-png.png)
-<img src="https://raw.githubusercontent.com/UniResu/UniResu-Connect-2.0/29ce2bdf916914f74e922aff7347f0967fb6590b/docs/diagrama-de-classes-png.png">
 
 ## Modelo ER (Projeto Conceitual)
 
