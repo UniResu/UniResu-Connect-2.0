@@ -66,7 +66,7 @@ Estrutura global definida em `frontend/src/app/layout.tsx`:
 
 ![Footer padrão da aplicação](assets/template/layout-footer.png)
 
-## 3) Comportamento responsivo (breakpoints reais)
+## 3) Comportamento responsivo (com breakpoints)
 
 Breakpoints identificados nos CSS Modules:
 
@@ -77,7 +77,7 @@ Breakpoints identificados nos CSS Modules:
 - **Ajuste de layout ampliado: `min-width: 900px`**  
   Usado na home para reorganização de seções em telas maiores.
 
-Resumo por faixa:
+Resumo por eixo:
 
 - **Mobile (≤640px)**: componentes empilhados, formulários e cards com menor espaçamento.
 - **Tablet (641px–768px)**: transição de densidade; header já utiliza comportamento mobile da navbar.
