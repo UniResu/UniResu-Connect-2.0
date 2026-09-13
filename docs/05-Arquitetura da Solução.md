@@ -18,10 +18,25 @@ Os três artefatos — **Diagrama de Classes, Modelo ER e Projeto da Base de Dad
 
 ## Tecnologias Utilizadas
 
-Descreva aqui qual(is) tecnologias você vai usar para resolver o seu problema, ou seja, implementar a sua solução. Liste todas as tecnologias envolvidas, linguagens a serem utilizadas, serviços web, frameworks, bibliotecas, IDEs de desenvolvimento, e ferramentas.
+| Camada         | Tecnologias                                      |
+| -------------- | ------------------------------------------------ |
+| Frontend       | Next.js 16, React 19                             |
+| Backend        | FastAPI                                          |
+| Banco de Dados | MongoDB Atlas                                    |
+| Infraestrutura | Docker, Render, Cloudflare                       |
 
-Apresente também uma figura explicando como as tecnologias estão relacionadas ou como uma interação do usuário com o sistema vai ser conduzida, por onde ela passa até retornar uma resposta ao usuário.
+```mermaid
+flowchart LR
+    U[Usuário] --> CF[Cloudflare]
+    CF --> FE[Frontend<br/>Next.js 16 + React 19<br/>uniresu.org]
+    FE --> API[Backend<br/>FastAPI<br/>api.uniresu.org]
+    API --> DB[(MongoDB Atlas)]
+    DB --> API
+    API --> FE
+    FE --> U
+```
 
 ## Hospedagem
 
-A hospedagem foi feita no Render com o domínio uniresu.org
+- **Aplicação (produção)**: [https://uniresu.org/](https://uniresu.org/)
+- **API (Swagger/OpenAPI)**: [https://api.uniresu.org/docs](https://api.uniresu.org/docs)
