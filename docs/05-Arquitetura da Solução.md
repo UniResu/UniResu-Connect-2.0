@@ -10,9 +10,7 @@
 
 ## Projeto da Base de Dados
 
-O projeto da base de dados corresponde à representação das entidades e relacionamentos identificadas no Modelo ER, no formato de tabelas, com colunas e chaves primárias/estrangeiras necessárias para representar corretamente as restrições de integridade.
- 
-Para mais informações, consulte o microfundamento "Modelagem de Dados".
+<img width="605" height="954" alt="mermaid_diag" src="https://github.com/user-attachments/assets/7c0fb1f7-1c0a-4f34-9557-f9f4b3249f6f" />
 
 ## ATENÇÃO!!!
 
