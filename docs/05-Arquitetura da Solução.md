@@ -1,4 +1,7 @@
+
 # Arquitetura da Solução
+
+<img width="1226" height="2051" alt="Arquitetura de solução" src="https://github.com/user-attachments/assets/2eea8d8c-6139-40db-b529-4c5a8fadde31" />
 
 ## Diagrama de Classes
 
