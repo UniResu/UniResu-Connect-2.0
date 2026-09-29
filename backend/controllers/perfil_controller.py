@@ -5,7 +5,7 @@ Suporta perfis polimórficos (aluno, professor, pesquisador) na
 mesma coleção 'usuarios' do MongoDB (Single Collection Pattern).
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from datetime import datetime, timezone
 from bson import ObjectId
 from fastapi import HTTPException, status

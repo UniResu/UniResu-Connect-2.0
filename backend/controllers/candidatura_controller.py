@@ -1,53 +1,151 @@
 """
-Controller de candidatura.
+Controller de candidatura com carta de intenção.
 
-Persiste a candidatura no banco e dispara um e-mail de notificação via
-API do Resend (substitui o antigo envio SMTP via smtplib).
+O aluno escreve uma carta de intenção, que vai no CORPO do e-mail ao
+coordenador do projeto (o Lattes entra só como link no final — nunca como
+anexo). O e-mail sai com reply_to no endereço do aluno, para o professor
+responder direto, e o aluno recebe uma cópia de confirmação no e-mail da
+CONTA logada — nunca no e-mail digitado no formulário, para que a
+plataforma não possa ser usada para enviar texto livre a terceiros.
 
 Regras importantes:
-- O envio do e-mail é totalmente isolado: qualquer falha (rede, chave
-  inválida, limite do Resend) é registrada em log e NÃO interrompe a
-  candidatura. O aluno sempre recebe confirmação de sucesso.
-- A candidatura é gravada no banco ANTES da chamada ao Resend — portanto
-  permanece salva mesmo se a API falhar.
-- Produção: domínio uniresu.org verificado no Resend. O remetente usa
-  contato@uniresu.org e o reply_to aponta para a caixa institucional no
-  Gmail, permitindo que respostas dos professores cheguem à equipe.
+- A candidatura é gravada no banco ANTES do envio — permanece salva mesmo
+  se a API do Resend falhar. Falhas de e-mail só são logadas.
+- Rate limit por usuário (CANDIDATURA_LIMITE_HORA / CANDIDATURA_LIMITE_DIA)
+  contado no próprio MongoDB, para valer entre todos os workers.
+- Todo texto do aluno é escapado no HTML do e-mail.
 """
 
-import os
-import base64
-import asyncio
+import html
 import logging
-from datetime import datetime, timezone
+import os
+from datetime import datetime, timedelta, timezone
 
-import resend
 from fastapi import HTTPException
 from bson import ObjectId
 from database.connection import Database
+from controllers.projeto_controller import email_contato
+from models.candidatura_model import CandidaturaCreate
+from services.email import EMAIL_SUPORTE, enviar_email
 
 logger = logging.getLogger(__name__)
 
-# Remetente oficial (domínio uniresu.org verificado no Resend).
-# Lido de EMAIL_REMETENTE; fallback cobre ambientes sem env configurado.
-EMAIL_REMETENTE = os.getenv("EMAIL_REMETENTE", "UniResu <contato@uniresu.org>")
-
-# Caixa institucional de suporte que recebe as respostas (reply_to) quando
-# o destinatário clica em "Responder" no cliente de e-mail.
-EMAIL_SUPORTE = os.getenv("EMAIL_SUPORTE", "uniresuconnect@gmail.com")
-
-# Configura a API key do Resend uma única vez, na importação do módulo.
-resend.api_key = os.getenv("RESEND_API_KEY")
+LIMITE_POR_HORA = int(os.getenv("CANDIDATURA_LIMITE_HORA", "5"))
+LIMITE_POR_DIA = int(os.getenv("CANDIDATURA_LIMITE_DIA", "20"))
 
 
-async def enviar_candidatura(
-    projeto_id: str,
-    email_aluno: str,
-    curriculo_bytes: bytes,
-    curriculo_filename: str,
-    curriculo_content_type: str,
-    usuario_atual: dict,
-):
+# ─────────────────────────────────────────────
+#  Montagem dos e-mails (funções puras)
+# ─────────────────────────────────────────────
+
+def _assunto_seguro(texto: str, limite: int = 200) -> str:
+    texto = " ".join((texto or "").split())
+    return texto if len(texto) <= limite else texto[: limite - 1] + "…"
+
+
+def _carta_html(carta: str) -> str:
+    paragrafos = [p for p in carta.split("\n\n") if p.strip()]
+    return "".join(
+        '<p style="margin:0 0 12px">' + html.escape(p).replace("\n", "<br>") + "</p>"
+        for p in paragrafos
+    )
+
+
+def montar_email_coordenador(projeto: dict, dados: CandidaturaCreate) -> dict:
+    """E-mail ao coordenador: carta no corpo, Lattes como link no final."""
+    titulo = projeto.get("titulo") or "Projeto Acadêmico"
+    professor = projeto.get("nome_professor") or "Professor(a)"
+    e = html.escape
+
+    texto = (
+        f"Prezado(a) {professor},\n\n"
+        f"{dados.nome} ({dados.curso_periodo}) enviou, pela plataforma UniResu Connect, "
+        f"uma carta de intenção para participar do projeto \"{titulo}\".\n\n"
+        "──────── Carta de intenção ────────\n\n"
+        f"{dados.carta}\n\n"
+        "───────────────────────────────────\n\n"
+        f"E-mail do(a) estudante: {dados.email}\n"
+        "Para responder, basta usar a opção \"Responder\" do seu e-mail.\n"
+    )
+    corpo_html = (
+        f"<p>Prezado(a) {e(professor)},</p>"
+        f"<p><strong>{e(dados.nome)}</strong> ({e(dados.curso_periodo)}) enviou, pela plataforma "
+        f"<strong>UniResu Connect</strong>, uma carta de intenção para participar do projeto "
+        f"<strong>{e(titulo)}</strong>.</p>"
+        '<h3 style="margin:24px 0 8px">Carta de intenção</h3>'
+        '<div style="border-left:3px solid #7c3aed;padding:4px 0 4px 16px;margin:0 0 24px">'
+        f"{_carta_html(dados.carta)}</div>"
+        f'<p>E-mail do(a) estudante: <a href="mailto:{e(dados.email)}">{e(dados.email)}</a><br>'
+        'Para responder, basta usar a opção "Responder" do seu e-mail.</p>'
+    )
+    if dados.lattes_url:
+        texto += f"\nCurrículo Lattes: {dados.lattes_url}\n"
+        corpo_html += (
+            f'<p>Currículo Lattes: <a href="{e(dados.lattes_url, quote=True)}">'
+            f"{e(dados.lattes_url)}</a></p>"
+        )
+
+    return {
+        "to": [email_contato(projeto)],
+        "reply_to": dados.email,
+        "subject": _assunto_seguro(f"Carta de intenção — {titulo} — {dados.nome}"),
+        "text": texto,
+        "html": corpo_html,
+    }
+
+
+def montar_email_confirmacao(projeto: dict, dados: CandidaturaCreate, email_conta: str) -> dict:
+    """Cópia de confirmação para o e-mail da conta do aluno (sem expor o do coordenador)."""
+    titulo = projeto.get("titulo") or "Projeto Acadêmico"
+    professor = projeto.get("nome_professor") or "o(a) coordenador(a)"
+    e = html.escape
+    texto = (
+        f"Olá, {dados.nome}!\n\n"
+        f"Sua carta de intenção para o projeto \"{titulo}\" foi enviada a {professor}. "
+        "Quando houver resposta, ela chegará direto neste e-mail.\n\n"
+        "Cópia da sua carta:\n\n"
+        f"{dados.carta}\n\n"
+        "Boa sorte!\nEquipe UniResu Connect"
+    )
+    corpo_html = (
+        f"<p>Olá, {e(dados.nome)}!</p>"
+        f"<p>Sua carta de intenção para o projeto <strong>{e(titulo)}</strong> foi enviada a "
+        f"{e(professor)}. Quando houver resposta, ela chegará direto neste e-mail.</p>"
+        '<h3 style="margin:24px 0 8px">Cópia da sua carta</h3>'
+        '<div style="border-left:3px solid #7c3aed;padding:4px 0 4px 16px">'
+        f"{_carta_html(dados.carta)}</div>"
+        "<p>Boa sorte!<br><strong>Equipe UniResu Connect</strong></p>"
+    )
+    return {
+        "to": [email_conta],
+        "reply_to": EMAIL_SUPORTE,
+        "subject": _assunto_seguro(f"Sua carta de intenção foi enviada — {titulo}"),
+        "text": texto,
+        "html": corpo_html,
+    }
+
+
+# ─────────────────────────────────────────────
+#  Fluxo de candidatura
+# ─────────────────────────────────────────────
+
+async def _verificar_rate_limit(db, usuario_id) -> None:
+    agora = datetime.now(timezone.utc)
+    for janela, limite, texto in (
+        (timedelta(hours=1), LIMITE_POR_HORA, "na última hora"),
+        (timedelta(days=1), LIMITE_POR_DIA, "nas últimas 24 horas"),
+    ):
+        total = await db.candidaturas.count_documents(
+            {"usuario_id": usuario_id, "data_candidatura": {"$gte": agora - janela}}
+        )
+        if total >= limite:
+            raise HTTPException(
+                status_code=429,
+                detail=f"Você atingiu o limite de {limite} candidaturas {texto}. Tente novamente mais tarde.",
+            )
+
+
+async def enviar_candidatura(projeto_id: str, dados: CandidaturaCreate, usuario_atual: dict):
     if not usuario_atual:
         raise HTTPException(status_code=401, detail="Usuário não autenticado.")
     try:
@@ -58,18 +156,15 @@ async def enviar_candidatura(
     db = Database.get_db()
     projeto = await db.projetos.find_one({"_id": obj_id})
 
-    if not projeto:
+    if not projeto or projeto.get("ativo") is False:
         raise HTTPException(status_code=404, detail="Projeto não encontrado")
 
-    email_professor = projeto.get("email_professor")
-    if not email_professor:
+    destino = email_contato(projeto)
+    if not destino:
         raise HTTPException(
             status_code=400,
-            detail="Este projeto não possui um contato de professor configurado.",
+            detail="Este projeto ainda não tem contato cadastrado para receber candidaturas.",
         )
-
-    titulo_projeto = projeto.get("titulo", "Projeto Acadêmico")
-    nome_professor = projeto.get("nome_professor", "Professor(a)")
 
     # Identificador do aluno — prioriza o id já formatado pelo middleware
     # de autenticação, com fallback para o _id bruto do documento do Mongo.
@@ -78,157 +173,69 @@ async def enviar_candidatura(
     # Bloqueia candidatura duplicada ao mesmo projeto pelo mesmo aluno.
     # Verifica tanto por usuario_id quanto por email para cobrir usuários
     # legados sem id vinculado.
-    filtro_duplicado = {
+    candidatura_existente = await db.candidaturas.find_one({
         "projeto_id": obj_id,
-        "$or": [
-            {"usuario_id": usuario_id},
-            {"email_aluno": email_aluno},
-        ],
-    }
-    candidatura_existente = await db.candidaturas.find_one(filtro_duplicado)
+        "$or": [{"usuario_id": usuario_id}, {"email_aluno": dados.email}],
+    })
     if candidatura_existente:
-        raise HTTPException(
-            status_code=409,
-            detail="Você já se candidatou a este projeto.",
-        )
+        raise HTTPException(status_code=409, detail="Você já se candidatou a este projeto.")
 
-    # 1) Persiste a candidatura no banco ANTES do disparo de e-mail,
-    #    para que a candidatura fique salva mesmo se a API do Resend falhar.
+    await _verificar_rate_limit(db, usuario_id)
+
+    agora = datetime.now(timezone.utc)
+
+    # 1) Persiste ANTES do envio — a candidatura fica salva mesmo se o
+    #    Resend falhar.
     candidatura_doc = {
         "projeto_id": obj_id,
-        "titulo_projeto": titulo_projeto,
-        "nome_professor": nome_professor,
-        "email_professor_destino": email_professor,
-        "email_aluno": email_aluno,
+        "titulo_projeto": projeto.get("titulo", "Projeto Acadêmico"),
+        "nome_professor": projeto.get("nome_professor", "Professor(a)"),
+        "email_professor_destino": destino,
+        "origem_projeto": projeto.get("origem", "manual"),
         "usuario_id": usuario_id,
-        "curriculo_filename": curriculo_filename,
-        "curriculo_content_type": curriculo_content_type,
+        "email_conta": usuario_atual.get("email"),
+        "nome_aluno": dados.nome,
+        "curso_periodo": dados.curso_periodo,
+        "email_aluno": dados.email,
+        "lattes_url": dados.lattes_url,
+        "carta_intencao": dados.carta,
         "status": "pendente",
         "mensagem": None,
-        "data_candidatura": datetime.now(timezone.utc),
-        "criada_em": datetime.now(timezone.utc),
+        "data_candidatura": agora,
+        "criada_em": agora,
         "email_enviado": False,
         "email_provider_id": None,
+        "confirmacao_enviada": False,
     }
-    insert_result = await db.candidaturas.insert_one(candidatura_doc)
-    candidatura_id = insert_result.inserted_id
+    candidatura_id = (await db.candidaturas.insert_one(candidatura_doc)).inserted_id
 
-    # 2) Tenta disparar o e-mail via Resend. Nunca propaga exceção.
-    email_enviado, provider_id = await _tentar_enviar_email_resend(
-        email_professor=email_professor,
-        email_aluno=email_aluno,
-        titulo_projeto=titulo_projeto,
-        nome_professor=nome_professor,
-        curriculo_bytes=curriculo_bytes,
-        curriculo_filename=curriculo_filename,
-        curriculo_content_type=curriculo_content_type,
-    )
+    # 2) E-mail ao coordenador + cópia ao aluno. Nunca propagam exceção.
+    email_enviado, provider_id = await enviar_email(montar_email_coordenador(projeto, dados))
+    confirmacao_enviada = False
+    email_conta = usuario_atual.get("email")
+    if email_enviado and email_conta:
+        confirmacao_enviada, _ = await enviar_email(montar_email_confirmacao(projeto, dados, email_conta))
 
-    # 3) Atualiza o registro com o resultado do envio (best-effort).
-    if email_enviado:
-        try:
-            await db.candidaturas.update_one(
-                {"_id": candidatura_id},
-                {"$set": {"email_enviado": True, "email_provider_id": provider_id}},
-            )
-        except Exception as e:
-            logger.warning("Não foi possível atualizar status de envio da candidatura %s: %s", candidatura_id, e)
+    # 3) Registra o resultado do envio (best-effort).
+    try:
+        await db.candidaturas.update_one(
+            {"_id": candidatura_id},
+            {"$set": {
+                "email_enviado": email_enviado,
+                "email_provider_id": provider_id,
+                "confirmacao_enviada": confirmacao_enviada,
+            }},
+        )
+    except Exception as e:
+        logger.warning("Não foi possível atualizar status de envio da candidatura %s: %s", candidatura_id, e)
 
     return {
         "status": "success",
         "message": "Candidatura enviada com sucesso!",
         "candidatura_id": str(candidatura_id),
         "email_enviado": email_enviado,
+        "confirmacao_enviada": confirmacao_enviada,
     }
-
-
-async def _tentar_enviar_email_resend(
-    email_professor: str,
-    email_aluno: str,
-    titulo_projeto: str,
-    nome_professor: str,
-    curriculo_bytes: bytes,
-    curriculo_filename: str,
-    curriculo_content_type: str,
-):
-    """
-    Dispara o e-mail de candidatura via API do Resend.
-
-    Retorna uma tupla (enviado: bool, provider_id: Optional[str]).
-    Nunca levanta exceção — falhas são apenas logadas.
-    """
-    try:
-        if not resend.api_key:
-            logger.warning(
-                "RESEND_API_KEY ausente. Candidatura persistida no banco, "
-                "mas e-mail NÃO foi disparado."
-            )
-            return False, None
-
-        corpo_texto = (
-            f"Prezado(a) {nome_professor},\n\n"
-            f"Você recebeu uma nova candidatura para o projeto "
-            f"\"{titulo_projeto}\" através da plataforma UniResu Connect.\n\n"
-            f"Dados do candidato:\n"
-            f"- E-mail para contato: {email_aluno}\n\n"
-            f"O currículo do candidato segue em anexo a este e-mail.\n\n"
-            f"Para responder diretamente ao candidato, utilize o endereço "
-            f"informado acima.\n\n"
-            f"Atenciosamente,\n"
-            f"Equipe UniResu Connect"
-        )
-
-        corpo_html = (
-            f"<p>Prezado(a) {nome_professor},</p>"
-            f"<p>Você recebeu uma nova candidatura para o projeto "
-            f"<strong>{titulo_projeto}</strong> através da plataforma "
-            f"<strong>UniResu Connect</strong>.</p>"
-            f"<p><strong>Dados do candidato:</strong><br>"
-            f"E-mail para contato: <a href=\"mailto:{email_aluno}\">{email_aluno}</a></p>"
-            f"<p>O currículo do candidato segue em anexo a este e-mail.</p>"
-            f"<p>Para responder diretamente ao candidato, utilize o endereço "
-            f"informado acima.</p>"
-            f"<p>Atenciosamente,<br><strong>Equipe UniResu Connect</strong></p>"
-        )
-
-        params: "resend.Emails.SendParams" = {
-            "from": EMAIL_REMETENTE,
-            "to": [email_professor],
-            "reply_to": EMAIL_SUPORTE,
-            "subject": f"Nova Candidatura Recebida: {titulo_projeto}",
-            "text": corpo_texto,
-            "html": corpo_html,
-            "attachments": [
-                {
-                    "filename": curriculo_filename,
-                    "content": base64.b64encode(curriculo_bytes).decode("ascii"),
-                    "content_type": curriculo_content_type or "application/octet-stream",
-                }
-            ],
-        }
-
-        # O SDK do Resend é síncrono (requests); rodamos em thread para
-        # não bloquear o event loop do FastAPI.
-        resposta = await asyncio.to_thread(resend.Emails.send, params)
-
-        provider_id = None
-        if isinstance(resposta, dict):
-            provider_id = resposta.get("id")
-
-        logger.info(
-            "E-mail de candidatura enviado via Resend (id=%s) para %s",
-            provider_id,
-            email_professor,
-        )
-        return True, provider_id
-
-    except Exception as e:
-        logger.error(
-            "Falha ao enviar e-mail via Resend (candidatura confirmada mesmo assim): %s",
-            e,
-            exc_info=True,
-        )
-        return False, None
 
 
 async def listar_candidaturas_do_aluno(usuario_atual: dict) -> list[dict]:

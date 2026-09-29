@@ -3,15 +3,17 @@ Rotas de projetos — busca pública + CRUD protegido para professores/pesquisad
 """
 
 from fastapi import APIRouter, Query, Depends, HTTPException, status
-from typing import List, Optional
+from typing import List, Literal, Optional
 from controllers.projeto_controller import (
     buscar_projetos_controller,
+    listar_unidades_controller,
+    status_sigaa_controller,
     criar_projeto_controller,
     listar_meus_projetos,
     editar_projeto_controller,
     deletar_projeto_controller,
 )
-from models.projeto_model import ProjetoResponse, ProjetoCreate
+from models.projeto_model import ProjetoResponse, ProjetoCreate, ProjetoPublicoResponse, SigaaStatusResponse
 from auth.autenticacao import get_usuario_atual
 
 router = APIRouter()
@@ -30,13 +32,16 @@ def verificar_papel(usuario: dict):
 
 # ── Busca pública ──
 
-@router.get("/projetos/buscar", response_model=List[ProjetoResponse])
+@router.get("/projetos/buscar", response_model=List[ProjetoPublicoResponse])
 async def buscar_projetos_route(
-    q: Optional[str] = None,
+    q: Optional[str] = Query(None, max_length=200),
     local: Optional[str] = None,
     area: Optional[str] = None,
     remoto: bool = False,
     tipos: Optional[str] = Query(None),
+    tipo_sigaa: Optional[Literal["pesquisa", "extensao"]] = Query(None, description="Pesquisa ou extensão (SIGAA)"),
+    unidade: Optional[str] = Query(None, max_length=300, description="Unidade/departamento"),
+    incluir_inativos: bool = Query(False, description="Inclui projetos inativos/finalizados"),
     last_id: Optional[str] = Query(None, description="ID do último item (paginação por cursor)"),
     page_size: int = Query(20, ge=1, le=50, description="Itens por página"),
 ):
@@ -47,9 +52,24 @@ async def buscar_projetos_route(
         area=area,
         remoto=remoto,
         tipos=tipos,
+        tipo_sigaa=tipo_sigaa,
+        unidade=unidade,
+        incluir_inativos=incluir_inativos,
         last_id=last_id,
         page_size=page_size,
     )
+
+
+@router.get("/projetos/unidades", response_model=List[str])
+async def listar_unidades_route(tipo_sigaa: Optional[Literal["pesquisa", "extensao"]] = None):
+    """Unidades/departamentos com projetos ativos (opções do filtro)."""
+    return await listar_unidades_controller(tipo_sigaa)
+
+
+@router.get("/projetos/sigaa/status", response_model=SigaaStatusResponse)
+async def status_sigaa_route():
+    """Data da última atualização dos dados vindos do SIGAA."""
+    return await status_sigaa_controller()
 
 
 # ── CRUD protegido ──

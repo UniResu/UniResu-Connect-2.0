@@ -1,0 +1,11 @@
+# Lint do backend. Regras padrão do ruff (pyflakes + erros de sintaxe/estilo
+# graves); o código legado não segue um formatador, então não usamos `format`.
+target-version = "py312"
+line-length = 120
+extend-exclude = ["venv"]
+
+[lint]
+# Conjunto clássico, explícito (as versões novas do ruff ampliaram o padrão):
+# erros de sintaxe/indentação (E4, E7, E9) + pyflakes (F: imports/variáveis
+# não usados, nomes indefinidos etc.).
+select = ["E4", "E7", "E9", "F"]

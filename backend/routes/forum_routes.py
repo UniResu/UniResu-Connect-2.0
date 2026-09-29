@@ -233,8 +233,6 @@ async def reagir_topico(
     likes = list(topico.get("likes", []))
     dislikes = list(topico.get("dislikes", []))
 
-    oposto = "dislikes" if tipo == "like" else "likes"
-    atual = "likes" if tipo == "like" else "dislikes"
     lista_atual = likes if tipo == "like" else dislikes
     lista_oposta = dislikes if tipo == "like" else likes
 

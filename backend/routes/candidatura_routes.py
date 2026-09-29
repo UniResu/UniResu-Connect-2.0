@@ -1,12 +1,12 @@
 from typing import List
 
-from fastapi import APIRouter, Form, File, UploadFile, HTTPException, Depends
+from fastapi import APIRouter, Depends
 
 from controllers.candidatura_controller import (
     enviar_candidatura,
     listar_candidaturas_do_aluno,
 )
-from models.candidatura_model import CandidaturaResponse
+from models.candidatura_model import CandidaturaCreate, CandidaturaResponse
 from auth.autenticacao import get_usuario_atual
 
 router = APIRouter()
@@ -15,33 +15,16 @@ router = APIRouter()
 @router.post("/projetos/{id}/candidatar")
 async def candidatar_projeto(
     id: str,
-    email: str = Form(...),
-    curriculo: UploadFile = File(...),
-    usuario_atual: dict = Depends(get_usuario_atual)
+    dados: CandidaturaCreate,
+    usuario_atual: dict = Depends(get_usuario_atual),
 ):
     """
-    Recebe os dados da candidatura (e-mail do aluno e o currículo em PDF/DOCX)
-    via formulário multipart, persiste em MongoDB e envia por e-mail para o
-    professor responsável. Bloqueia candidaturas duplicadas ao mesmo projeto.
+    Recebe a candidatura com carta de intenção (JSON), persiste no MongoDB
+    e envia a carta no corpo do e-mail ao coordenador do projeto, com
+    reply-to no e-mail do aluno e cópia de confirmação para o aluno.
+    Bloqueia candidaturas duplicadas e aplica rate limit por usuário.
     """
-
-    if not curriculo.filename:
-        raise HTTPException(status_code=400, detail="Arquivo não selecionado")
-
-    conteudo = await curriculo.read()
-
-    # Limita tamanho para ~5MB por precaução do Resend (limite de payload).
-    if len(conteudo) > 5 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="O currículo deve ter no máximo 5MB")
-
-    return await enviar_candidatura(
-        projeto_id=id,
-        email_aluno=email,
-        curriculo_bytes=conteudo,
-        curriculo_filename=curriculo.filename,
-        curriculo_content_type=curriculo.content_type or "application/octet-stream",
-        usuario_atual=usuario_atual
-    )
+    return await enviar_candidatura(projeto_id=id, dados=dados, usuario_atual=usuario_atual)
 
 
 @router.get("/candidaturas/me", response_model=List[CandidaturaResponse])

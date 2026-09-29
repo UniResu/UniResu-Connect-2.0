@@ -13,7 +13,7 @@ import secrets
 import hashlib
 import base64
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from fastapi import HTTPException, status
 from dotenv import load_dotenv
 import httpx

@@ -1,0 +1,1259 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"  "http://www.w3.org/TR/html4/loose.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta content="no-cache" http-equiv="Pragma"/>
+<title>SIGAA - Sistema Integrado de Gestão de Atividades Acadêmicas</title>
+<link class="component" href="/sigaa/a4j/s/3_3_3.Finalorg/richfaces/renderkit/html/css/basic_classes.xcss/DATB/eAF7sqpgb-jyGdIAFrMEaw__.jsf" rel="stylesheet" type="text/css"/><link class="component" href="/sigaa/a4j/s/3_3_3.Finalorg/richfaces/renderkit/html/css/extended_classes.xcss/DATB/eAF7sqpgb-jyGdIAFrMEaw__.jsf" media="rich-extended-skinning" rel="stylesheet" type="text/css"/><script src="/sigaa/a4j/g/3_3_3.Finalorg.ajax4jsf.javascript.AjaxScript.jsf" type="text/javascript"></script><script src="/sigaa/a4j/g/3_3_3.Finalorg.ajax4jsf.javascript.PrototypeScript.jsf" type="text/javascript"></script><script src="/sigaa/a4j/g/3_3_3.Finalorg/richfaces/renderkit/html/scripts/jquery/jquery.js.jsf" type="text/javascript"></script><script src="/sigaa/a4j/g/3_3_3.Finalorg/richfaces/renderkit/html/scripts/available.js.jsf" type="text/javascript"></script><script src="/sigaa/a4j/g/3_3_3.Finalorg.ajax4jsf.javascript.SmartPositionScript.jsf" type="text/javascript"></script><script src="/sigaa/a4j/g/3_3_3.Finalorg/richfaces/renderkit/html/scripts/browser_info.js.jsf" type="text/javascript"></script><script src="/sigaa/a4j/g/3_3_3.Finalorg/richfaces/renderkit/html/scripts/utils.js.jsf" type="text/javascript"></script><script src="/sigaa/a4j/g/3_3_3.Finalorg/richfaces/renderkit/html/scripts/scriptaculous/effects.js.jsf" type="text/javascript"></script><script src="/sigaa/a4j/g/3_3_3.Finalscripts/suggestionbox.js.jsf" type="text/javascript"></script><link class="component" href="/sigaa/a4j/s/3_3_3.Finalorg/richfaces/renderkit/html/css/suggestionbox.xcss/DATB/eAF7sqpgb-jyGdIAFrMEaw__.jsf" rel="stylesheet" type="text/css"/><script type="text/javascript">window.RICH_FACES_EXTENDED_SKINNING_ON=true;</script><script src="/sigaa/a4j/g/3_3_3.Finalorg/richfaces/renderkit/html/scripts/skinning.js.jsf" type="text/javascript"></script><link href="/sigaa/img/sigaa.ico" rel="shortcut icon"/>
+<script src="/shared/jsBundles/jawr_loader.js" type="text/javascript"></script>
+<script src="/sigaa/javascript/prevenir-duplo-clique.js" type="text/javascript"></script>
+<script type="text/javascript">
+		JAWR.loader.style('/javascript/ext-2.0.a.1/resources/css/ext-all.css', 'all');
+		JAWR.loader.style('/css/public.css','all');
+	 	JAWR.loader.script('/bundles/js/sigaa_base.js');
+	 	JAWR.loader.script('/bundles/js/ext2_all.js');
+
+	 	
+	</script>
+<link href="/sigaa/cssBundles/gzip_787491763/public/css/public.css" media="all" rel="stylesheet" type="text/css"/>
+<link href="/shared/beta/css/font-awesome.css" media="screen" rel="stylesheet" type="text/css"/>
+<script src="/shared/javascript/STICookieConsent.js"></script>
+<script>
+	    document.addEventListener("DOMContentLoaded", () => {
+	    	generateCookieConsentModal("SIGAA", "N&#243;s usamos cookies para melhorar sua experi&#234;ncia de navega&#231;&#227;o no portal. Ao utilizar o %sitename%, voc&#234; concorda com a pol&#237;tica de monitoramento de cookies. Para ter mais informa&#231;&#245;es sobre como isso &#233; feito e como remover, acesse a <a href=%cookie-policy%>Pol&#237;tica de Privacidade</a>. Para saber como a UNIR trata os dados, acesse a <a href=%privacy-policy%> Pol&#237;&#173;tica de cookies</a>. Se voc&#234; concorda, clique em %button-text%.", "https://unir.br/", "https://unir.br/");
+	    })
+	</script>
+</head>
+<body>
+<div id="container">
+<div id="container-inner">
+<div id="cabecalho">
+<div id="logo">
+<a href="/sigaa/public/"> <img src="http://sigadmin.unir.br/shared/img/UNIR/logo_UNIR_vertical.png"/> </a>
+</div>
+<div id="identificacao">
+<span class="ufrn"> Fundação Universidade Federal de Rondônia </span>
+<span class="data">
+				 Porto Velho, 
+				 29 de Setembro de 
+				 2026 
+			</span>
+<a href="/sigaa/public/" id="home" style="width: 450px;" title="Página inicial"> </a>
+<div id="menu_info">
+<ul>
+<li class="acessibilidade">
+<a alt="Acessível para pessoas com deficiência visual" href="https://sigaa.unir.br/sigaa/verTelaLogin.do?acessibilidade=true" title="Acessível para pessoas com deficiência visual">
+							Acessível para pessoas com deficiência visual
+						</a>
+</li>
+<li class="login">
+<a alt="Clique aqui para logar-se no SIGAA" href="/sigaa/" title="Clique aqui para logar-se no SIGAA">
+							Login
+						<i class="fa fa-angle-right"></i></a>
+</li>
+</ul>
+</div>
+</div>
+<br clear="all"/>
+</div>
+<div id="corpo">
+<style>
+	.camposBusca{
+		width: 560px;
+	}
+</style>
+<h2>Consulte as atividades de extensão desenvolvidas pela UNIR</h2>
+<br/>
+<form action="/sigaa/public/extensao/consulta_extensao.jsf" enctype="application/x-www-form-urlencoded" id="formBuscaAtividade" method="post" name="formBuscaAtividade">
+<input name="formBuscaAtividade" type="hidden" value="formBuscaAtividade"/>
+<table class="formulario" width="80%">
+<caption>Busca por Ações de Extensão</caption>
+<tbody>
+<tr>
+<td><input class="noborder" id="formBuscaAtividade:selectBuscaTitulo" name="formBuscaAtividade:selectBuscaTitulo" type="checkbox"/> </td>
+<td> <label for="nomeProjeto"> Título da Ação </label> </td>
+<td><input class="camposBusca" id="formBuscaAtividade:buscaTitulo" name="formBuscaAtividade:buscaTitulo" onfocus="javascript:$('formBuscaAtividade:selectBuscaTitulo').checked = true;" type="text" value=""/></td>
+</tr>
+<tr>
+<td><input class="noborder" id="formBuscaAtividade:selectBuscaTipoAtividade" name="formBuscaAtividade:selectBuscaTipoAtividade" type="checkbox"/> </td>
+<td> <label for="situacaoProjeto"> Tipo de Atividade </label> </td>
+<td><select class="camposBusca" id="formBuscaAtividade:buscaTipoAcao" name="formBuscaAtividade:buscaTipoAcao" onfocus="javascript:$('formBuscaAtividade:selectBuscaTipoAtividade').checked = true;" size="1"> <option value="0">-- SELECIONE UM TIPO DE AÇÃO --</option>
+<option value="3">CURSO</option>
+<option value="4">EVENTO</option>
+<option value="5">PRESTAÇÃO DE SERVIÇOS</option>
+<option value="6">PRODUTO</option>
+<option value="1">PROGRAMA</option>
+<option selected="selected" value="2">PROJETO</option>
+<option value="7">TODOS</option>
+</select>
+</td>
+</tr>
+<tr>
+<td><input class="noborder" id="formBuscaAtividade:selectBuscaUnidadeProponente" name="formBuscaAtividade:selectBuscaUnidadeProponente" type="checkbox"/> </td>
+<td><label for="unidade"> Unidade Responsável: </label> </td>
+<td>
+<select class="camposBusca" id="formBuscaAtividade:buscaUnidade" name="formBuscaAtividade:buscaUnidade" onfocus="javascript:$('formBuscaAtividade:selectBuscaUnidadeProponente').checked = true;" size="1"> <option selected="selected" value="0">-- SELECIONE UM DEPARTAMENTO --</option>
+<option value="1005">ARQUIVO GERAL (11.56.11)</option>
+<option value="181">ASSESSORIA DA PRAD (11.26.01)</option>
+<option value="914">ASSESSORIA DE CERIMONIAL E EVENTOS (11.68.02)</option>
+<option value="164">ASSESSORIA DO(A) REITOR(A) (11.68.01)</option>
+<option value="159">ASSESSORIA DOS CONSELHOS SUPERIORES (11.10.01)</option>
+<option value="160">AUDITORIA INTERNA (11.11)</option>
+<option value="129">CAMPUS ARIQUEMES (11.35)</option>
+<option value="881">CAMPUS PORTO VELHO (11.42)</option>
+<option value="130">CAMPUS ROLIM DE MOURA (11.41)</option>
+<option value="928">CENTRO DE EDUCAÇÃO À DISTÂNCIA E NOVAS TECNOLOGIAS (11.01.01.01)</option>
+<option value="165">COMISSÃO PERMANENTE DE PESSOAL DOCENTE (11.45)</option>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</select>
+</td>
+</tr>
+<tr>
+<td><input class="noborder" id="formBuscaAtividade:selectBuscaServidor" name="formBuscaAtividade:selectBuscaServidor" type="checkbox"/> </td>
+<td>Coordenador:</td>
+<td>
+<input class="camposBusca" id="formBuscaAtividade:nomeServidor" name="formBuscaAtividade:nomeServidor" size="59" type="text" value=""/><div class="rich-sb-common-container" id="formBuscaAtividade:suggestionNomeServ" style="display:none; z-index: 201;width:450px;height:100px;;;"><div class="rich-sb-ext-decor-1"><div class="rich-sb-ext-decor-2" style=";; border-width: null  null  null  null ;"><table border="0" cellpadding="0" cellspacing="1" class="rich-sb-ext-decor-3"><tbody><tr><td><div class="_suggestion_size_ rich-sb-overflow" style="width:446px;height:96px;"><table border="0" id="formBuscaAtividade:suggestionNomeServ:suggest" width="100%"><tbody><tr style="display:none;"><td></td></tr></tbody></table></div></td></tr></tbody></table></div></div><div class="rich-sb-shadow" style="opacity:0.1; filter:alpha(opacity=10);top: 4px; left: 4px; "></div></div><div id="formBuscaAtividade:suggestionNomeServ_script" style="display:none;"><script type="text/javascript">Richfaces.onAvailable('formBuscaAtividade:nomeServidor', function() { new RichFaces.Suggestion('formBuscaAtividade','formBuscaAtividade:nomeServidor','formBuscaAtividade:suggestionNomeServ',{'minChars':'3','height':'100','onselect':function(suggestion,event){A4J.AJAX.Submit('formBuscaAtividade',event,{'similarityGroupingId':'formBuscaAtividade:suggestionNomeServ:j_id_jsp_1888680434_18','parameters':{'apenasAtivos':'false','formBuscaAtividade:suggestionNomeServ:j_id_jsp_1888680434_18':'formBuscaAtividade:suggestionNomeServ:j_id_jsp_1888680434_18'} ,'containerId':'j_id_jsp_1888680434_0'} )},'implicitEventsQueue':'formBuscaAtividade:suggestionNomeServ','width':'450','similarityGroupingId':'formBuscaAtividade:suggestionNomeServ','parameters':{'ajaxSingle':'formBuscaAtividade:suggestionNomeServ','formBuscaAtividade:suggestionNomeServ':'formBuscaAtividade:suggestionNomeServ'} ,'containerId':'j_id_jsp_1888680434_0'} );
+});</script></div><iframe id="formBuscaAtividade:suggestionNomeServ_iframe" src="/sigaa/a4j/g/3_3_3.Finalorg/richfaces/renderkit/html/images/spacer.gif.jsf" style="position:absolute;display:none;z-index:200;"></iframe><input autocomplete="off" id="formBuscaAtividade:suggestionNomeServ_selection" name="formBuscaAtividade:suggestionNomeServ_selection" type="hidden"/>
+</td>
+</tr>
+<tr>
+<td><input checked="checked" class="noborder" id="formBuscaAtividade:selectBuscaAno" name="formBuscaAtividade:selectBuscaAno" type="checkbox"/></td>
+<td><label for="nomeProjeto"> Ano </label> </td>
+<td><input id="formBuscaAtividade:buscaAno" name="formBuscaAtividade:buscaAno" onfocus="javascript:$('formBuscaAtividade:selectBuscaAno').checked = true;" onkeyup="return formatarInteiro(this);" size="10" type="text" value="2026"/></td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td colspan="3">
+<input id="formBuscaAtividade:btBuscar" name="formBuscaAtividade:btBuscar" type="submit" value="Buscar"/> 
+						<input id="formBuscaAtividade:limpar" name="formBuscaAtividade:limpar" type="submit" value="Cancelar"/>
+</td>
+</tr>
+</tfoot>
+</table>
+<input id="javax.faces.ViewState" name="javax.faces.ViewState" type="hidden" value="j_id2"/>
+</form>
+<br/><br/><br/>
+<!-- ######################################################################################################################## -->
+<!-- Resultado da busca -->
+<form action="/sigaa/public/extensao/consulta_extensao.jsf" enctype="application/x-www-form-urlencoded" id="form" method="post" name="form">
+<input name="form" type="hidden" value="form"/>
+<table class="listagem" width="100%">
+<caption>Ações de extensão localizadas (8)</caption>
+<thead>
+<tr>
+<th>Ano/Título</th>
+<th>Tipo</th>
+<th>Departamento</th>
+</tr>
+</thead>
+<tbody>
+<tr class="linhaPar">
+<td>
+<script language="Javascript" type="text/javascript">function dpf(f) {var adp = f.adp;if (adp != null) {for (var i = 0;i < adp.length;i++) {f.removeChild(adp[i]);}}};function apf(f, pvp) {var adp = new Array();f.adp = adp;var i = 0;for (k in pvp) {var p = document.createElement("input");p.type = "hidden";p.name = k;p.value = pvp[k];f.appendChild(p);adp[i++] = p;}};function jsfcljs(f, pvp, t) {apf(f, pvp);var ft = f.target;if (t) {f.target = t;}f.submit();f.target = ft;dpf(f);};</script>
+<a href="#" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('form'),{'form:j_id_jsp_1888680434_25':'form:j_id_jsp_1888680434_25','idAtividadeExtensaoSelecionada':'4695','acao':'2'},'');}return false" title="Visualizar Ação">2026 - A análise da teoria democrática no discurso jurídico e seu impacto nas políticas públicas do Estado de Rondônia.</a>
+</td>
+<td> PRODUTO </td>
+<td>CODIR</td>
+</tr>
+
+
+
+
+
+
+
+
+
+
+<tr class="linhaImpar">
+<td>
+<a href="#" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('form'),{'form:j_id_jsp_1888680434_25j_id_11':'form:j_id_jsp_1888680434_25j_id_11','idAtividadeExtensaoSelecionada':'4529','acao':'2'},'');}return false" title="Visualizar Ação">2026 - Implantação de um pomar urbano na cidade de Rolim de Moura</a>
+</td>
+<td> PRESTAÇÃO DE SERVIÇOS </td>
+<td>DCRM</td>
+</tr>
+
+
+
+
+
+
+<tr class="linhaPar">
+<td>
+<a href="#" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('form'),{'form:j_id_jsp_1888680434_25j_id_18':'form:j_id_jsp_1888680434_25j_id_18','idAtividadeExtensaoSelecionada':'4711','acao':'2'},'');}return false" title="Visualizar Ação">2026 - XXI Jornada Científica CEDSA</a>
+</td>
+<td> EVENTO </td>
+<td>DNCSA</td>
+</tr>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<tr class="linhaPar">
+<td>
+<a href="#" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('form'),{'form:j_id_jsp_1888680434_25j_id_184':'form:j_id_jsp_1888680434_25j_id_184','idAtividadeExtensaoSelecionada':'4705','acao':'2'},'');}return false" title="Visualizar Ação">2026 - Multiplicando Saberes: aulões de matemática para o fortalecimento da aprendizagem</a>
+</td>
+<td> CURSO </td>
+<td>DCJP</td>
+</tr>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<tr class="linhaImpar">
+<td>
+<a href="#" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('form'),{'form:j_id_jsp_1888680434_25j_id_305':'form:j_id_jsp_1888680434_25j_id_305','idAtividadeExtensaoSelecionada':'4527','acao':'2'},'');}return false" title="Visualizar Ação">2026 - Núcleo Educacional do Observatório Regional da Violência contra Educadoras/es (ORVE) Norte</a>
+</td>
+<td> PROJETO </td>
+<td>CCPDG</td>
+</tr>
+<tr class="linhaPar">
+<td>
+<a href="#" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('form'),{'form:j_id_jsp_1888680434_25j_id_306':'form:j_id_jsp_1888680434_25j_id_306','idAtividadeExtensaoSelecionada':'4534','acao':'2'},'');}return false" title="Visualizar Ação">2026 - MEDPOP - Informação instantânea sobre saúde</a>
+</td>
+<td> PROJETO </td>
+<td>DNS</td>
+</tr>
+<tr class="linhaImpar">
+<td>
+<a href="#" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('form'),{'form:j_id_jsp_1888680434_25j_id_307':'form:j_id_jsp_1888680434_25j_id_307','idAtividadeExtensaoSelecionada':'4712','acao':'2'},'');}return false" title="Visualizar Ação">2026 - Letras Info Hub: Literatura, Linguística, Cultura e Comunidade</a>
+</td>
+<td> PROJETO </td>
+<td>DCA</td>
+</tr>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<tr class="linhaImpar">
+<td>
+<a href="#" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('form'),{'form:j_id_jsp_1888680434_25j_id_543':'form:j_id_jsp_1888680434_25j_id_543','idAtividadeExtensaoSelecionada':'4019','acao':'2'},'');}return false" title="Visualizar Ação">2026 - LETRAMENTO EM AVALIAÇÃO DE TECNOLOGIAS EM SAÚDE E POLÍTICAS INFORMADAS POR EVIDÊNCIAS: FORMAÇÃO, PARCERIAS E FORTALECIMENTO DA TOMADA DE DECISÃO BASEADA EM EVIDÊNCIAS NO SUS</a>
+</td>
+<td> PROGRAMA </td>
+<td>DAENF</td>
+</tr>
+
+
+
+
+
+
+</tbody>
+</table>
+<input id="javax.faces.ViewState" name="javax.faces.ViewState" type="hidden" value="j_id2"/>
+</form>
+<!-- ######################################################################################################################### -->
+<br/>
+<div style="width: 80%; text-align: center; margin: 0 auto;">
+<a href="/sigaa/public/home.jsf" style="color: #404E82;">&lt;&lt; voltar ao menu principal</a>
+</div>
+<br/>
+<script type="text/javascript">
+		var lista = getEl(document).getChildrenByClassName('descricao')
+		for (i = 0; i < lista.size(); i++) {
+			lista[i].setDisplayed(false);
+		}
+	</script>
+<div class="clear"></div>
+</div>
+<div id="rodape">
+<p>	
+			SIGAA | Diretoria de Tecnologia da Informação - (69) 2182-2176 | Copyright © 2006-2026 - UNIR - SigBoss1.unir.br.SigBoss1
+			 
+				<a onclick="javascript:versao();">v4.19.16</a>
+</p>
+</div>
+<!-- Fim dos containers -->
+</div>
+</div>
+<script>
+	  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+	
+	  ga('create', 'UA-148645666-1', 'auto');
+	  ga('send', 'pageview');
+	
+	</script>
+<!-- MYFACES JAVASCRIPT -->
+</body>
+</html>
+<script charset="UTF-8" type="text/javascript">
+		function versao(){
+			var msg='';
+			msg+='SIGAA 4.19.16,  publicado em: 09/07/2026 15:34\n\n';
+			msg+='Depend\u00eancias:\n';
+			msg+='Arquitetura 5.2.1_unir\n';
+			msg+='Entidades Comuns 3.1.1\n';
+			msg+='Servicos Integrados 3.1.1\n';
+			msg+='SharedResources 3.1.0\n';
+			msg+='Servicos Remoto Biblioteca null\n';
+			msg+='SIGAA Mobile Objects 1.0.0\n\n';
+			msg+='Copyright SINFO/UFRN';
+			alert(msg);
+		}	
+	</script>
+<style>
+a.linkMobile:link {
+	color: #003395;
+	font-weight: bold;
+	font-size: inherit;
+	text-decoration: none;
+}
+
+a.linkMobile:visited {
+	color: #003390;
+	text-decoration: none;
+	font-weight: bold;
+}
+
+a.linkMobile:active {
+	color: #444444;
+	text-decoration: none;
+	font-weight: bold;
+}
+</style>

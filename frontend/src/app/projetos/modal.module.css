@@ -178,3 +178,50 @@
   font-weight: 500;
   margin-top: var(--space-md);
 }
+
+/* ── Carta de intenção ── */
+
+.textarea {
+  padding: 0.75rem var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 180px;
+}
+.textarea::placeholder { color: var(--text-muted); }
+.textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-100);
+}
+
+.hint {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+.hintOk { color: var(--success); }
+
+.optional {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.externalLink {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+.externalLink:hover { text-decoration: underline; }
+
+.noticeMessage {
+  padding: var(--space-md);
+  background: #fffbeb;
+  color: #92400e;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  margin-bottom: var(--space-md);
+}
