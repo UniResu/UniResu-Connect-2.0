@@ -5,11 +5,13 @@ Usa o lifespan context manager (padrão moderno do FastAPI) para gerenciar
 inicialização e encerramento da conexão com o banco de dados.
 """
 
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from database.connection import Database
+from database.indexes import criar_indices
 from routes.usuario_routes import router as router_usuario
 from routes.projeto_routes import router as router_projeto
 from routes.forum_routes import router as router_forum
@@ -36,6 +38,11 @@ async def lifespan(app: FastAPI):
     """Gerencia o ciclo de vida da aplicação (startup/shutdown)."""
     # ── Startup ──
     await Database.connect()
+    try:
+        await criar_indices(Database.get_db())
+    except Exception as e:
+        # Índice é otimização/garantia extra — não derruba a API se falhar.
+        logging.getLogger(__name__).error("Falha ao criar índices do MongoDB: %s", e)
     yield
     # ── Shutdown ──
     await Database.disconnect()
