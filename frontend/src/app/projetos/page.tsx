@@ -499,7 +499,7 @@ export default function ProjetosPage() {
                 <div className={modalStyles.successMessage}>
                   Sua carta de intenção foi enviada à coordenação do projeto! ✅
                   <br />
-                  Enviamos uma cópia para o seu e-mail.
+                  Enviamos uma cópia para o e-mail da sua conta.
                 </div>
               ) : (
                 <form onSubmit={handleCandidatar}>

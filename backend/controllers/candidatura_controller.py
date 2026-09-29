@@ -4,7 +4,9 @@ Controller de candidatura com carta de intenção.
 O aluno escreve uma carta de intenção, que vai no CORPO do e-mail ao
 coordenador do projeto (o Lattes entra só como link no final — nunca como
 anexo). O e-mail sai com reply_to no endereço do aluno, para o professor
-responder direto, e o aluno recebe uma cópia de confirmação.
+responder direto, e o aluno recebe uma cópia de confirmação no e-mail da
+CONTA logada — nunca no e-mail digitado no formulário, para que a
+plataforma não possa ser usada para enviar texto livre a terceiros.
 
 Regras importantes:
 - A candidatura é gravada no banco ANTES do envio — permanece salva mesmo
@@ -92,8 +94,8 @@ def montar_email_coordenador(projeto: dict, dados: CandidaturaCreate) -> dict:
     }
 
 
-def montar_email_confirmacao(projeto: dict, dados: CandidaturaCreate) -> dict:
-    """Cópia de confirmação para o aluno (sem expor o e-mail do coordenador)."""
+def montar_email_confirmacao(projeto: dict, dados: CandidaturaCreate, email_conta: str) -> dict:
+    """Cópia de confirmação para o e-mail da conta do aluno (sem expor o do coordenador)."""
     titulo = projeto.get("titulo") or "Projeto Acadêmico"
     professor = projeto.get("nome_professor") or "o(a) coordenador(a)"
     e = html.escape
@@ -115,7 +117,7 @@ def montar_email_confirmacao(projeto: dict, dados: CandidaturaCreate) -> dict:
         "<p>Boa sorte!<br><strong>Equipe UniResu Connect</strong></p>"
     )
     return {
-        "to": [dados.email],
+        "to": [email_conta],
         "reply_to": EMAIL_SUPORTE,
         "subject": _assunto_seguro(f"Sua carta de intenção foi enviada — {titulo}"),
         "text": texto,
@@ -210,8 +212,9 @@ async def enviar_candidatura(projeto_id: str, dados: CandidaturaCreate, usuario_
     # 2) E-mail ao coordenador + cópia ao aluno. Nunca propagam exceção.
     email_enviado, provider_id = await enviar_email(montar_email_coordenador(projeto, dados))
     confirmacao_enviada = False
-    if email_enviado:
-        confirmacao_enviada, _ = await enviar_email(montar_email_confirmacao(projeto, dados))
+    email_conta = usuario_atual.get("email")
+    if email_enviado and email_conta:
+        confirmacao_enviada, _ = await enviar_email(montar_email_confirmacao(projeto, dados, email_conta))
 
     # 3) Registra o resultado do envio (best-effort).
     try:

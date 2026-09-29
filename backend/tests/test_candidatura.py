@@ -102,9 +102,9 @@ class TestEmails:
         assert "<script>" not in m["html"] and "&lt;script&gt;" in m["html"]
         assert "<b>oi</b>" not in m["html"]
 
-    def test_confirmacao_ao_aluno_sem_email_do_coordenador(self):
-        m = cc.montar_email_confirmacao(PROJETO, CandidaturaCreate(**dados()))
-        assert m["to"] == ["maria@exemplo.com"]
+    def test_confirmacao_vai_para_email_da_conta_sem_email_do_coordenador(self):
+        m = cc.montar_email_confirmacao(PROJETO, CandidaturaCreate(**dados()), "conta@exemplo.com")
+        assert m["to"] == ["conta@exemplo.com"]
         assert "Robótica educacional" in m["subject"]
         assert CARTA in m["text"]
         assert "ana@unir.br" not in m["text"] + m["html"]
@@ -134,7 +134,14 @@ async def test_candidatura_envia_carta_e_confirmacao(api, db, emails):
 
     assert r.status_code == 200, r.text
     assert r.json()["email_enviado"] is True and r.json()["confirmacao_enviada"] is True
-    assert [e["to"] for e in emails] == [["ana@unir.br"], ["maria@exemplo.com"]]
+    # Coordenador recebe o e-mail do formulário como contato/reply-to; a cópia
+    # de confirmação vai para o e-mail da CONTA logada, não o do formulário.
+    coordenador, confirmacao = emails
+    assert coordenador["to"] == ["ana@unir.br"]
+    assert coordenador["reply_to"] == "maria@exemplo.com"
+    assert "maria@exemplo.com" in coordenador["text"]
+    assert confirmacao["to"] == ["aluno@exemplo.com"]
+    assert "maria@exemplo.com" not in str(confirmacao)
 
     doc = await db.candidaturas.find_one({})
     assert doc["carta_intencao"] == CARTA
