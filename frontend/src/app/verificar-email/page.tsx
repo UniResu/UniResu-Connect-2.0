@@ -15,11 +15,7 @@ function VerificarEmailContent() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    if (!token) {
-      setStatus("error");
-      setMessage("Link de verificação inválido ou ausente.");
-      return;
-    }
+    if (!token) return;
 
     async function verificar() {
       try {
@@ -42,10 +38,14 @@ function VerificarEmailContent() {
     verificar();
   }, [token, router]);
 
+  // Sem token não há o que verificar: o erro é derivado direto da URL.
+  const statusExibido = token ? status : "error";
+  const mensagemExibida = token ? message : "Link de verificação inválido ou ausente.";
+
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        {status === "loading" && (
+        {statusExibido === "loading" && (
           <div className={styles.content}>
             <div className={styles.spinner} />
             <h1 className={styles.title}>Verificando seu e-mail...</h1>
@@ -53,11 +53,11 @@ function VerificarEmailContent() {
           </div>
         )}
 
-        {status === "success" && (
+        {statusExibido === "success" && (
           <div className={styles.content}>
             <div className={styles.iconSuccess}>&#10003;</div>
             <h1 className={styles.title}>E-mail verificado!</h1>
-            <p className={styles.text}>{message}</p>
+            <p className={styles.text}>{mensagemExibida}</p>
             <p className={styles.text}>
               Redirecionando para o login em instantes...
             </p>
@@ -67,11 +67,11 @@ function VerificarEmailContent() {
           </div>
         )}
 
-        {status === "error" && (
+        {statusExibido === "error" && (
           <div className={styles.content}>
             <div className={styles.iconError}>&#10007;</div>
             <h1 className={styles.title}>Falha na verificação</h1>
-            <p className={styles.textError}>{message}</p>
+            <p className={styles.textError}>{mensagemExibida}</p>
             <p className={styles.text}>
               O link pode ter expirado. Solicite um novo e-mail de verificação
               na página de login.

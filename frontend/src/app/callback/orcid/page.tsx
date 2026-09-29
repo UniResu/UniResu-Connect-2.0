@@ -15,52 +15,47 @@ function OrcidCallbackContent() {
 
   const hasProcessed = useRef(false);
 
+  const code = searchParams.get("code");
+  const state = searchParams.get("state");
+  const error = searchParams.get("error");
+
+  // Erros de parâmetro são derivados direto da URL (sem setState no effect).
+  const erroParametros = error
+    ? "Autorização negada pelo ORCID."
+    : !code || !state
+      ? "Parâmetros inválidos no callback."
+      : "";
+
   useEffect(() => {
-    const code = searchParams.get("code");
-    const state = searchParams.get("state");
-    const error = searchParams.get("error");
+    if (erroParametros || !code || !state || hasProcessed.current) return;
+    hasProcessed.current = true;
 
-    if (error) {
-      setStatus("error");
-      setErrorMsg("Autorização negada pelo ORCID.");
-      return;
+    async function processarCallback(code: string, state: string) {
+      try {
+        const response = await api.post<LoginResponse>(
+          "/api/auth/orcid/callback",
+          { code, state }
+        );
+
+        localStorage.setItem(TOKEN_KEY, response.access_token);
+        window.location.href = "/perfil";
+      } catch (err: unknown) {
+        const apiErr = err as { detail?: string };
+        setStatus("error");
+        setErrorMsg(apiErr.detail || "Erro ao autenticar com ORCID.");
+      }
     }
 
-    if (!code || !state) {
-      setStatus("error");
-      setErrorMsg("Parâmetros inválidos no callback.");
-      return;
-    }
+    processarCallback(code, state);
+  }, [code, state, erroParametros]);
 
-    if (!hasProcessed.current) {
-      hasProcessed.current = true;
-      processarCallback(code, state);
-    }
-  }, [searchParams]);
-
-  async function processarCallback(code: string, state: string) {
-    try {
-      const response = await api.post<LoginResponse>(
-        "/api/auth/orcid/callback",
-        { code, state }
-      );
-
-      localStorage.setItem(TOKEN_KEY, response.access_token);
-      window.location.href = "/perfil";
-    } catch (err: unknown) {
-      const apiErr = err as { detail?: string };
-      setStatus("error");
-      setErrorMsg(apiErr.detail || "Erro ao autenticar com ORCID.");
-    }
-  }
-
-  if (status === "error") {
+  if (erroParametros || status === "error") {
     return (
       <div className={styles.page}>
         <div className={styles.card}>
           <span className={styles.icon}>❌</span>
           <h2 className={styles.title}>Erro na Autenticação</h2>
-          <p className={styles.message}>{errorMsg}</p>
+          <p className={styles.message}>{erroParametros || errorMsg}</p>
           <button
             onClick={() => router.push("/login")}
             className={styles.button}
