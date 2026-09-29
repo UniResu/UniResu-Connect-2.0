@@ -127,3 +127,17 @@ async def test_item_novo_sem_detalhe_e_salvo_sem_contato_e_depois_completado(db)
     assert len(docs) == 1
     assert docs[0]["_id"] == primeiro["_id"]
     assert docs[0]["email_professor"] == "ana@unir.br"
+
+
+async def test_script_de_contato_manual(db):
+    from jobs.definir_contato import definir_contato
+
+    await repositorio.upsert_projetos(db, [reg(email=None, codigo="PVC9-2026")])
+    filtro = {"origem": "sigaa", "codigo": "PVC9-2026"}
+
+    assert await definir_contato(db, filtro, "secretaria@unir.br") == 1
+    assert (await db.projetos.find_one(filtro))["email_contato_manual"] == "secretaria@unir.br"
+    assert await definir_contato(db, {"origem": "sigaa", "codigo": "NAO-EXISTE"}, "x@unir.br") == 0
+
+    assert await definir_contato(db, filtro, None) == 1
+    assert "email_contato_manual" not in await db.projetos.find_one(filtro)
