@@ -165,3 +165,43 @@
   .searchGroup { flex-direction: column; }
   .metaDate { margin-left: 0; }
 }
+
+/* ── Projetos do SIGAA ── */
+
+.updatedAt {
+  margin-top: var(--space-sm);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.projetoCoordenador {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-xs);
+}
+
+.metaTipo {
+  background: var(--primary-100);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.loadMoreWrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-xl);
+}
+
+.loadMoreButton {
+  padding: 0.75rem var(--space-xl);
+  background: var(--bg-primary);
+  color: var(--primary);
+  font-weight: 600;
+  border: 1px solid var(--primary-200);
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.loadMoreButton:hover:not(:disabled) { background: var(--primary-50); transform: translateY(-1px); }
+.loadMoreButton:disabled { opacity: 0.7; cursor: wait; }
