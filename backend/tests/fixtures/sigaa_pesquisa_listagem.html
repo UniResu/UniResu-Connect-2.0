@@ -1,0 +1,2453 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"  "http://www.w3.org/TR/html4/loose.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<link href="/sigaa/faces/myFacesExtensionResource/org.apache.myfaces.renderkit.html.util.MyFacesResourceLoader/17896526/calendar.HtmlCalendarRenderer/WH/theme.css" rel="stylesheet" type="text/css"/>
+<link href="/sigaa/faces/myFacesExtensionResource/org.apache.myfaces.renderkit.html.util.MyFacesResourceLoader/17896526/calendar.HtmlCalendarRenderer/DB/theme.css" rel="stylesheet" type="text/css"/>
+<script src="/sigaa/faces/myFacesExtensionResource/org.apache.myfaces.renderkit.html.util.MyFacesResourceLoader/17896526/prototype.PrototypeResourceLoader/prototype.js" type="text/javascript"><!--
+
+//--></script>
+<script src="/sigaa/faces/myFacesExtensionResource/org.apache.myfaces.renderkit.html.util.MyFacesResourceLoader/17896526/calendar.HtmlCalendarRenderer/date.js" type="text/javascript"><!--
+
+//--></script>
+<script src="/sigaa/faces/myFacesExtensionResource/org.apache.myfaces.renderkit.html.util.MyFacesResourceLoader/17896526/calendar.HtmlCalendarRenderer/popcalendar.js" type="text/javascript"><!--
+
+//--></script>
+<script src="/sigaa/faces/myFacesExtensionResource/org.apache.myfaces.renderkit.html.util.MyFacesResourceLoader/17896526/inputTextHelp.HtmlTextHelpRenderer/inputTextHelp.js" type="text/javascript"><!--
+
+//--></script>
+<meta content="no-cache" http-equiv="Pragma"/>
+<title>SIGAA - Sistema Integrado de Gestão de Atividades Acadêmicas</title>
+<link class="component" href="/sigaa/a4j/s/3_3_3.Finalorg/richfaces/renderkit/html/css/basic_classes.xcss/DATB/eAF7sqpgb-jyGdIAFrMEaw__.jsf" rel="stylesheet" type="text/css"/><link class="component" href="/sigaa/a4j/s/3_3_3.Finalorg/richfaces/renderkit/html/css/extended_classes.xcss/DATB/eAF7sqpgb-jyGdIAFrMEaw__.jsf" media="rich-extended-skinning" rel="stylesheet" type="text/css"/><script type="text/javascript">window.RICH_FACES_EXTENDED_SKINNING_ON=true;</script><script src="/sigaa/a4j/g/3_3_3.Finalorg/richfaces/renderkit/html/scripts/skinning.js.jsf" type="text/javascript"></script><link href="/sigaa/img/sigaa.ico" rel="shortcut icon"/>
+<script src="/shared/jsBundles/jawr_loader.js" type="text/javascript"></script>
+<script src="/sigaa/javascript/prevenir-duplo-clique.js" type="text/javascript"></script>
+<script type="text/javascript">
+		JAWR.loader.style('/javascript/ext-2.0.a.1/resources/css/ext-all.css', 'all');
+		JAWR.loader.style('/css/public.css','all');
+	 	JAWR.loader.script('/bundles/js/sigaa_base.js');
+	 	JAWR.loader.script('/bundles/js/ext2_all.js');
+
+	 	
+	</script>
+<link href="/sigaa/cssBundles/gzip_787491763/public/css/public.css" media="all" rel="stylesheet" type="text/css"/>
+<link href="/shared/beta/css/font-awesome.css" media="screen" rel="stylesheet" type="text/css"/>
+<script src="/shared/javascript/STICookieConsent.js"></script>
+<script>
+	    document.addEventListener("DOMContentLoaded", () => {
+	    	generateCookieConsentModal("SIGAA", "N&#243;s usamos cookies para melhorar sua experi&#234;ncia de navega&#231;&#227;o no portal. Ao utilizar o %sitename%, voc&#234; concorda com a pol&#237;tica de monitoramento de cookies. Para ter mais informa&#231;&#245;es sobre como isso &#233; feito e como remover, acesse a <a href=%cookie-policy%>Pol&#237;tica de Privacidade</a>. Para saber como a UNIR trata os dados, acesse a <a href=%privacy-policy%> Pol&#237;&#173;tica de cookies</a>. Se voc&#234; concorda, clique em %button-text%.", "https://unir.br/", "https://unir.br/");
+	    })
+	</script>
+</head>
+<body>
+<div id="container">
+<div id="container-inner">
+<div id="cabecalho">
+<div id="logo">
+<a href="/sigaa/public/"> <img src="http://sigadmin.unir.br/shared/img/UNIR/logo_UNIR_vertical.png"/> </a>
+</div>
+<div id="identificacao">
+<span class="ufrn"> Fundação Universidade Federal de Rondônia </span>
+<span class="data">
+				 Porto Velho, 
+				 29 de Setembro de 
+				 2026 
+			</span>
+<a href="/sigaa/public/" id="home" style="width: 450px;" title="Página inicial"> </a>
+<div id="menu_info">
+<ul>
+<li class="acessibilidade">
+<a alt="Acessível para pessoas com deficiência visual" href="https://sigaa.unir.br/sigaa/verTelaLogin.do?acessibilidade=true" title="Acessível para pessoas com deficiência visual">
+							Acessível para pessoas com deficiência visual
+						</a>
+</li>
+<li class="login">
+<a alt="Clique aqui para logar-se no SIGAA" href="/sigaa/" title="Clique aqui para logar-se no SIGAA">
+							Login
+						<i class="fa fa-angle-right"></i></a>
+</li>
+</ul>
+</div>
+</div>
+<br clear="all"/>
+</div>
+<div id="corpo">
+<script type="text/javascript">
+
+	var prefixTr = "descricao_";
+
+	function showDescricao(resultado){
+
+		var index = resultado.id.substring(10);
+		elementName = prefixTr + index;
+		var elemento = getEl(elementName);
+
+		elemento.setDisplayed(!elemento.isDisplayed());
+	}
+
+</script>
+<h2>
+	 Quem pesquisa o que na UNIR?
+</h2>
+<br/>
+<style>
+	span.info {
+		font-size: 0.8em;
+		color: #666;
+	}
+
+	p.descricao{
+		padding: 10px 20px;
+		font-style: italic;
+		background: #F9F9F9;
+		border: 1px solid #EEE;
+		margin: 5px 20px;
+	}
+</style>
+<form action="/sigaa/public/pesquisa/consulta_projetos.jsf" enctype="application/x-www-form-urlencoded" id="formConsulta" method="post" name="formConsulta">
+<input name="formConsulta" type="hidden" value="formConsulta"/>
+<table class="formulario" style="width: 80%">
+<caption class="listagem">Critérios de Busca dos Projetos</caption>
+<tr>
+<td width="3%"><input class="noborder" id="formConsulta:checkTipo" name="formConsulta:checkTipo" type="checkbox"/> </td>
+<td width="22%"><label for="formConsulta:checkTipo">Tipo:</label></td>
+<td>
+<select id="formConsulta:tipo" name="formConsulta:tipo" onclick="$('formConsulta:checkTipo').checked = true;" size="1" style="width:75%"> <option value=""> -- SELECIONE UM TIPO DE PROJETO -- </option>
+<option value="INTERNO">INTERNO</option>
+<option value="EXTERNO">EXTERNO</option>
+</select>
+</td>
+</tr>
+<tr>
+<td width="3%"><input checked="checked" class="noborder" id="formConsulta:checkSituacaoProjeto" name="formConsulta:checkSituacaoProjeto" type="checkbox"/> </td>
+<td width="22%"><label for="formConsulta:checkSituacaoProjeto">Situação do Projeto:</label></td>
+<td>
+<select id="formConsulta:situacaoProjeto" name="formConsulta:situacaoProjeto" onclick="$('formConsulta:checkSituacaoProjeto').checked = true;" size="1" style="width:75%"> <option value="0"> -- SELECIONE UMA SITUAÇÃO DE PROJETO -- </option>
+<option value="205">Aguardando Validação</option>
+<option selected="selected" value="215">Em Execução</option>
+<option value="222">Finalizado</option>
+<option value="221">Renovado</option>
+<option value="201">Submetido</option>
+</select>
+</td>
+</tr>
+<tr>
+<td width="3%"><input checked="checked" class="noborder" id="formConsulta:checkAno" name="formConsulta:checkAno" type="checkbox"/> </td>
+<td width="22%"><label for="formConsulta:checkAno">Ano:</label></td>
+<td><input id="formConsulta:ano" maxlength="4" name="formConsulta:ano" onchange="$('formConsulta:checkAno').checked = true;" onkeyup="return formatarInteiro(this);" size="5" type="text" value="2026"/></td>
+</tr>
+<tr>
+<td width="3%"><input class="noborder" id="formConsulta:checkPeriodoVigencia" name="formConsulta:checkPeriodoVigencia" type="checkbox"/></td>
+<td width="22%"><label for="formConsulta:checkPeriodoVigencia">Período de Vigência:</label></td>
+<td>
+<input id="formConsulta:dataInicio" maxlength="10" name="formConsulta:dataInicio" onchange="javascript:$('formConsulta:checkPeriodoVigencia').checked = true;" onclick="selectText('null', 'formConsulta:dataInicio')" onfocus="selectText('null', 'formConsulta:dataInicio')" onkeypress="return(formatarMascara(this,event,'##/##/####'))" size="10" title="Data Início" type="text"/><span id="formConsulta:dataInicioSpan"></span><script type="text/javascript">formConsulta_3AdataInicioCalendarVar=new org_apache_myfaces_PopupCalendar();
+formConsulta_3AdataInicioCalendarVar.initData.imgDir = "\/sigaa\/faces\/myFacesExtensionResource\/org.apache.myfaces.renderkit.html.util.MyFacesResourceLoader\/17896526\/calendar.HtmlCalendarRenderer\/DB\/";
+formConsulta_3AdataInicioCalendarVar.initData.monthName = new Array("Janeiro","Fevereiro","Mar\u00E7o","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro");
+formConsulta_3AdataInicioCalendarVar.initData.dayName = new Array("Dom","Seg","Ter","Qua","Qui","Sex","S\u00E1b");
+formConsulta_3AdataInicioCalendarVar.initData.startAt = 0;
+formConsulta_3AdataInicioCalendarVar.dateFormatSymbols.weekdays = new Array("Domingo","Segunda-feira","Ter\u00E7a-feira","Quarta-feira","Quinta-feira","Sexta-feira","S\u00E1bado");
+formConsulta_3AdataInicioCalendarVar.dateFormatSymbols.shortWeekdays = new Array("Dom","Seg","Ter","Qua","Qui","Sex","S\u00E1b");
+formConsulta_3AdataInicioCalendarVar.dateFormatSymbols.shortMonths = new Array("Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez");
+formConsulta_3AdataInicioCalendarVar.dateFormatSymbols.months = new Array("Janeiro","Fevereiro","Mar\u00E7o","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro");
+formConsulta_3AdataInicioCalendarVar.dateFormatSymbols.eras = new Array("BC","AD");
+formConsulta_3AdataInicioCalendarVar.dateFormatSymbols.ampms = new Array("AM","PM");
+formConsulta_3AdataInicioCalendarVar.initData.todayDateFormat = "dd\/MM\/yyyy";
+formConsulta_3AdataInicioCalendarVar.initData.popupLeft = false;
+
+formConsulta_3AdataInicioCalendarVar.init(document.getElementById('formConsulta:dataInicioSpan'));
+</script><img onclick="formConsulta_3AdataInicioCalendarVar._popUpCalendar(this,document.getElementById('formConsulta:dataInicio'),'dd/MM/yyyy')" src="/sigaa/faces/myFacesExtensionResource/org.apache.myfaces.renderkit.html.util.MyFacesResourceLoader/17896526/calendar.HtmlCalendarRenderer/images/calendar.gif" style="vertical-align:bottom;"/>
+					a <input id="formConsulta:dataFim" maxlength="10" name="formConsulta:dataFim" onchange="javascript:$('formConsulta:checkPeriodoVigencia').checked = true;" onclick="selectText('null', 'formConsulta:dataFim')" onfocus="selectText('null', 'formConsulta:dataFim')" onkeypress="return(formatarMascara(this,event,'##/##/####'))" size="10" title="Data Fim" type="text"/><span id="formConsulta:dataFimSpan"></span><script type="text/javascript">formConsulta_3AdataFimCalendarVar=new org_apache_myfaces_PopupCalendar();
+formConsulta_3AdataFimCalendarVar.initData.imgDir = "\/sigaa\/faces\/myFacesExtensionResource\/org.apache.myfaces.renderkit.html.util.MyFacesResourceLoader\/17896526\/calendar.HtmlCalendarRenderer\/DB\/";
+formConsulta_3AdataFimCalendarVar.initData.monthName = new Array("Janeiro","Fevereiro","Mar\u00E7o","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro");
+formConsulta_3AdataFimCalendarVar.initData.dayName = new Array("Dom","Seg","Ter","Qua","Qui","Sex","S\u00E1b");
+formConsulta_3AdataFimCalendarVar.initData.startAt = 0;
+formConsulta_3AdataFimCalendarVar.dateFormatSymbols.weekdays = new Array("Domingo","Segunda-feira","Ter\u00E7a-feira","Quarta-feira","Quinta-feira","Sexta-feira","S\u00E1bado");
+formConsulta_3AdataFimCalendarVar.dateFormatSymbols.shortWeekdays = new Array("Dom","Seg","Ter","Qua","Qui","Sex","S\u00E1b");
+formConsulta_3AdataFimCalendarVar.dateFormatSymbols.shortMonths = new Array("Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez");
+formConsulta_3AdataFimCalendarVar.dateFormatSymbols.months = new Array("Janeiro","Fevereiro","Mar\u00E7o","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro");
+formConsulta_3AdataFimCalendarVar.dateFormatSymbols.eras = new Array("BC","AD");
+formConsulta_3AdataFimCalendarVar.dateFormatSymbols.ampms = new Array("AM","PM");
+formConsulta_3AdataFimCalendarVar.initData.todayDateFormat = "dd\/MM\/yyyy";
+formConsulta_3AdataFimCalendarVar.initData.popupLeft = false;
+
+formConsulta_3AdataFimCalendarVar.init(document.getElementById('formConsulta:dataFimSpan'));
+</script><img onclick="formConsulta_3AdataFimCalendarVar._popUpCalendar(this,document.getElementById('formConsulta:dataFim'),'dd/MM/yyyy')" src="/sigaa/faces/myFacesExtensionResource/org.apache.myfaces.renderkit.html.util.MyFacesResourceLoader/17896526/calendar.HtmlCalendarRenderer/images/calendar.gif" style="vertical-align:bottom;"/>
+</td>
+</tr>
+<tr>
+<td width="3%"><input class="noborder" id="formConsulta:checkPesquisador" name="formConsulta:checkPesquisador" type="checkbox"/> </td>
+<td width="22%"><label for="formConsulta:checkPesquisador">Pesquisador:</label></td>
+<td>
+<input id="formConsulta:nomePesquisador" name="formConsulta:nomePesquisador" onchange="$('formConsulta:checkPesquisador').checked = true;" style="width:75%" type="text" value=""/>
+</td>
+</tr>
+<tr>
+<td width="3%"><input class="noborder" id="formConsulta:checkCentro" name="formConsulta:checkCentro" type="checkbox"/> </td>
+<td width="22%"><label for="formConsulta:checkCentro">Centro:</label></td>
+<td>
+<select id="formConsulta:centro" name="formConsulta:centro" onchange="$('formConsulta:checkCentro').checked = true;" size="1" style="width:75%"> <option selected="selected" value="0"> -- SELECIONE UM CENTRO ACADÊMICO -- </option>
+<option value="129">CAMPUS ARIQUEMES - ARIQUEMES - 11.35</option>
+<option value="881">CAMPUS PORTO VELHO - PORTO VELHO - 11.42</option>
+<option value="130">CAMPUS ROLIM DE MOURA - ROLIM DE MOURA - 11.41</option>
+<option value="928">CENTRO DE EDUCAÇÃO À DISTÂNCIA E NOVAS TECNOLOGIAS - PORTO VELHO - 11.01.01.01</option>
+<option value="1056">COORDENADORIA DE APOIO ACADÊMICO - ARI - ARIQUEMES - 11.35.01.14</option>
+<option value="1065">COORDENADORIA DE APOIO ACADÊMICO - CAC - PRESIDENTE MÉDICI - 11.40.01.14</option>
+<option value="282">DIRETORIA DA FACULDADE DE CIÊNCIAS DA SAÚDE - PORTO VELHO - 11.62</option>
+<option value="271">DIRETORIA DA FACULDADE DE CIÊNCIAS HUMANAS - PORTO VELHO - 11.66</option>
+<option value="264">DIRETORIA DA FACULDADE DE CIÊNCIAS SOCIAIS APLICADAS - PORTO VELHO - 11.71</option>
+<option value="297">DIRETORIA DA FACULDADE DE ENGENHARIA, TECNOLOGIA E INOVAÇÃO - PORTO VELHO - 11.65</option>
+<option value="290">DIRETORIA DA FACULDADES DE CIÊNCIAS EXATAS E DA TERRA - PORTO VELHO - 11.64</option>
+
+
+
+
+
+
+
+
+
+</select>
+</td>
+</tr>
+<tr>
+<td width="3%"><input class="noborder" id="formConsulta:checkUnidade" name="formConsulta:checkUnidade" type="checkbox"/> </td>
+<td width="22%"><label for="formConsulta:checkUnidade">Departamento:</label></td>
+<td>
+<select id="formConsulta:unidade" name="formConsulta:unidade" onchange="$('formConsulta:checkUnidade').checked = true;" size="1" style="width:75%"> <option selected="selected" value="0"> -- SELECIONE UM DEPARTAMENTO -- </option>
+<option value="1084">COORDENADORIA DO CURSO DE ADMINISTRAÇÃO - CAC</option>
+<option value="1083">COORDENADORIA DO CURSO DE CIÊNCIAS CONTÁBEIS - CAC</option>
+<option value="1085">COORDENADORIA DO CURSO DE ENGENHARIA DE PRODUÇÃO - CAC</option>
+<option value="1079">COORDENAÇÃO DE APOIO ACADÊMICO  - JP</option>
+<option value="2018">COORDENAÇÃO DE APOIO ACADÊMICO - RM</option>
+<option value="1051">COORDENAÇÃO DE APOIO ACADÊMICO - VILHENA</option>
+<option value="2035">COORDENAÇÃO DE APOIO DA FACULDADE - FACISA</option>
+<option value="2065">COORDENAÇÃO DE CURSOS DE CIÊNCIAS SOCIAIS</option>
+<option value="2030">COORDENAÇÃO DE INTERNATO</option>
+<option value="2073">COORDENAÇÃO DO CURSO DE ADMINISTRAÇÃO</option>
+<option value="1048">COORDENAÇÃO DO CURSO DE ADMINISTRAÇÃO - VILHENA</option>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</select>
+</td>
+</tr>
+<tr>
+<td width="3%"><input class="noborder" id="formConsulta:checkTitulo" name="formConsulta:checkTitulo" type="checkbox"/> </td>
+<td width="22%"><label for="formConsulta:checkTitulo">Título:</label></td>
+<td>
+<input id="formConsulta:titulo" name="formConsulta:titulo" onchange="$('formConsulta:checkTitulo').checked = true;" style="width: 75%;" type="text" value=""/>
+</td>
+</tr>
+<tr>
+<td width="3%"><input class="noborder" id="formConsulta:checkObjetivos" name="formConsulta:checkObjetivos" type="checkbox"/> </td>
+<td width="22%"><label for="formConsulta:checkObjetivos">Objetivos <i>(Palavras chaves)</i>:</label></td>
+<td>
+<input id="formConsulta:objetivos" name="formConsulta:objetivos" onchange="$('formConsulta:checkObjetivos').checked = true;" style="width:75%" type="text" value=""/>
+</td>
+</tr>
+<tr>
+<td width="3%"><input class="noborder" id="formConsulta:checkArea" name="formConsulta:checkArea" type="checkbox"/> </td>
+<td width="22%"><label for="formConsulta:checkArea">Área de Conhecimento:</label></td>
+<td>
+<select id="formConsulta:area" name="formConsulta:area" onchange="$('formConsulta:checkArea').checked = true;" size="1" style="width:95%"> <option selected="selected" value="0"> -- SELECIONE UMA ÁREA DE CONHECIMENTO -- </option>
+<option value="10502033">Acústica</option>
+<option value="60403012">Adequação Ambiental</option>
+<option value="60200006">Administração</option>
+<option value="70802009">Administração Educacional</option>
+<option value="60201029">Administração Financeira</option>
+<option value="50202030">Administração Florestal</option>
+<option value="60503017">Administração Municipal e Urbana</option>
+<option value="60202009">Administração Pública</option>
+<option value="90200004">Administração Rural</option>
+<option value="60201010">Administração da Produção</option>
+<option value="60201002">Administração de Empresas</option>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</select>
+</td>
+</tr>
+<tr>
+<td width="3%"><input class="noborder" id="formConsulta:checkGrupo" name="formConsulta:checkGrupo" type="checkbox"/> </td>
+<td width="22%"><label for="formConsulta:checkGrupo">Grupo de Pesquisa (<i>Base</i>):</label></td>
+<td>
+<select id="formConsulta:grupo" name="formConsulta:grupo" onchange="$('formConsulta:checkGrupo').checked = true;" size="1" style="width:95%"> <option selected="selected" value="0">  -- SELECIONE UM GRUPO DE PESQUISA --  </option>
+<option value="7821461">ACADEMICOS DE DIREITO ESPECIAL E TERRITORIAL</option>
+<option value="5083908">ALÉM DAS FRONTEIRAS JURÍDICAS: UM CAMINHO MULTIDISCIPLINAR P...</option>
+<option value="3814505">AMAZON DATA SCIENCE</option>
+<option value="3121291">AMAZÔNIA E LÉXICO EM SUAS DIFERENTES ABORDAGENS: DESCRIÇÃO, ...</option>
+<option value="730166">ARQUEOLOGIA NA AMAZÔNIA MERIDIONAL GPAAM</option>
+<option value="7383686">B5: BIOATIVOS, BIODIVERSIDADE, BIOECONOMIA, BIOFÁRMACOS E BI...</option>
+<option value="4009025">BARRAS - BLOCO DE AÇÕES EM RAP, RÁDIO E AUSÊNCIAS SONORAS</option>
+<option value="1104218">BIODIVERSIDADE, CONSERVAÇÃO E USO DOS RECURSOS NATURAIS NA A...</option>
+<option value="2480707">BIOÉTICA NA AMAZÔNIA</option>
+<option value="7042013">CAR - CLUBE DE ASTRONOMIA E CIÊNCIAS DE RONDÔNIA</option>
+<option value="5180075">CARACTERIZAÇÃO BOTÂNICA E QUÍMICA DE PLANTAS DA AMAZÔNIA OCI...</option>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</select>
+</td>
+</tr>
+<tr>
+<td width="3%"><input class="noborder" id="formConsulta:checkAgencia" name="formConsulta:checkAgencia" type="checkbox"/> </td>
+<td width="22%"><label for="formConsulta:checkAgencia">Agência Financiadora:</label></td>
+<td>
+<select id="formConsulta:agencia" name="formConsulta:agencia" onchange="$('formConsulta:checkAgencia').checked = true;" size="1" style="width:75%"> <option selected="selected" value="0"> -- SELECIONE UMA AGÊNCIA FINANCIADORA -- </option>
+<option value="13">ANP</option>
+<option value="100705406">Agência Espacial Brasileira</option>
+<option value="4433561">Associação dos Pesquisadores da Região Norte</option>
+<option value="7">BNB</option>
+<option value="4">CAPES</option>
+<option value="3">CNPQ</option>
+<option value="107250414">COMPERVE - NÚCLEO PERMANENTE DE CONCURSOS</option>
+<option value="8">CT GAS</option>
+<option value="91012284">Centro de Lançamento da Barreira do Inferno</option>
+<option value="100196390">Cetacean Society International</option>
+<option value="2223449">Companhia de Águas e Esgoto do Rio Grande do Norte - CAERN</option>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</select>
+</td>
+</tr>
+<tr>
+<td width="3%"><input class="noborder" id="formConsulta:checkGerarCSV" name="formConsulta:checkGerarCSV" type="checkbox"/> </td>
+<td colspan="2"><label for="formConsulta:checkGerarCSV">Gerar CSV</label></td>
+</tr>
+<tfoot>
+<tr>
+<td colspan="3">
+<input id="formConsulta:buscar" name="formConsulta:buscar" type="submit" value="Buscar"/>  
+					<input id="formConsulta:cancelar" name="formConsulta:cancelar" type="submit" value="Cancelar"/>
+</td>
+</tr>
+</tfoot>
+</table>
+<style>
+	table.listagem tr.ano td {
+		font-weight: bold;
+		background-color: #C4D2EB;
+		padding: 3px 15px;
+		border-bottom: 1px solid #CCC;
+		font-size: 1.1em;
+	}
+	table.listagem tr.centro td {
+		font-weight: bold;
+		background-color: #C4D2EB;
+		padding: 3px 15px;
+		border-bottom: 1px solid #CCC;
+		font-size: 1.5em;
+		text-align: center;
+	}
+</style>
+<br/>
+<div class="legenda">
+<img src="/sigaa/img/view.gif"/>: Visualizar Projeto de Pesquisa
+</div>
+<table class="listagem" style="width: 99%;">
+<caption class="listagem">Lista de Projetos de Pesquisa Encontrados</caption>
+<thead>
+<tr>
+<th>Código</th>
+<th width="40%">Título / Coordenador</th>
+<th>   </th>
+<th> Tipo </th>
+<th style="text-align: center;"> Situação </th>
+<th colspan="2">   </th>
+</tr>
+</thead>
+<tbody>
+<tr class="centro">
+<td colspan="7"> CAMPUS ARIQUEMES </td>
+</tr>
+<tr class="ano">
+<td colspan="7"> 2026 </td>
+</tr>
+<tr class="linhaPar">
+<td rowspan="2"> PVC2148-2026 </td>
+<td colspan="5"> <i>Formulações, processos e desdobramentos de políticas educacionais na Amazônia</i> </td>
+<td rowspan="2"> </td>
+</tr>
+<tr class="linhaPar">
+<td colspan="2"> ANA PAULA SOUZA </td>
+<td> EXTERNO </td>
+<td align="center"> EM EXECUÇÃO  </td>
+<td>
+<script language="Javascript" type="text/javascript">function dpf(f) {var adp = f.adp;if (adp != null) {for (var i = 0;i < adp.length;i++) {f.removeChild(adp[i]);}}};function apf(f, pvp) {var adp = new Array();f.adp = adp;var i = 0;for (k in pvp) {var p = document.createElement("input");p.type = "hidden";p.name = k;p.value = pvp[k];f.appendChild(p);adp[i++] = p;}};function jsfcljs(f, pvp, t) {apf(f, pvp);var ft = f.target;if (t) {f.target = t;}f.submit();f.target = ft;dpf(f);};</script>
+<a href="#" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('formConsulta'),{'formConsulta:j_id_jsp_1668853897_45':'formConsulta:j_id_jsp_1668853897_45','id':'8120935'},'');}return false" title="Visualizar Projeto de Pesquisa"><img src="/sigaa/img/view.gif"/>
+<br clear="all"/>
+</a>
+</td>
+</tr>
+<tr class="linhaPar">
+<td colspan="7">
+<p class="descricao" id="descricao_0">
+</p>
+</td>
+</tr>
+<tr class="centro">
+<td colspan="7"> CAMPUS CACOAL </td>
+</tr>
+<tr class="linhaImpar">
+<td rowspan="2"> PVC2152-2026 </td>
+<td colspan="5"> <i>Estimativa do Potencial Eólico na Camada Superficial Atmosférica no Sudeste de Rondônia</i> </td>
+<td rowspan="2"> </td>
+</tr>
+<tr class="linhaImpar">
+<td colspan="2"> BRUNO LIMA COSTA </td>
+<td> EXTERNO </td>
+<td align="center"> EM EXECUÇÃO  </td>
+<td>
+<a href="#" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('formConsulta'),{'formConsulta:j_id_jsp_1668853897_45j_id_1':'formConsulta:j_id_jsp_1668853897_45j_id_1','id':'8167592'},'');}return false" title="Visualizar Projeto de Pesquisa"><img src="/sigaa/img/view.gif"/>
+<br clear="all"/>
+</a>
+</td>
+</tr>
+<tr class="linhaImpar">
+<td colspan="7">
+<p class="descricao" id="descricao_1">
+</p>
+</td>
+</tr>
+<tr class="linhaPar">
+<td rowspan="2"> PVC1588-2026 </td>
+<td colspan="5"> <i>A valorização dos Saberes Tradicionais Indígenas na Amazônia Brasileira: decolonialismo e políticas públicas</i> </td>
+<td rowspan="2"> </td>
+</tr>
+<tr class="linhaPar">
+<td colspan="2"> CARLA MENDES ROCHA </td>
+<td> EXTERNO </td>
+<td align="center"> EM EXECUÇÃO  </td>
+<td>
+<a href="#" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('formConsulta'),{'formConsulta:j_id_jsp_1668853897_45j_id_2':'formConsulta:j_id_jsp_1668853897_45j_id_2','id':'6451015'},'');}return false" title="Visualizar Projeto de Pesquisa"><img src="/sigaa/img/view.gif"/>
+<br clear="all"/>
+</a>
+</td>
+</tr>
+<tr class="linhaPar">
+<td colspan="7">
+<p class="descricao" id="descricao_2">
+</p>
+</td>
+</tr>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</tbody>
+<tfoot>
+<tr>
+<td colspan="7" style="text-align: center; font-weight: bold;">
+				20 projetos encontrados
+			</td>
+</tr>
+</tfoot>
+</table>
+<input id="javax.faces.ViewState" name="javax.faces.ViewState" type="hidden" value="j_id2"/>
+</form>
+<br/>
+<div style="width: 80%; text-align: center; margin: 0 auto;">
+<a href="/sigaa/public/home.jsf" style="color: #404E82;">&lt;&lt; voltar ao menu principal</a>
+</div>
+<br/>
+<div class="clear"></div>
+</div>
+<div id="rodape">
+<p>	
+			SIGAA | Diretoria de Tecnologia da Informação - (69) 2182-2176 | Copyright © 2006-2026 - UNIR - SigBoss1.unir.br.SigBoss1
+			 
+				<a onclick="javascript:versao();">v4.19.16</a>
+</p>
+</div>
+<!-- Fim dos containers -->
+</div>
+</div>
+<script>
+	  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+	
+	  ga('create', 'UA-148645666-1', 'auto');
+	  ga('send', 'pageview');
+	
+	</script>
+<!-- MYFACES JAVASCRIPT -->
+</body>
+</html>
+<script charset="UTF-8" type="text/javascript">
+		function versao(){
+			var msg='';
+			msg+='SIGAA 4.19.16,  publicado em: 09/07/2026 15:34\n\n';
+			msg+='Depend\u00eancias:\n';
+			msg+='Arquitetura 5.2.1_unir\n';
+			msg+='Entidades Comuns 3.1.1\n';
+			msg+='Servicos Integrados 3.1.1\n';
+			msg+='SharedResources 3.1.0\n';
+			msg+='Servicos Remoto Biblioteca null\n';
+			msg+='SIGAA Mobile Objects 1.0.0\n\n';
+			msg+='Copyright SINFO/UFRN';
+			alert(msg);
+		}	
+	</script>
+<style>
+a.linkMobile:link {
+	color: #003395;
+	font-weight: bold;
+	font-size: inherit;
+	text-decoration: none;
+}
+
+a.linkMobile:visited {
+	color: #003390;
+	text-decoration: none;
+	font-weight: bold;
+}
+
+a.linkMobile:active {
+	color: #444444;
+	text-decoration: none;
+	font-weight: bold;
+}
+</style>
+<script type="text/javascript">
+	var lista = getEl(document).getChildrenByClassName('descricao')
+	for (i = 0; i < lista.size(); i++) {
+		lista[i].setDisplayed(false);
+	}
+</script>
