@@ -1,10 +1,10 @@
 """Parser, coleta e job dos portais da UNIRIO — sem rede.
 
-As fixtures abaixo reproduzem layouts comuns de portais PHP (tabela com
-cabeçalho e botão "Detalhes", paginação Bootstrap, detalhe em th/td, dt/dd,
-strong+br e colunas Bootstrap). Quando o HTML real for capturado
-(`python -m jobs.sync_unirio --captura`), ele deve substituir estes trechos
-em `tests/fixtures/`.
+`tests/fixtures/unirio_extensao_*.html` é o HTML real do Portal da Extensão
+(anonimizado). Os trechos sintéticos abaixo cobrem outros layouts comuns de
+portais PHP (tabela com cabeçalho e botão "Detalhes", paginação Bootstrap,
+detalhe em th/td, dt/dd, strong+br e colunas Bootstrap) e o fluxo do Portal
+da Pesquisa (formulário web2py + POST).
 """
 
 from datetime import date
@@ -12,6 +12,7 @@ from datetime import date
 import pytest
 import requests
 
+from conftest import FIXTURES
 from jobs.sync_unirio import capturar, executar_sync
 from services.fontes import UNIRIO
 from services.http_client import ClienteHttp
@@ -23,6 +24,29 @@ from services.unirio.scraper import ResultadoColeta, UnirioErro
 URL_EXT = UnirioConfig().url_extensao
 URL_PESQ = UnirioConfig().url_pesquisa
 URL_EXT_P2 = "https://sistemas2.unirio.br/extensao/busca/projetos?f_status=1&page=2"
+
+
+def fixture(nome: str) -> str:
+    return (FIXTURES / nome).read_text(encoding="utf-8")
+
+
+# Formulário real do Portal da Pesquisa (web2py), reduzido.
+FORM_PESQUISA = """<html><body><h2>Busca de Projetos</h2>
+<form action="#" class="form-horizontal" enctype="multipart/form-data" method="post">
+  <input name="TITULO" type="text"/>
+  <input name="participante" type="text"/>
+  <select class="combo" name="NOME_UNIDADE"><option value=""></option><option value="156">Arquivo Central</option></select>
+  <select class="combo" name="ANO_REFERENCIA"><option value=""></option><option value="2025">2025</option>
+    <option value="2026">2026</option></select>
+  <select class="combo" name="GRUPO_CNPQ"><option value=""></option><option value="2612">Ecologia</option></select>
+  <input name="palavra_chave_upper" type="text"/>
+  <input type="submit" value="Buscar"/>
+  <div style="display:none;"><input name="_formkey" type="hidden" value="58673d0c-bd05"/>
+  <input name="_formname" type="hidden" value="default"/></div>
+</form></body></html>"""
+
+FORM_PESQUISA_EXIGE_BUSCA = FORM_PESQUISA.replace("<h2>Busca de Projetos</h2>",
+                                                  "<div class='flash'>Você precisa realizar uma busca.</div>")
 
 
 def listagem_extensao(pagina: int, total_paginas: int = 2) -> str:
@@ -112,6 +136,54 @@ DETALHE_COLUNAS = """<html><body>
   <div class="row"><div class="col-md-3"><strong>E-mail:</strong></div><div class="col-md-9">beltrana@unirio.br</div></div>
   <div class="row"><div class="col-md-3"><strong>Status:</strong></div><div class="col-md-9">Não aprovado</div></div>
 </body></html>"""
+
+
+class TestHtmlRealExtensao:
+    """HTML real (anonimizado) do Portal da Extensão."""
+
+    def test_listagem_list_group(self):
+        itens = parser.parse_listagem(fixture("unirio_extensao_listagem.html"), "extensao", URL_EXT)
+        assert len(itens) == 5
+        assert itens[0]["titulo"] == "Maré de Saúde"
+        assert itens[0]["unirio_id"] == "6637"
+        assert itens[0]["link_detalhe"] == "https://sistemas2.unirio.br/extensao/detalhes?ID_PROJETO=6637"
+        assert itens[0]["unidade"] == "Departamento de Interpretacao Teatral"
+        assert itens[0]["coordenador"] == "ANA PAULA SOUZA, BRUNO LIMA"
+        assert itens[0]["ano"] == "2018"
+        assert parser.proxima_pagina(fixture("unirio_extensao_listagem.html"), URL_EXT) == URL_EXT.replace(
+            "&f_uni=0&termos=", "&f_uni=0&pag=2&termos=")
+        assert parser.total_resultados(fixture("unirio_extensao_listagem.html")) == 386
+
+    def test_detalhe_em_cards(self):
+        d = parser.parse_detalhe(fixture("unirio_extensao_detalhe.html"), hoje=date(2026, 6, 1))
+        assert d["titulo"] == "Maré de Saúde"
+        assert d["codigo"] == "X0272/2017"
+        assert d["coordenador"] == "BRUNO LIMA"               # card "Dados do coordenador"
+        assert d["email"] == "coordenador@unirio.br"          # não o e-mail dos participantes
+        assert d["unidade"] == "Departamento de Interpretacao Teatral"
+        assert d["situacao"] == "EM EXECUÇÃO"                 # do projeto, não dos participantes (Inativo)
+        assert (d["periodo_inicio"], d["periodo_fim"]) == ("2018-03-01", "2026-12-31")
+        assert d["ano"] == "2018"
+        assert d["descricao"].startswith("O projeto de extensão desenvolve")
+        assert d["extras"]["area_tematica"] == "Saúde"
+        assert "Pessoas com deficiências, incapacidades, e necessidades especiais" in d["extras"]["linhas_extensao"]
+        assert d["extras"]["financiamento"] == "Não Possui Financiamento"
+        assert "palavras_chave" not in d["extras"]            # "-" conta como vazio
+
+    def test_coleta_completa_com_html_real(self):
+        listagem = fixture("unirio_extensao_listagem.html")
+        detalhe = fixture("unirio_extensao_detalhe.html")
+        # página 2: outros ids e sem link "Próximo" (fim da paginação)
+        pagina2 = listagem.replace("ID_PROJETO=6", "ID_PROJETO=7").replace(">Próximo<", ">Fim<")
+        rotas = {URL_EXT: listagem, URL_EXT.replace("&f_uni=0&termos=", "&f_uni=0&pag=2&termos="): pagina2}
+        for html in (listagem, pagina2):
+            for link in parser.links_de_detalhe(html, "extensao", URL_EXT):
+                rotas[link] = detalhe
+        res = scraper.coletar_extensao(ClienteRoteado(UnirioConfig(), rotas))
+        # a paginação acabou, mas a busca anuncia 386 resultados e lemos 10 → incompleta
+        assert res.paginas == 2 and res.completa is False
+        assert len(res.itens) == 10 and all(i["detalhe_ok"] for i in res.itens)
+        assert res.itens[0]["codigo"] == "X0272/2017" and res.itens[0]["email"] == "coordenador@unirio.br"
 
 
 class TestParser:
@@ -213,10 +285,12 @@ class TestParser:
 class TestConfig:
     def test_variavel_vazia_conta_como_ausente(self, monkeypatch):
         for nome in ("UNIRIO_MAX_DETALHES", "UNIRIO_MAX_PAGINAS", "UNIRIO_PAUSA_SEGUNDOS", "UNIRIO_TIMEOUT_SEGUNDOS",
-                     "UNIRIO_MAX_TENTATIVAS", "UNIRIO_MODULOS", "UNIRIO_EXTENSAO_STATUS"):
+                     "UNIRIO_MAX_TENTATIVAS", "UNIRIO_MODULOS", "UNIRIO_EXTENSAO_STATUS", "UNIRIO_PESQUISA_ANOS"):
             monkeypatch.setenv(nome, "")
         cfg = UnirioConfig.from_env()
         assert cfg == UnirioConfig()
+        monkeypatch.setenv("UNIRIO_PESQUISA_ANOS", "2025, 2026")
+        assert UnirioConfig.from_env().pesquisa_anos == ["2025", "2026"]
 
     def test_prefixo_de_detalhe_configuravel(self, monkeypatch):
         monkeypatch.setenv("UNIRIO_PESQUISA_DETALHE_PREFIXO", "/projetos/projeto/")
@@ -257,21 +331,34 @@ class TestEncoding:
 
 
 class ClienteRoteado:
-    """Cliente falso que responde por URL, sem throttle."""
+    """Cliente falso que responde por URL, sem throttle. POSTs são roteados por
+    `url#post` ou, com ano, `url#post:ANO`."""
 
     def __init__(self, cfg, rotas):
         self.cfg = cfg
         self.rotas = rotas
         self.total_requisicoes = 0
         self.urls = []
+        self.posts = []
 
-    def get(self, url, **kwargs):
+    def _resp(self, chave):
         self.total_requisicoes += 1
-        self.urls.append(url)
-        r = self.rotas[url]
+        self.urls.append(chave)
+        if chave not in self.rotas:
+            raise UnirioErro(f"HTTP 404 em {chave}")
+        r = self.rotas[chave]
         if isinstance(r, Exception):
             raise r
         return r
+
+    def get(self, url, **kwargs):
+        return self._resp(url)
+
+    def post(self, url, data):
+        self.posts.append(data)
+        ano = data.get(scraper.CAMPO_ANO_PESQUISA)
+        chave = f"{url}#post:{ano}" if ano else f"{url}#post"
+        return self._resp(chave)
 
 
 def _rotas_extensao(falha_em=None):
@@ -316,19 +403,50 @@ class TestColeta:
         assert [i["detalhe_ok"] for i in res.itens] == [True, False, False, False]
         assert res.erros == []  # itens além do teto não contam como erro
 
-    def test_pesquisa_usa_url_prefixo_e_base_proprias(self):
+    def test_pesquisa_posta_o_formulario_e_segue_a_listagem(self):
         rotas = {
-            URL_PESQ: LISTAGEM_PESQUISA,
+            URL_PESQ: FORM_PESQUISA,
+            URL_PESQ + "#post": LISTAGEM_PESQUISA,
             "https://sistemas.unirio.br/projetos/search/index?page=2": LISTAGEM_PESQUISA,  # mesma página
             "https://sistemas.unirio.br/projetos/search/view?id=501": DETALHE_PESQUISA,
             "https://sistemas.unirio.br/projetos/search/view?Id=502": DETALHE_PESQUISA,
         }
-        res = scraper.coletar_pesquisa(ClienteRoteado(UnirioConfig(), rotas))
-        # a 2ª página repete os itens: paramos e marcamos incompleta (paginação não avançou)
-        assert res.paginas == 2 and res.completa is False
+        cliente = ClienteRoteado(UnirioConfig(), rotas)
+        res = scraper.coletar_pesquisa(cliente)
+        # POST leva o _formkey/_formname do web2py e os campos vazios
+        assert cliente.posts[0]["_formkey"] == "58673d0c-bd05" and cliente.posts[0]["_formname"] == "default"
+        assert cliente.posts[0]["TITULO"] == "" and cliente.posts[0]["ANO_REFERENCIA"] == ""
+        # GET do form + POST + página 2 repetida: paramos e marcamos incompleta (paginação não avançou)
+        assert res.paginas == 3 and res.completa is False
         assert len(res.itens) == 2
         assert res.itens[1]["titulo"] == "Genômica de bactérias"  # detalhe (fixture única) sobrescreve
         assert res.itens[1]["situacao"] == "FINALIZADO"
+
+    def test_pesquisa_busca_por_ano_quando_o_portal_exige_filtro(self):
+        listagem_2025 = LISTAGEM_PESQUISA.replace("id=501", "id=601").replace("Id=502", "Id=602").replace(
+            '<div class="pager"><a href="/projetos/search/index?page=2" class="next">Next &gt;</a></div>', "")
+        assert "pager" not in listagem_2025
+        listagem_2026 = listagem_2025.replace("id=601", "id=701").replace("Id=602", "Id=702")
+        rotas = {
+            URL_PESQ: FORM_PESQUISA,
+            URL_PESQ + "#post": FORM_PESQUISA_EXIGE_BUSCA,      # busca vazia recusada
+            URL_PESQ + "#post:2025": listagem_2025,
+            URL_PESQ + "#post:2026": listagem_2026,
+        }
+        for id_ in ("601", "602", "701", "702"):
+            chave = "Id" if id_.endswith("2") else "id"
+            rotas[f"https://sistemas.unirio.br/projetos/search/view?{chave}={id_}"] = DETALHE_PESQUISA
+        cliente = ClienteRoteado(UnirioConfig(), rotas)
+        res = scraper.coletar_pesquisa(cliente)
+        assert [p.get("ANO_REFERENCIA") for p in cliente.posts] == ["", "2025", "2026"]  # anos do formulário
+        assert [i["unirio_id"] for i in res.itens] == ["601", "602", "701", "702"]
+        assert res.completa is True and res.erros == []
+
+        cfg = UnirioConfig(pesquisa_anos=["2026"])
+        cliente = ClienteRoteado(cfg, rotas)
+        res = scraper.coletar_pesquisa(cliente)
+        assert [p.get("ANO_REFERENCIA") for p in cliente.posts] == ["", "2026"]
+        assert [i["unirio_id"] for i in res.itens] == ["701", "702"]
 
 
 # ─────────────────────────────────────────────

@@ -1,0 +1,670 @@
+
+<!DOCTYPE html>
+
+<html lang="pt-br">
+<head>
+<title> Portal da Extensão - UNIRIO </title> 
+
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1, shrink-to-fit=no" name="viewport"/>
+<meta content="IE=edge" http-equiv="X-UA-Compatible"/>
+
+<link href="/extensao/static/images/favicon.ico" rel="shortcut icon" type="image/x-icon"/>
+<link crossorigin="anonymous" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" rel="stylesheet"/>
+<link href="/extensao/static/css/style.css" rel="stylesheet"/>
+<link crossorigin="anonymous" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css" integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" rel="stylesheet"/>
+<link href="/extensao/static/css/sticky-footer.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+
+<meta content="DTIC - Sistemas &lt;participante@unirio.br&gt;" name="author"/>
+<meta content="Sistema modelo" name="description"/>
+<meta content="web2py, python, framework" name="keywords"/>
+<meta content="Web2py Web Framework" name="generator"/>
+<link href="/extensao/static/css/calendar.css" rel="stylesheet" type="text/css"/>
+</head>
+<body>
+
+<header class="nao_logado_layout2">
+<ul class="oculto" id="atalhos">
+<li><a accesskey="1" href="#main">Ir Conteudo [1]</a></li>
+<li><a accesskey="2" href="#irmenu">Ir Menu [2]</a></li>
+<li><a accesskey="3" href="#irrodape">Ir Rodapé [3]</a></li>
+</ul>
+<div class="container marca" id="iniciotopo">
+<div class="row align-items-center py-2">
+<div class="col-10">
+<a href="/extensao" target="_self">
+<img alt="Marca PROEXC" src="/extensao/static/images/logo-header-extensao.png"/></a>
+</div>
+<div class="col-2 text-right">
+<a href="https://www.vlibras.gov.br/" id="vlibras">
+<span class="accessibility-icon">
+<span class="fas fa-assistive-listening-systems fa-lg"></span>
+</span>
+<span class="accessibility-text">
+<span>VLibras</span>
+</span>
+</a>
+</div>
+</div>
+</div>
+</header>
+
+<nav>
+<div class="container-fluid menu_unirio_layout2" id="irmenu">
+<div class="container">
+<ul class="nav justify-content-end" id="menu_superior">
+<li class="nav-item" id="buscar_programa_superior">
+<a class="nav-link" href="/extensao/busca/programas" target="_self">Buscar programas</a>
+</li>
+<li class="nav-item" id="buscar_projeto_superior">
+<a class="nav-link" href="/extensao/busca/projetos" target="_self">Buscar projetos</a>
+</li>
+
+<li class="nav-item" id="inicio">
+<a class="nav-link" href="/extensao">Início</a>
+</li>
+<li class="nav-item">
+<a class="nav-link" href="http://www.unirio.br" target="_self">Portal UNIRIO</a>
+</li>
+<li class="nav-item" id="ajuda_superior">
+<a class="nav-link" href="/extensao/ajuda">Ajuda</a>
+</li>
+<li class="nav-item">
+<button class="btn btn-light btn-sm btn-entrar-sair" onclick="window.location.href='/extensao/login'" type="button">
+<span class="material-icons login-icon">login</span>Entrar
+                            </button>
+</li>
+</ul>
+</div>
+</div>
+</nav>
+
+<div class="container-fluid menu_mobile">
+<nav class="navbar navbar-light navbar-expand-md navigation-clean">
+<div class="container-fluid">
+<button class="navbar-toggler justify-content-center align-items-center" data-target="#navcol-1" data-toggle="collapse">
+<span class="sr-only">Toggle navigation</span>
+<span class="navbar-toggler-icon"></span>
+</button>
+<a class="navbar-brand" href="#">
+<img alt="Marca PROEXC" src="/extensao/static/images/logo-header-extensao.png"/></a>
+
+<div class="collapse navbar-collapse" id="navcol-1">
+<ul class="nav navbar-nav">
+<li class="nav-item perfil-menu-mobile">
+<button class="btn btn-light btn-entrar-sair" onclick="window.location.href='/extensao/login'" type="button">
+<span class="material-icons login-icon">login</span>Entrar
+                                </button>
+<p hidden="" id="bemvindo_mobile">Olá, </p>
+</li>
+<div id="esquerdo_mobile">
+<li class="list-group-item categoria" hidden="">
+<span class="material-icons">article</span> Projetos
+                                </li>
+<li class="nav-item">
+<a class="nav-link" href="/extensao/busca/projetos"> Buscar projetos </a>
+</li>
+<li class="nav-item" hidden="">
+<a class="nav-link" href="/extensao/gerenciar/projetos"> Meus projetos </a>
+</li>
+<li class="nav-item" hidden="">
+<a class="nav-link" href="/extensao/cadastro/novo_projeto"> Cadastrar projetos </a>
+</li>
+<li class="list-group-item categoria" hidden="">
+<span class="material-icons">library_books</span> Programas
+                                </li>
+<li class="nav-item">
+<a class="nav-link" href="/extensao/busca/programas"> Buscar programas </a>
+</li>
+<li class="nav-item" hidden="">
+<a class="nav-link" href="/extensao/gerenciar/programas"> Meus programas </a>
+</li>
+<li class="nav-item" hidden="">
+<a class="nav-link" href="/extensao/cadastro/novo_programa"> Cadastrar programas </a>
+</li>
+<li class="list-group-item categoria" hidden="">
+<span class="material-icons centraliza-icon">miscellaneous_services</span> Administração
+                                </li>
+<li class="nav-item" hidden="">
+<a class="nav-link" href="/extensao/adm/projetos"> Projetos em trâmite </a>
+</li>
+<li class="nav-item" hidden="">
+<a class="nav-link" href="/extensao/adm/programas"> Programas em trâmite </a>
+</li>
+</div>
+<div class="categoria" hidden=""></div>
+<li class="nav-item">
+<a class="nav-link" href="/extensao"> Início </a>
+</li>
+<li class="nav-item">
+<a class="nav-link" href="http://www.unirio.br"> Portal Unirio </a>
+</li>
+<li class="nav-item">
+<a class="nav-link" href="/extensao/ajuda"> Ajuda </a>
+</li>
+</ul>
+</div>
+</div>
+</nav>
+</div>
+
+<div class="container">
+</div>
+
+<div class="container" id="breadcrumb">
+<div class="row">
+<nav aria-label="breadcrumb">
+<ol class="breadcrumb">
+<li class="breadcrumb-item" id="bread_inicio"><a href="/extensao">Início</a></li>
+<li aria-current="page" class="breadcrumb-item active" id="bread_ativo"></li>
+</ol>
+</nav>
+</div>
+</div>
+
+<section class="container" id="main">
+
+
+
+
+<div class="container" id="content">
+<h1>Portal da Extensão</h1>
+<h2 class="blockquote text-center">Buscar projetos</h2>
+<br/>
+<div class="container">
+<div class="row">
+<div class="form-group col-12">
+<h3>Detalhes do Projeto</h3>
+<hr/>
+<div class="accordion" id="accordionExample">
+<div class="card">
+<div class="card-header" id="headingOne">
+<h4 class="mb-0">
+<button aria-controls="collapseOne" aria-expanded="true" class="btn btn-link btn-block text-left" data-target="#collapseOne" data-toggle="collapse" type="button">
+                                    Dados básicos
+                                </button>
+</h4>
+</div>
+<div aria-labelledby="headingOne" class="collapse show" data-parent="#accordionExample" id="collapseOne">
+<div class="card-body">
+<p class="card-subtitle titulo_ficha"><small>Processo:</small></p>
+<p class="card-text"><small>X0272/2017          </small></p>
+<p class="card-subtitle titulo_ficha"><small>Título:</small></p>
+<p class="card-text"><small>Maré de Saúde</small></p>
+<p class="card-subtitle titulo_ficha"><small>Resumo:</small></p>
+<p class="card-text"><small>O projeto de extensão desenvolve atividades de promoção da saúde através do teatro, com aulas para adolescentes, adultos e idosos em um centro municipal de saúde.</small></p>
+<p class="card-subtitle titulo_ficha"><small>Palavras-chave:</small></p>
+<p class="card-text"><small>-</small></p>
+<p class="card-subtitle titulo_ficha"><small>Unidade responsável:</small></p>
+<p class="card-text"><small>Departamento de Interpretacao Teatral</small></p>
+<p class="card-subtitle titulo_ficha"><small>Financiamento:</small></p>
+<p class="card-text"><small>Não Possui Financiamento</small></p>
+<p class="card-subtitle titulo_ficha"><small>Situação:</small></p>
+<p class="card-text"><small>Em andamento                                                                                        </small></p>
+<p class="card-subtitle titulo_ficha"><small>Data de Vigência</small></p>
+<p class="card-text"><small>01/03/2018 a 31/12/2026</small></p>
+<p class="card-subtitle titulo_ficha"><small>Ano de referência:</small></p>
+<p class="card-text"><small>2018</small></p>
+</div>
+</div>
+</div>
+<div class="card">
+<div class="card-header" id="headingTwo">
+<h4 class="mb-0">
+<button aria-controls="collapseTwo" aria-expanded="false" class="btn btn-link btn-block text-left collapsed" data-target="#collapseTwo" data-toggle="collapse" type="button">
+                                    Dados do coordenador
+                                </button>
+</h4>
+</div>
+<div aria-labelledby="headingTwo" class="collapse" data-parent="#accordionExample" id="collapseTwo">
+<div class="card-body">
+<p class="card-subtitle titulo_ficha"><small>Coordenador:</small></p>
+<p class="card-text"><small>BRUNO LIMA</small></p>
+<p class="card-subtitle titulo_ficha"><small>Email:</small></p>
+<p class="card-text"><small>coordenador@unirio.br</small></p>
+</div>
+</div>
+</div>
+<div class="card">
+<div class="card-header" id="headingThree">
+<h4 class="mb-0">
+<button aria-controls="collapseThree" aria-expanded="false" class="btn btn-link btn-block text-left collapsed" data-target="#collapseThree" data-toggle="collapse" type="button">
+                                    Classificações
+                                </button>
+</h4>
+</div>
+<div aria-labelledby="headingThree" class="collapse" data-parent="#accordionExample" id="collapseThree">
+<div class="card-body">
+<p class="card-subtitle titulo_ficha"><small>Área temática:</small></p>
+<p class="card-text"><small>Saúde</small></p>
+<p class="card-subtitle titulo_ficha"><small>Linhas de extensão:</small></p>
+<ul>
+<li><small>Artes cênicas</small></li>
+<li><small>Endemias e epidemias</small></li>
+<li><small>Formação de professores (formação docente)</small></li>
+<li><small>Grupos sociais vulneráveis</small></li>
+<li><small>Infância e adolescência</small></li>
+<li><small>Jovens e adultos</small></li>
+<li><small>Metodologias e estratégias de ensino/aprendizagem</small></li>
+<li><small>Organizações da sociedade civil e movimentos sociais e populares</small></li>
+<li><small>Pessoas com deficiências, incapacidades, e necessidades especiais</small></li>
+<li><small>Saúde da família</small></li>
+<li><small>Saúde humana</small></li>
+<li><small>Temas específicos / Desenvolvimento humano</small></li>
+<li><small>Terceira idade</small></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="card">
+<div class="card-header" id="headingFour">
+<h4 class="mb-0">
+<button aria-controls="collapseFour" aria-expanded="false" class="btn btn-link btn-block text-left collapsed" data-target="#collapseFour" data-toggle="collapse" type="button">
+                                    Participantes
+                                </button>
+</h4>
+</div>
+<div aria-labelledby="headingFour" class="collapse" data-parent="#accordionExample" id="collapseFour">
+<div class="card-body">
+<section>
+<p class="card-subtitle titulo_ficha"><small>Nome:</small></p>
+<p class="card-text"><small>BRUNO LIMA</small></p>
+<p class="card-subtitle titulo_ficha"><small>Função:</small></p>
+<p class="card-text"><small>Coordenador                                                                                         </small></p>
+<p class="card-subtitle titulo_ficha"><small>E-mail:</small></p>
+<p class="card-text"><small>participante@unirio.br</small></p>
+<p class="card-subtitle titulo_ficha"><small>Vínculo:</small></p>
+<p class="card-text"><small>Docente                                                                                             </small></p>
+<p class="card-subtitle titulo_ficha"><small>Vigência de participação:</small></p>
+<p class="card-text"><small>01/10/2025 a 31/12/2026</small></p>
+<p class="card-subtitle titulo_ficha"><small>Situação:</small></p>
+<p class="card-text">
+<small class="badge badge-pill badge-info">
+                                                Ativo
+                                            </small>
+</p>
+</section>
+<hr/>
+<section>
+<p class="card-subtitle titulo_ficha"><small>Nome:</small></p>
+<p class="card-text"><small>GABRIELA MOTTA</small></p>
+<p class="card-subtitle titulo_ficha"><small>Função:</small></p>
+<p class="card-text"><small>Bolsista                                                                                            </small></p>
+<p class="card-subtitle titulo_ficha"><small>E-mail:</small></p>
+<p class="card-text"><small>participante@unirio.br</small></p>
+<p class="card-subtitle titulo_ficha"><small>Vínculo:</small></p>
+<p class="card-text"><small>Aluno de Graduacao                                                                                  </small></p>
+<p class="card-subtitle titulo_ficha"><small>Vigência de participação:</small></p>
+<p class="card-text"><small>01/03/2026 a 31/12/2026</small></p>
+<p class="card-subtitle titulo_ficha"><small>Situação:</small></p>
+<p class="card-text">
+<small class="badge badge-pill badge-info">
+                                                Ativo
+                                            </small>
+</p>
+</section>
+<hr/>
+<section>
+<p class="card-subtitle titulo_ficha"><small>Nome:</small></p>
+<p class="card-text"><small>HENRIQUE PRADO</small></p>
+<p class="card-subtitle titulo_ficha"><small>Função:</small></p>
+<p class="card-text"><small>Bolsista                                                                                            </small></p>
+<p class="card-subtitle titulo_ficha"><small>E-mail:</small></p>
+<p class="card-text"><small>participante@unirio.br</small></p>
+<p class="card-subtitle titulo_ficha"><small>Vínculo:</small></p>
+<p class="card-text"><small>Aluno de Graduacao                                                                                  </small></p>
+<p class="card-subtitle titulo_ficha"><small>Vigência de participação:</small></p>
+<p class="card-text"><small>01/03/2024 a 31/12/2024</small></p>
+<p class="card-subtitle titulo_ficha"><small>Situação:</small></p>
+<p class="card-text">
+<small class="badge badge-pill badge-dark">
+                                                Inativo
+                                            </small>
+</p>
+</section>
+<hr/>
+<section>
+<p class="card-subtitle titulo_ficha"><small>Nome:</small></p>
+<p class="card-text"><small>HENRIQUE PRADO</small></p>
+<p class="card-subtitle titulo_ficha"><small>Função:</small></p>
+<p class="card-text"><small>Bolsista                                                                                            </small></p>
+<p class="card-subtitle titulo_ficha"><small>E-mail:</small></p>
+<p class="card-text"><small>participante@unirio.br</small></p>
+<p class="card-subtitle titulo_ficha"><small>Vínculo:</small></p>
+<p class="card-text"><small>Aluno de Graduacao                                                                                  </small></p>
+<p class="card-subtitle titulo_ficha"><small>Vigência de participação:</small></p>
+<p class="card-text"><small>01/03/2025 a 31/12/2025</small></p>
+<p class="card-subtitle titulo_ficha"><small>Situação:</small></p>
+<p class="card-text">
+<small class="badge badge-pill badge-dark">
+                                                Inativo
+                                            </small>
+</p>
+</section>
+<hr/>
+<section>
+<p class="card-subtitle titulo_ficha"><small>Nome:</small></p>
+<p class="card-text"><small>ANA PAULA SOUZA</small></p>
+<p class="card-subtitle titulo_ficha"><small>Função:</small></p>
+<p class="card-text"><small>Coordenador                                                                                         </small></p>
+<p class="card-subtitle titulo_ficha"><small>E-mail:</small></p>
+<p class="card-text"><small>participante@unirio.br</small></p>
+<p class="card-subtitle titulo_ficha"><small>Vínculo:</small></p>
+<p class="card-text"><small>Docente                                                                                             </small></p>
+<p class="card-subtitle titulo_ficha"><small>Vigência de participação:</small></p>
+<p class="card-text"><small>01/03/2018 a 30/09/2025</small></p>
+<p class="card-subtitle titulo_ficha"><small>Situação:</small></p>
+<p class="card-text">
+<small class="badge badge-pill badge-dark">
+                                                Inativo
+                                            </small>
+</p>
+</section>
+<hr/>
+<section>
+<p class="card-subtitle titulo_ficha"><small>Nome:</small></p>
+<p class="card-text"><small>IVONE CASTRO</small></p>
+<p class="card-subtitle titulo_ficha"><small>Função:</small></p>
+<p class="card-text"><small>Bolsista                                                                                            </small></p>
+<p class="card-subtitle titulo_ficha"><small>E-mail:</small></p>
+<p class="card-text"><small>participante@unirio.br</small></p>
+<p class="card-subtitle titulo_ficha"><small>Vínculo:</small></p>
+<p class="card-text"><small>Aluno de Graduacao                                                                                  </small></p>
+<p class="card-subtitle titulo_ficha"><small>Vigência de participação:</small></p>
+<p class="card-text"><small>01/08/2022 a 31/12/2022</small></p>
+<p class="card-subtitle titulo_ficha"><small>Situação:</small></p>
+<p class="card-text">
+<small class="badge badge-pill badge-dark">
+                                                Inativo
+                                            </small>
+</p>
+</section>
+<hr/>
+<section>
+<p class="card-subtitle titulo_ficha"><small>Nome:</small></p>
+<p class="card-text"><small>IVONE CASTRO</small></p>
+<p class="card-subtitle titulo_ficha"><small>Função:</small></p>
+<p class="card-text"><small>Bolsista                                                                                            </small></p>
+<p class="card-subtitle titulo_ficha"><small>E-mail:</small></p>
+<p class="card-text"><small>participante@unirio.br</small></p>
+<p class="card-subtitle titulo_ficha"><small>Vínculo:</small></p>
+<p class="card-text"><small>Aluno de Graduacao                                                                                  </small></p>
+<p class="card-subtitle titulo_ficha"><small>Vigência de participação:</small></p>
+<p class="card-text"><small>05/03/2023 a 31/12/2023</small></p>
+<p class="card-subtitle titulo_ficha"><small>Situação:</small></p>
+<p class="card-text">
+<small class="badge badge-pill badge-dark">
+                                                Inativo
+                                            </small>
+</p>
+</section>
+<hr/>
+<section>
+<p class="card-subtitle titulo_ficha"><small>Nome:</small></p>
+<p class="card-text"><small>IVONE CASTRO</small></p>
+<p class="card-subtitle titulo_ficha"><small>Função:</small></p>
+<p class="card-text"><small>Bolsista                                                                                            </small></p>
+<p class="card-subtitle titulo_ficha"><small>E-mail:</small></p>
+<p class="card-text"><small>participante@unirio.br</small></p>
+<p class="card-subtitle titulo_ficha"><small>Vínculo:</small></p>
+<p class="card-text"><small>Aluno de Graduacao                                                                                  </small></p>
+<p class="card-subtitle titulo_ficha"><small>Vigência de participação:</small></p>
+<p class="card-text"><small>01/08/2024 a 31/12/2024</small></p>
+<p class="card-subtitle titulo_ficha"><small>Situação:</small></p>
+<p class="card-text">
+<small class="badge badge-pill badge-dark">
+                                                Inativo
+                                            </small>
+</p>
+</section>
+<hr/>
+<section>
+<p class="card-subtitle titulo_ficha"><small>Nome:</small></p>
+<p class="card-text"><small>JOAO PEDRO ALVES</small></p>
+<p class="card-subtitle titulo_ficha"><small>Função:</small></p>
+<p class="card-text"><small>Bolsista                                                                                            </small></p>
+<p class="card-subtitle titulo_ficha"><small>E-mail:</small></p>
+<p class="card-text"><small>participante@unirio.br</small></p>
+<p class="card-subtitle titulo_ficha"><small>Vínculo:</small></p>
+<p class="card-text"><small>Aluno de Graduacao                                                                                  </small></p>
+<p class="card-subtitle titulo_ficha"><small>Vigência de participação:</small></p>
+<p class="card-text"><small>01/03/2019 a 31/12/2019</small></p>
+<p class="card-subtitle titulo_ficha"><small>Situação:</small></p>
+<p class="card-text">
+<small class="badge badge-pill badge-dark">
+                                                Inativo
+                                            </small>
+</p>
+</section>
+<hr/>
+<section>
+<p class="card-subtitle titulo_ficha"><small>Nome:</small></p>
+<p class="card-text"><small>JOAO PEDRO ALVES</small></p>
+<p class="card-subtitle titulo_ficha"><small>Função:</small></p>
+<p class="card-text"><small>Bolsista                                                                                            </small></p>
+<p class="card-subtitle titulo_ficha"><small>E-mail:</small></p>
+<p class="card-text"><small>participante@unirio.br</small></p>
+<p class="card-subtitle titulo_ficha"><small>Vínculo:</small></p>
+<p class="card-text"><small>Aluno de Graduacao                                                                                  </small></p>
+<p class="card-subtitle titulo_ficha"><small>Vigência de participação:</small></p>
+<p class="card-text"><small>01/03/2020 a 31/12/2020</small></p>
+<p class="card-subtitle titulo_ficha"><small>Situação:</small></p>
+<p class="card-text">
+<small class="badge badge-pill badge-dark">
+                                                Inativo
+                                            </small>
+</p>
+</section>
+<hr/>
+<section>
+<p class="card-subtitle titulo_ficha"><small>Nome:</small></p>
+<p class="card-text"><small>BRUNO LIMA</small></p>
+<p class="card-subtitle titulo_ficha"><small>Função:</small></p>
+<p class="card-text"><small>Vice coordenador                                                                                    </small></p>
+<p class="card-subtitle titulo_ficha"><small>E-mail:</small></p>
+<p class="card-text"><small>participante@unirio.br</small></p>
+<p class="card-subtitle titulo_ficha"><small>Vínculo:</small></p>
+<p class="card-text"><small>Docente                                                                                             </small></p>
+<p class="card-subtitle titulo_ficha"><small>Vigência de participação:</small></p>
+<p class="card-text"><small>01/03/2018 a 21/12/2018</small></p>
+<p class="card-subtitle titulo_ficha"><small>Situação:</small></p>
+<p class="card-text">
+<small class="badge badge-pill badge-dark">
+                                                Inativo
+                                            </small>
+</p>
+</section>
+<hr/>
+<section>
+<p class="card-subtitle titulo_ficha"><small>Nome:</small></p>
+<p class="card-text"><small>BRUNO LIMA</small></p>
+<p class="card-subtitle titulo_ficha"><small>Função:</small></p>
+<p class="card-text"><small>Vice coordenador                                                                                    </small></p>
+<p class="card-subtitle titulo_ficha"><small>E-mail:</small></p>
+<p class="card-text"><small>participante@unirio.br</small></p>
+<p class="card-subtitle titulo_ficha"><small>Vínculo:</small></p>
+<p class="card-text"><small>Docente                                                                                             </small></p>
+<p class="card-subtitle titulo_ficha"><small>Vigência de participação:</small></p>
+<p class="card-text"><small>31/03/2019 a 30/09/2025</small></p>
+<p class="card-subtitle titulo_ficha"><small>Situação:</small></p>
+<p class="card-text">
+<small class="badge badge-pill badge-dark">
+                                                Inativo
+                                            </small>
+</p>
+</section>
+<hr/>
+<section>
+<p class="card-subtitle titulo_ficha"><small>Nome:</small></p>
+<p class="card-text"><small>KARINA LOPES</small></p>
+<p class="card-subtitle titulo_ficha"><small>Função:</small></p>
+<p class="card-text"><small>Bolsista                                                                                            </small></p>
+<p class="card-subtitle titulo_ficha"><small>E-mail:</small></p>
+<p class="card-text"><small>participante@unirio.br</small></p>
+<p class="card-subtitle titulo_ficha"><small>Vínculo:</small></p>
+<p class="card-text"><small>Aluno de Graduacao                                                                                  </small></p>
+<p class="card-subtitle titulo_ficha"><small>Vigência de participação:</small></p>
+<p class="card-text"><small>01/03/2018 a 31/12/2018</small></p>
+<p class="card-subtitle titulo_ficha"><small>Situação:</small></p>
+<p class="card-text">
+<small class="badge badge-pill badge-dark">
+                                                Inativo
+                                            </small>
+</p>
+</section>
+<hr/>
+<section>
+<p class="card-subtitle titulo_ficha"><small>Nome:</small></p>
+<p class="card-text"><small>LEONARDO BRAGA</small></p>
+<p class="card-subtitle titulo_ficha"><small>Função:</small></p>
+<p class="card-text"><small>Bolsista                                                                                            </small></p>
+<p class="card-subtitle titulo_ficha"><small>E-mail:</small></p>
+<p class="card-text"><small>participante@unirio.br</small></p>
+<p class="card-subtitle titulo_ficha"><small>Vínculo:</small></p>
+<p class="card-text"><small>Aluno de Graduacao                                                                                  </small></p>
+<p class="card-subtitle titulo_ficha"><small>Vigência de participação:</small></p>
+<p class="card-text"><small>01/03/2024 a 31/07/2024</small></p>
+<p class="card-subtitle titulo_ficha"><small>Situação:</small></p>
+<p class="card-text">
+<small class="badge badge-pill badge-dark">
+                                                Inativo
+                                            </small>
+</p>
+</section>
+<hr/>
+<section>
+<p class="card-subtitle titulo_ficha"><small>Nome:</small></p>
+<p class="card-text"><small>MARIA CLARA DUARTE</small></p>
+<p class="card-subtitle titulo_ficha"><small>Função:</small></p>
+<p class="card-text"><small>Bolsista                                                                                            </small></p>
+<p class="card-subtitle titulo_ficha"><small>E-mail:</small></p>
+<p class="card-text"><small>participante@unirio.br</small></p>
+<p class="card-subtitle titulo_ficha"><small>Vínculo:</small></p>
+<p class="card-text"><small>Aluno de Graduacao                                                                                  </small></p>
+<p class="card-subtitle titulo_ficha"><small>Vigência de participação:</small></p>
+<p class="card-text"><small>01/03/2021 a 31/12/2021</small></p>
+<p class="card-subtitle titulo_ficha"><small>Situação:</small></p>
+<p class="card-text">
+<small class="badge badge-pill badge-dark">
+                                                Inativo
+                                            </small>
+</p>
+</section>
+<hr/>
+<section>
+<p class="card-subtitle titulo_ficha"><small>Nome:</small></p>
+<p class="card-text"><small>MARIA CLARA DUARTE</small></p>
+<p class="card-subtitle titulo_ficha"><small>Função:</small></p>
+<p class="card-text"><small>Bolsista                                                                                            </small></p>
+<p class="card-subtitle titulo_ficha"><small>E-mail:</small></p>
+<p class="card-text"><small>participante@unirio.br</small></p>
+<p class="card-subtitle titulo_ficha"><small>Vínculo:</small></p>
+<p class="card-text"><small>Aluno de Graduacao                                                                                  </small></p>
+<p class="card-subtitle titulo_ficha"><small>Vigência de participação:</small></p>
+<p class="card-text"><small>07/03/2022 a 22/12/2022</small></p>
+<p class="card-subtitle titulo_ficha"><small>Situação:</small></p>
+<p class="card-text">
+<small class="badge badge-pill badge-dark">
+                                                Inativo
+                                            </small>
+</p>
+</section>
+<hr/>
+</div>
+</div>
+</div>
+<div class="card">
+<div class="card-header" id="headingFive">
+<h4 class="mb-0">
+<button aria-controls="collapseFive" aria-expanded="false" class="btn btn-link btn-block text-left collapsed" data-target="#collapseFive" data-toggle="collapse" type="button">
+                                    Arquivos
+                                </button>
+</h4>
+</div>
+<div aria-labelledby="headingFive" class="collapse" data-parent="#accordionExample" id="collapseFive">
+<div class="card-body">
+<p class="card-subtitle titulo_ficha"><small>Plano de ação:</small></p>
+<p class="card-link">
+<div class="bg-anexo">
+<small>
+<a class="form-control-file link-download" href="/extensao/cadastro/download_arquivo_projeto?ID_PROJETO=6637&amp;TIPO_ARQUIVO=20">
+<span class="material-icons link-download-icon" id="info">attachment</span>
+<span class="link-download-desc">MARE DE SAUDE PLANO DE ACAO 2020 com assinatura.PDF                                                 </span>
+</a>
+</small>
+</div>
+</p>
+<p class="card-subtitle titulo_ficha"><small>Ata do departamento:</small></p>
+<p class="card-link">
+<div class="bg-anexo">
+<small>
+<a class="form-control-file link-download" href="/extensao/cadastro/download_arquivo_projeto?ID_PROJETO=6637&amp;TIPO_ARQUIVO=5">
+<span class="material-icons link-download-icon" id="info">attachment</span>
+<span class="link-download-desc">ata.pdf                                                                                             </span>
+</a>
+</small>
+</div>
+</p>
+<p class="card-subtitle titulo_ficha"><small>Carta de anuência:</small></p>
+<p class="card-link">
+<div class="bg-anexo">
+<small>
+<a class="form-control-file link-download" href="/extensao/cadastro/download_arquivo_projeto?ID_PROJETO=6637&amp;TIPO_ARQUIVO=29">
+<span class="material-icons link-download-icon" id="info">attachment</span>
+<span class="link-download-desc">Carta de anuência do coordenador do programa.pdf                                                    </span>
+</a>
+</small>
+</div>
+</p>
+<p class="card-subtitle titulo_ficha"><small>Termo de outorga:</small></p>
+<p class="card-link">
+<small>--</small>
+</p>
+</div>
+</div>
+</div>
+</div>
+<br/>
+<a class="btn btn-light" href="/extensao/busca">
+                    Voltar
+                </a>
+
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<footer class="footer" id="irrodape">
+<div class="container-fluid">
+<div class="container">
+<div class="container_footer">
+<span class="rodape">Desenvolvido por <a class="link_rodape" href="http://www.unirio.br/dtic">
+<img alt="marca DTIC UNIRIO" class="logo_dtic" src="/extensao/static/images/logo_dtic_pb.png"/></a>
+</span>
+</div>
+</div>
+</div>
+</footer>
+<div class="enabled" vw="">
+<div class="active" vw-access-button=""></div>
+<div vw-plugin-wrapper="">
+<div class="vw-plugin-top-wrapper"></div>
+</div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

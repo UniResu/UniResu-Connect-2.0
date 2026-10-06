@@ -19,12 +19,19 @@ import logging
 from dataclasses import dataclass, field
 from typing import Optional
 
+from bs4 import BeautifulSoup
+
 from services.http_client import ClienteHttp, ErroColeta
-from services.sigaa.parser import SITUACAO_EM_EXECUCAO
+from services.sigaa.parser import SITUACAO_EM_EXECUCAO, normalizar, payload_base
 from services.unirio import parser
 from services.unirio.config import UnirioConfig
 
 logger = logging.getLogger(__name__)
+
+# Portal da Pesquisa (web2py): a listagem só aparece depois de um POST no
+# formulário de busca ("Você precisa realizar uma busca").
+CAMPO_ANO_PESQUISA = "ANO_REFERENCIA"
+AVISO_BUSCA_OBRIGATORIA = "PRECISA REALIZAR UMA BUSCA"
 
 
 class UnirioErro(ErroColeta):
@@ -57,23 +64,53 @@ def prefixo_detalhe(cfg: UnirioConfig, modulo: str) -> Optional[str]:
     return cfg.pesquisa_detalhe_prefixo if modulo == "pesquisa" else None
 
 
-def listar(client: UnirioClient, modulo: str) -> tuple[list[dict], int, bool]:
-    """Percorre todas as páginas da listagem. Devolve (itens, páginas lidas, completa)."""
+def formulario_pesquisa(html_form: str):
+    """O <form> de busca do Portal da Pesquisa (tem o campo ANO_REFERENCIA)."""
+    soup = BeautifulSoup(html_form, "html.parser")
+    for form in soup.find_all("form"):
+        if form.find(attrs={"name": CAMPO_ANO_PESQUISA}) or form.find("input", {"name": "_formkey"}):
+            return form
+    raise UnirioErro("Formulário de busca do Portal da Pesquisa não encontrado — o layout mudou?")
+
+
+def anos_disponiveis_pesquisa(html_form: str) -> list[str]:
+    """Opções (não vazias) do seletor de ano de referência da busca."""
+    sel = formulario_pesquisa(html_form).find("select", {"name": CAMPO_ANO_PESQUISA})
+    return [o.get("value") for o in sel.find_all("option") if o.get("value")] if sel else []
+
+
+def payload_pesquisa(html_form: str, ano: Optional[str] = None) -> dict:
+    """POST da busca: todos os campos do form com seus valores padrão (inclui o
+    `_formkey` de sessão do web2py) e, opcionalmente, o ano de referência."""
+    dados = payload_base(formulario_pesquisa(html_form))
+    if ano:
+        dados[CAMPO_ANO_PESQUISA] = ano
+    return dados
+
+
+def buscar_pesquisa(client: UnirioClient, ano: Optional[str] = None, html_form: Optional[str] = None) -> str:
+    """GET do formulário (cookie de sessão + _formkey) e POST da busca."""
+    url = client.cfg.url_pesquisa
+    html_form = html_form or client.get(url)
+    return client.post(url, payload_pesquisa(html_form, ano))
+
+
+def exige_busca(html: str) -> bool:
+    return AVISO_BUSCA_OBRIGATORIA in normalizar(BeautifulSoup(html, "html.parser").get_text(" "))
+
+
+def _paginar(client: UnirioClient, modulo: str, html: str, url: str, itens: list[dict], vistos: set[str],
+             paginas_ja: int) -> tuple[int, bool]:
+    """A partir da 1ª página já carregada (contada pelo chamador), segue os
+    links de próxima página. Devolve (páginas adicionais lidas, completa)."""
     cfg: UnirioConfig = client.cfg
-    url: Optional[str] = url_inicial(cfg, modulo)
     prefixo = prefixo_detalhe(cfg, modulo)
-    itens: list[dict] = []
-    vistos: set[str] = set()
-    visitadas: set[str] = set()
-    paginas = 0
+    visitadas: set[str] = {url}
+    lidas = 0       # páginas adicionais buscadas aqui
+    n = 0           # páginas processadas neste bloco (inclui a inicial)
     completa = True
-    while url:
-        if url in visitadas or paginas >= cfg.max_paginas:
-            completa = False
-            break
-        visitadas.add(url)
-        html = client.get(url)
-        paginas += 1
+    while True:
+        n += 1
         novos = 0
         for item in parser.parse_listagem(html, modulo, url, prefixo):
             if item["unirio_id"] not in vistos:
@@ -81,13 +118,65 @@ def listar(client: UnirioClient, modulo: str) -> tuple[list[dict], int, bool]:
                 itens.append(item)
                 novos += 1
         proxima = parser.proxima_pagina(html, url)
-        if novos == 0 and paginas > 1:
+        if novos == 0 and n > 1:
             # Uma página além da primeira sem nenhum item novo: ou o portal
             # ignorou o parâmetro de página, ou a paginação não avançou. Não dá
             # para confiar no que lemos; paramos e marcamos como incompleta.
             completa = False
             break
+        if not proxima:
+            break
+        if proxima in visitadas or paginas_ja + lidas + 1 >= cfg.max_paginas:
+            completa = False
+            break
+        visitadas.add(proxima)
         url = proxima
+        html = client.get(url)
+        lidas += 1
+    return lidas, completa
+
+
+def listar(client: UnirioClient, modulo: str) -> tuple[list[dict], int, bool]:
+    """Percorre todas as páginas da listagem. Devolve (itens, páginas lidas, completa).
+
+    Extensão: GET na URL de busca e paginação por link (`pag=N`).
+    Pesquisa: POST no formulário de busca; se o portal exigir algum filtro,
+    uma busca por ano de referência (UNIRIO_PESQUISA_ANOS) de cada vez.
+    """
+    cfg: UnirioConfig = client.cfg
+    itens: list[dict] = []
+    vistos: set[str] = set()
+    paginas = 0
+    completa = True
+    url = url_inicial(cfg, modulo)
+
+    if modulo == "pesquisa":
+        html_form = client.get(url)
+        paginas += 1
+        html = buscar_pesquisa(client, html_form=html_form)
+        paginas += 1
+        if exige_busca(html) or not parser.parse_listagem(html, modulo, url, prefixo_detalhe(cfg, modulo)):
+            anos = cfg.pesquisa_anos or anos_disponiveis_pesquisa(html_form)
+            logger.info("UNIRIO pesquisa: busca vazia não lista nada; buscando por ano: %s", anos)
+            for ano in anos:
+                html = buscar_pesquisa(client, ano=ano, html_form=html_form)
+                paginas += 1
+                lidas, ok = _paginar(client, modulo, html, url, itens, vistos, paginas)
+                paginas += lidas
+                completa = completa and ok
+        else:
+            lidas, completa = _paginar(client, modulo, html, url, itens, vistos, paginas)
+            paginas += lidas
+    else:
+        html = client.get(url)
+        paginas = 1
+        lidas, completa = _paginar(client, modulo, html, url, itens, vistos, paginas)
+        paginas += lidas
+        total = parser.total_resultados(html)
+        if total is not None and completa and len(itens) < total:
+            logger.warning("UNIRIO %s: a busca anuncia %d resultados, mas lemos %d itens", modulo, total, len(itens))
+            completa = False
+
     if not completa:
         logger.warning("UNIRIO %s: listagem incompleta após %d página(s) (teto=%d) — nada será desativado",
                        modulo, paginas, cfg.max_paginas)
@@ -130,7 +219,7 @@ def _registro(modulo: str, item: dict, detalhe: Optional[dict], cfg: Optional[Un
     return {
         "modulo": modulo,
         "unirio_id": item.get("unirio_id"),
-        "codigo": None,
+        "codigo": d.get("codigo"),
         "titulo": d.get("titulo") or item.get("titulo"),
         "coordenador": d.get("coordenador") or item.get("coordenador"),
         "email": d.get("email"),

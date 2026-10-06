@@ -74,10 +74,10 @@ A aba **Projetos Acadêmicos** lista, além dos projetos cadastrados pelos profe
 **Sync com a UNIRIO**
 
 * Fontes: [Portal da Pesquisa](https://sistemas.unirio.br/projetos/search/index) e [Portal da Extensão](https://sistemas2.unirio.br/extensao/busca/projetos?cat_termos=titulo&f_ano=0&f_area=0&f_centro=0&f_cor=0&f_lin=0&f_status=1&f_uni=0&termos=) (busca com status "em andamento").
-* `backend/jobs/sync_unirio.py` faz GET na busca, segue a paginação até a última página e abre a página de detalhe de cada projeto (coordenador(a), e-mail, unidade, período, resumo, palavras-chave). O parser fica em `backend/services/unirio/parser.py`; o cliente HTTP (pausa, timeout, retry) é o mesmo do SIGAA (`backend/services/http_client.py`).
+* `backend/jobs/sync_unirio.py` lê a busca de cada portal e abre a página de detalhe de cada projeto (coordenador(a), e-mail, unidade, período, resumo, palavras-chave, área temática, linhas de extensão). Extensão: GET na busca pública e paginação por link (`pag=N`, 5 projetos por página). Pesquisa: o portal (web2py) só lista após um POST no formulário de busca; o job envia a busca sem filtro e, se o portal exigir algum, busca por ano de referência. O parser fica em `backend/services/unirio/parser.py`; o cliente HTTP (pausa, timeout, retry) é o mesmo do SIGAA (`backend/services/http_client.py`).
 * Grava na collection `projetos` com `origem: "unirio"`, `instituicao: "UNIRIO"` e `modulo` (`pesquisa`/`extensao`), com chave natural em `chave_unirio`. As regras são as mesmas do SIGAA: projetos manuais nunca são tocados, uma fonte nunca encosta nos documentos da outra, e o que some da fonte fica `ativo: false`.
 * Uma listagem que parou antes da última página (teto `UNIRIO_MAX_PAGINAS` ou paginação não reconhecida) é tratada como falha: o que foi lido é gravado, mas **nada é desativado** e o alerta é enviado. Se o processo for morto pelo timeout do Actions, a run fica `abortada`.
-* O parser ainda foi escrito sem acesso ao HTML real dos portais (a rede do ambiente de desenvolvimento não alcançava a UNIRIO). As fixtures em `backend/tests/test_unirio.py` são sintéticas: rode o modo `captura` abaixo, baixe o artifact `captura-unirio` e substitua as fixtures pelo HTML real antes do primeiro `sync`.
+* As fixtures `backend/tests/fixtures/unirio_extensao_*.html` são o HTML real do Portal da Extensão (anonimizado: nomes e e-mails trocados). O Portal da Pesquisa ainda está em validação: rode o modo `captura`, baixe o artifact `captura-unirio` e confira o parser antes de ativar o agendamento.
 * As execuções ficam em `sigaa_sync_runs` com `fonte: "unirio"` (mesma collection do SIGAA, para reaproveitar o usuário restrito do Atlas). A rota `GET /api/projetos/fontes/status` devolve a última coleta de cada fonte.
 * Agendamento: GitHub Actions, toda segunda às 10:00 UTC (`.github/workflows/sync-unirio.yml`). **Está comentado no workflow** até o parser ser validado com o HTML real; até lá, só execução manual.
 * Execução manual (**Actions → Sync UNIRIO → Run workflow**) com três modos:
@@ -118,6 +118,7 @@ python -m jobs.definir_contato --codigo PVC2148-2026 --remover
 | `SIGAA_ALERTA_EMAIL` | job | `EMAIL_SUPORTE` | Quem recebe o alerta de falha do sync |
 | `UNIRIO_MODULOS` | job | `pesquisa,extensao` | Módulos coletados dos portais da UNIRIO |
 | `UNIRIO_EXTENSAO_STATUS` | job | `1` | Filtro `f_status` da busca de extensão (1 = em andamento, 0 = todos) |
+| `UNIRIO_PESQUISA_ANOS` | job | todos os anos do formulário | Anos de referência buscados no Portal da Pesquisa quando a busca sem filtro não lista nada |
 | `UNIRIO_MAX_PAGINAS` | job | `300` | Teto de páginas percorridas por listagem (ao bater, a listagem conta como incompleta) |
 | `UNIRIO_MAX_DETALHES` | job | `0` | Teto de detalhes consultados por módulo, só em `dry-run`/`captura` (o sync real ignora) |
 | `UNIRIO_URL_PESQUISA` | job | URL do Portal da Pesquisa | Substitui a URL da listagem de pesquisa |

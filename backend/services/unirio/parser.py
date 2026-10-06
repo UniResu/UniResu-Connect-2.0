@@ -212,6 +212,30 @@ def _linha_do_link(a: Tag):
     return a.find_parent("tr") or a.find_parent(["li", "article"]) or a.find_parent("div")
 
 
+_RE_UNIDADE = re.compile(r"^(DEPARTAMENTO|CENTRO|ESCOLA|INSTITUTO|COORDENADORIA|FACULDADE|NUCLEO|PRO-REITORIA|"
+                         r"PROGRAMA|LABORATORIO|BIBLIOTECA|ARQUIVO|AUDITORIA|HOSPITAL|REITORIA|DECANIA)\b")
+
+
+def _campos_por_heuristica(colunas: list[str]) -> dict:
+    """Blocos sem cabeçalho (ex.: `<li class="list-group-item">` do Portal da
+    Extensão, com <small>unidade</small>, <small>COORDENADORES</small>,
+    <small>ano</small>): reconhece ano (4 dígitos), coordenador (texto todo em
+    caixa alta, como os portais exibem nomes), unidade (começa com
+    Departamento/Centro/Escola...) e situação (vocabulário de status)."""
+    campos: dict = {}
+    for c in colunas:
+        n = normalizar(c)
+        if re.fullmatch(r"\d{4}", c):
+            campos.setdefault("ano", c)
+        elif _RE_UNIDADE.match(n):
+            campos.setdefault("unidade", c)
+        elif len(c) < 40 and any(p in n for p in _SITUACOES_NEGATIVAS + _SITUACOES_POSITIVAS):
+            campos.setdefault("situacao", c)
+        elif c.upper() == c and re.search(r"[A-Z]{3,}", n) and len(c) > 5 and not _RE_DATA.search(c):
+            campos.setdefault("coordenador", c)
+    return campos
+
+
 def _escolher_titulo(texto_link: str, colunas: list[str], por_cabecalho: dict) -> Optional[str]:
     if por_cabecalho.get("titulo") and not _titulo_generico(por_cabecalho["titulo"]):
         return por_cabecalho["titulo"]
@@ -258,8 +282,10 @@ def parse_listagem(html: str, modulo: str, url_pagina: str, prefixo_detalhe: Opt
                     cabecalhos = cabecalhos_por_tabela.setdefault(id(tabela), _cabecalhos(tabela))
                     por_cabecalho = _campos_por_cabecalho(cabecalhos, celulas)
             else:
-                celulas = [limpar(c.get_text(" ")) for c in linha.find_all(["p", "span", "div", "h3", "h4", "h5"])]
+                celulas = [limpar(c.get_text(" ")) for c in linha.find_all(["p", "span", "div", "small", "h3", "h4", "h5"])]
             colunas = [c for c in celulas if c and c != texto_link]
+            if not por_cabecalho:
+                por_cabecalho = _campos_por_heuristica(colunas)
 
         titulo = _escolher_titulo(texto_link, colunas, por_cabecalho)
         if not titulo:
@@ -278,6 +304,13 @@ def parse_listagem(html: str, modulo: str, url_pagina: str, prefixo_detalhe: Opt
             "colunas": colunas,
         })
     return itens
+
+
+def total_resultados(html: str) -> Optional[int]:
+    """Total anunciado pela busca ("(386 resultados)"), se houver — serve de
+    conferência da paginação."""
+    m = re.search(r"\(?\s*(\d[\d.]*)\s+resultados?\s*\)?", _soup(html).get_text(" "), re.I)
+    return int(m.group(1).replace(".", "")) if m else None
 
 
 def _desabilitado(a: Tag) -> bool:
@@ -328,10 +361,12 @@ def proxima_pagina(html: str, url_atual: str) -> Optional[str]:
 # ─────────────────────────────────────────────
 
 # (palavras do rótulo, campo, palavras que excluem o rótulo) — ordem importa:
-# E-MAIL antes de COORDENADOR ("E-mail do coordenador"), ANO antes de INÍCIO/TÉRMINO.
+# E-MAIL antes de COORDENADOR ("E-mail do coordenador"), ANO antes de INÍCIO/TÉRMINO,
+# LINHA antes de ÁREA ("Linhas de extensão" não é a área temática).
 _MAPA_DETALHE = [
     (("E-MAIL", "EMAIL", "E MAIL"), "email_raw", ()),
     (("TITULO",), "titulo", ()),
+    (("PROCESSO", "CODIGO"), "codigo", ()),
     (("COORDENADOR", "RESPONSAVEL", "PROPONENTE", "DOCENTE"), "coordenador",
      ("VICE", "ADJUNTO", "TELEFONE", "LATTES", "SUBSTITUTO")),
     (("UNIDADE", "CENTRO", "DEPARTAMENTO", "ESCOLA", "INSTITUTO", "LOTACAO", "FACULDADE"), "unidade",
@@ -343,9 +378,15 @@ _MAPA_DETALHE = [
     (("TERMINO", "FIM", "CONCLUSAO", "ENCERRAMENTO"), "fim_raw", ()),
     (("RESUMO", "DESCRICAO", "OBJETIVO", "APRESENTACAO", "JUSTIFICATIVA"), "descricao", ()),
     (("PALAVRA",), "palavras_chave_raw", ()),
-    (("AREA", "LINHA", "TEMATICA"), "area_tematica", ()),
+    (("LINHA",), "linhas_raw", ()),
+    (("AREA", "TEMATICA"), "area_tematica", ()),
+    (("FINANCIAMENTO",), "financiamento", ()),
     (("TIPO", "MODALIDADE", "NATUREZA"), "categoria", ("BOLSA",)),
 ]
+
+# Cards (seções) da ficha cujos rótulos não são do projeto, e sim de outras
+# pessoas/anexos — "Situação" e "E-mail" ali são dos participantes.
+_CARDS_IGNORADOS = ("PARTICIPANTE", "ARQUIVO", "EQUIPE", "MEMBRO", "BOLSISTA", "ANEXO")
 
 _ROTULOS = ("label", "strong", "b", "h4", "h5")
 _BLOCOS = {"p", "div", "li", "tr", "td", "table", "ul", "ol", "dl", "dt", "dd", "section", "article",
@@ -371,17 +412,50 @@ def _valor_apos(tag: Tag) -> str:
     return limpar(" ".join(partes))
 
 
+def _guardar_em(campos: dict, rotulo, valor) -> None:
+    r = normalizar(rotulo).rstrip(":").strip()
+    v = limpar(valor)
+    if re.fullmatch(r"[-–—.*/]+", v):  # "-" = campo vazio nos portais
+        v = ""
+    if r and v and r not in campos:
+        campos[r] = v
+
+
+def _valor_de_bloco(tag: Tag) -> str:
+    """Valor de um bloco da ficha: texto do <p>, ou itens de uma <ul> separados por ';'."""
+    if tag.name in ("ul", "ol"):
+        return "; ".join(limpar(li.get_text(" ")) for li in tag.find_all("li") if limpar(li.get_text(" ")))
+    return limpar(tag.get_text(" "))
+
+
+def _pares_ficha(soup: BeautifulSoup) -> dict:
+    """Layout dos portais da UNIRIO (Bootstrap): cards com <h4> no card-header
+    e, no card-body, pares `<p class="card-subtitle titulo_ficha">Rótulo:</p>`
+    seguidos do valor em `<p class="card-text">` ou `<ul>`. Cards de
+    participantes/arquivos são ignorados (seus rótulos repetem os do projeto)."""
+    campos: dict = {}
+    for card in soup.select("div.card"):
+        cabecalho = card.find(class_="card-header")
+        titulo_card = normalizar(cabecalho.get_text(" ")) if cabecalho else ""
+        if any(p in titulo_card for p in _CARDS_IGNORADOS):
+            continue
+        corpo = card.find(class_="card-body") or card
+        for rotulo in corpo.select("p.titulo_ficha, p.card-subtitle"):
+            valor = rotulo.find_next_sibling()
+            if valor is not None and not (valor.get("class") and "titulo_ficha" in valor.get("class")):
+                _guardar_em(campos, rotulo.get_text(" "), _valor_de_bloco(valor))
+    return campos
+
+
 def _pares_rotulo_valor(soup: BeautifulSoup) -> dict:
     """Mapa {RÓTULO NORMALIZADO: valor} a partir de th/td, dt/dd, linhas de
     duas células e rótulos em label/strong/b/h4/h5 (valor no texto seguinte,
-    no bloco irmão ou na seção seguinte)."""
+    no bloco irmão ou na seção seguinte). Fallback genérico para layouts que
+    não sejam a ficha em cards (`_pares_ficha`)."""
     campos: dict = {}
 
     def guardar(rotulo, valor):
-        r = normalizar(rotulo).rstrip(":").strip()
-        v = limpar(valor)
-        if r and v and r not in campos:
-            campos[r] = v
+        _guardar_em(campos, rotulo, valor)
 
     for th in soup.find_all("th"):
         td = th.find_next_sibling("td")
@@ -439,9 +513,14 @@ def _mapear(campos: dict) -> dict:
     return saida
 
 
+def _lista(valor: Optional[str], separadores: str = r"[;,|]") -> list[str]:
+    return [limpar(p) for p in re.split(separadores, valor or "") if limpar(p)]
+
+
 def parse_detalhe(html: str, hoje: Optional[date] = None) -> dict:
     soup = _soup(html)
-    m = _mapear(_pares_rotulo_valor(soup))
+    campos = _pares_ficha(soup) or _pares_rotulo_valor(soup)
+    m = _mapear(campos)
     if not m:
         raise ValueError("Página de detalhe da UNIRIO inesperada (nenhum campo reconhecido).")
     inicio, fim = periodo(m.get("periodo_raw"))
@@ -449,9 +528,9 @@ def parse_detalhe(html: str, hoje: Optional[date] = None) -> dict:
         inicio, _ = periodo(m.get("inicio_raw"))
     if not fim:
         fim, _ = periodo(m.get("fim_raw"))
-    palavras = [limpar(p) for p in re.split(r"[;,|]", m.get("palavras_chave_raw") or "") if limpar(p)]
     return {
         "titulo": m.get("titulo") or None,
+        "codigo": m.get("codigo") or None,
         "coordenador": m.get("coordenador") or None,
         "email": email(m.get("email_raw")),
         "unidade": m.get("unidade") or None,
@@ -463,6 +542,9 @@ def parse_detalhe(html: str, hoje: Optional[date] = None) -> dict:
         "ano": ano_de(m.get("ano")) or ano_de(inicio),
         "extras": {k: v for k, v in {
             "area_tematica": m.get("area_tematica") or None,
-            "palavras_chave": palavras or None,
+            # itens de <ul> chegam separados por ";" e podem conter vírgulas
+            "linhas_extensao": _lista(m.get("linhas_raw"), r"[;|]") or None,
+            "palavras_chave": _lista(m.get("palavras_chave_raw")) or None,
+            "financiamento": m.get("financiamento") or None,
         }.items() if v},
     }

@@ -38,7 +38,14 @@ from services.http_client import ErroColeta
 from services.sigaa import repositorio
 from services.unirio import parser
 from services.unirio.config import UnirioConfig
-from services.unirio.scraper import COLETORES, UnirioClient, prefixo_detalhe, url_inicial
+from services.unirio.scraper import (
+    COLETORES,
+    UnirioClient,
+    anos_disponiveis_pesquisa,
+    buscar_pesquisa,
+    prefixo_detalhe,
+    url_inicial,
+)
 
 logger = logging.getLogger("jobs.sync_unirio")
 
@@ -216,6 +223,19 @@ def capturar(cfg: UnirioConfig, max_detalhes: int = 2, destino: Optional[str] = 
         url = url_inicial(cfg, modulo)
         try:
             html = client.get(url)
+            if modulo == "pesquisa":
+                # Portal da Pesquisa: a listagem só existe após o POST da busca.
+                html_form = html
+                _salvar(pasta / "pesquisa_formulario.html", "pesquisa formulário", url, html_form)
+                html = buscar_pesquisa(client, html_form=html_form)
+                _salvar(pasta / "pesquisa_busca_vazia.html", "pesquisa busca vazia (POST)", url, html)
+                anos = anos_disponiveis_pesquisa(html_form)
+                if anos:
+                    html_ano = buscar_pesquisa(client, ano=anos[-1], html_form=html_form)
+                    _salvar(pasta / f"pesquisa_busca_{anos[-1]}.html", f"pesquisa busca {anos[-1]} (POST)",
+                            url, html_ano)
+                    if not parser.links_de_detalhe(html, modulo, url, prefixo_detalhe(cfg, modulo)):
+                        html = html_ano
         except ErroColeta as e:
             print(f"### {modulo}: listagem FALHOU ({e})", flush=True)
             falhas += 1

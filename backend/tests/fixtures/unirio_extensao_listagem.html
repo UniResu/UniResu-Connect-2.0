@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+
+<html lang="pt-br">
+<head>
+<title> Portal da Extensão - UNIRIO </title> 
+
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1, shrink-to-fit=no" name="viewport"/>
+<meta content="IE=edge" http-equiv="X-UA-Compatible"/>
+
+<link href="/extensao/static/images/favicon.ico" rel="shortcut icon" type="image/x-icon"/>
+<link crossorigin="anonymous" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" rel="stylesheet"/>
+<link href="/extensao/static/css/style.css" rel="stylesheet"/>
+<link crossorigin="anonymous" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css" integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" rel="stylesheet"/>
+<link href="/extensao/static/css/sticky-footer.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+
+<meta content="DTIC - Sistemas &lt;participante@unirio.br&gt;" name="author"/>
+<meta content="Sistema modelo" name="description"/>
+<meta content="web2py, python, framework" name="keywords"/>
+<meta content="Web2py Web Framework" name="generator"/>
+<link href="/extensao/static/css/calendar.css" rel="stylesheet" type="text/css"/>
+</head>
+<body>
+
+<header class="nao_logado_layout2">
+<ul class="oculto" id="atalhos">
+<li><a accesskey="1" href="#main">Ir Conteudo [1]</a></li>
+<li><a accesskey="2" href="#irmenu">Ir Menu [2]</a></li>
+<li><a accesskey="3" href="#irrodape">Ir Rodapé [3]</a></li>
+</ul>
+<div class="container marca" id="iniciotopo">
+<div class="row align-items-center py-2">
+<div class="col-10">
+<a href="/extensao" target="_self">
+<img alt="Marca PROEXC" src="/extensao/static/images/logo-header-extensao.png"/></a>
+</div>
+<div class="col-2 text-right">
+<a href="https://www.vlibras.gov.br/" id="vlibras">
+<span class="accessibility-icon">
+<span class="fas fa-assistive-listening-systems fa-lg"></span>
+</span>
+<span class="accessibility-text">
+<span>VLibras</span>
+</span>
+</a>
+</div>
+</div>
+</div>
+</header>
+
+<nav>
+<div class="container-fluid menu_unirio_layout2" id="irmenu">
+<div class="container">
+<ul class="nav justify-content-end" id="menu_superior">
+<li class="nav-item" id="buscar_programa_superior">
+<a class="nav-link" href="/extensao/busca/programas" target="_self">Buscar programas</a>
+</li>
+<li class="nav-item" id="buscar_projeto_superior">
+<a class="nav-link" href="/extensao/busca/projetos" target="_self">Buscar projetos</a>
+</li>
+
+<li class="nav-item" id="inicio">
+<a class="nav-link" href="/extensao">Início</a>
+</li>
+<li class="nav-item">
+<a class="nav-link" href="http://www.unirio.br" target="_self">Portal UNIRIO</a>
+</li>
+<li class="nav-item" id="ajuda_superior">
+<a class="nav-link" href="/extensao/ajuda">Ajuda</a>
+</li>
+<li class="nav-item">
+<button class="btn btn-light btn-sm btn-entrar-sair" onclick="window.location.href='/extensao/login'" type="button">
+<span class="material-icons login-icon">login</span>Entrar
+                            </button>
+</li>
+</ul>
+</div>
+</div>
+</nav>
+
+<div class="container-fluid menu_mobile">
+<nav class="navbar navbar-light navbar-expand-md navigation-clean">
+<div class="container-fluid">
+<button class="navbar-toggler justify-content-center align-items-center" data-target="#navcol-1" data-toggle="collapse">
+<span class="sr-only">Toggle navigation</span>
+<span class="navbar-toggler-icon"></span>
+</button>
+<a class="navbar-brand" href="#">
+<img alt="Marca PROEXC" src="/extensao/static/images/logo-header-extensao.png"/></a>
+
+<div class="collapse navbar-collapse" id="navcol-1">
+<ul class="nav navbar-nav">
+<li class="nav-item perfil-menu-mobile">
+<button class="btn btn-light btn-entrar-sair" onclick="window.location.href='/extensao/login'" type="button">
+<span class="material-icons login-icon">login</span>Entrar
+                                </button>
+<p hidden="" id="bemvindo_mobile">Olá, </p>
+</li>
+<div id="esquerdo_mobile">
+<li class="list-group-item categoria" hidden="">
+<span class="material-icons">article</span> Projetos
+                                </li>
+<li class="nav-item">
+<a class="nav-link" href="/extensao/busca/projetos"> Buscar projetos </a>
+</li>
+<li class="nav-item" hidden="">
+<a class="nav-link" href="/extensao/gerenciar/projetos"> Meus projetos </a>
+</li>
+<li class="nav-item" hidden="">
+<a class="nav-link" href="/extensao/cadastro/novo_projeto"> Cadastrar projetos </a>
+</li>
+<li class="list-group-item categoria" hidden="">
+<span class="material-icons">library_books</span> Programas
+                                </li>
+<li class="nav-item">
+<a class="nav-link" href="/extensao/busca/programas"> Buscar programas </a>
+</li>
+<li class="nav-item" hidden="">
+<a class="nav-link" href="/extensao/gerenciar/programas"> Meus programas </a>
+</li>
+<li class="nav-item" hidden="">
+<a class="nav-link" href="/extensao/cadastro/novo_programa"> Cadastrar programas </a>
+</li>
+<li class="list-group-item categoria" hidden="">
+<span class="material-icons centraliza-icon">miscellaneous_services</span> Administração
+                                </li>
+<li class="nav-item" hidden="">
+<a class="nav-link" href="/extensao/adm/projetos"> Projetos em trâmite </a>
+</li>
+<li class="nav-item" hidden="">
+<a class="nav-link" href="/extensao/adm/programas"> Programas em trâmite </a>
+</li>
+</div>
+<div class="categoria" hidden=""></div>
+<li class="nav-item">
+<a class="nav-link" href="/extensao"> Início </a>
+</li>
+<li class="nav-item">
+<a class="nav-link" href="http://www.unirio.br"> Portal Unirio </a>
+</li>
+<li class="nav-item">
+<a class="nav-link" href="/extensao/ajuda"> Ajuda </a>
+</li>
+</ul>
+</div>
+</div>
+</nav>
+</div>
+
+<div class="container">
+</div>
+
+<div class="container" id="breadcrumb">
+<div class="row">
+<nav aria-label="breadcrumb">
+<ol class="breadcrumb">
+<li class="breadcrumb-item" id="bread_inicio"><a href="/extensao">Início</a></li>
+<li aria-current="page" class="breadcrumb-item active" id="bread_ativo"></li>
+</ol>
+</nav>
+</div>
+</div>
+
+<section class="container" id="main">
+
+
+<div id="content">
+<h1>Portal da Extensão</h1>
+<h2 class="blockquote text-center">Resultados da busca</h2>
+<br/>
+<div class="row">
+<div class="col-sm-2 col-md-3 col-xl-2"></div>
+<div class="col-sm-8 col-md-6 col-xl-8 formulario">
+<form action="/extensao/busca/projetos" enctype="multipart/form-data" method="post" style="margin-bottom: 0">
+<div class="form-group">
+<br style="display: none"/>
+<label for="buscaprojeto" hidden="">Digite o título, palavra-chave, numero do processo ou nome do participante. </label>
+<div class="input-group mb-3">
+<div class="input-group-prepend">
+<select class="form-control input-group-text" id="categoria_busca" name="categoria_busca">
+<option selected="" value="titulo">
+                                     Título</option>
+<option value="processo">
+                                     Nº do Processo</option>
+<option value="palavrachave">
+                                     Palavra-chave</option>
+<option value="participante">
+                                     Participante</option>
+</select>
+</div>
+<input aria-describedby="buscaprojeto" autofocus="" class="form-control" id="buscaprojeto" name="buscaprojeto" placeholder="" type="text" value=""/>
+<button class="btn btn-primary" id="botao_pesquisar" style="" type="submit">Pesquisar</button><br/>
+</div>
+</div>
+<button class="btn btn-primary" style="display: none" type="submit">Pesquisar</button><br/>
+<div style="display:none;"><input name="_formkey" type="hidden" value="9e667477-94aa-4b07-8f60-721ae6a5e91f"/><input name="_formname" type="hidden" value="default"/></div>
+<h3>(386 resultados)</h3>
+<br/>
+<div class="row">
+<div class="col-sm col-md-3 col-xl-3 filtro">
+<p><strong>Filtrar resultados:</strong></p>
+<div>
+<div class="form-group">
+<label for="filtro_ano">Ano</label>
+<select class="form-control" id="filtro_ano" name="filtro_ano">
+<option selected="" value="0">
+                                            Todos</option>
+<option value="1">
+                                            2015</option>
+<option value="2">
+                                            2016</option>
+<option value="3">
+                                            2017</option>
+
+
+
+
+
+
+
+
+
+
+</select>
+</div>
+<div class="form-group">
+<label for="filtro_unidade">Unidade</label>
+<select class="form-control" id="filtro_unidade" name="filtro_unidade">
+<option selected="" value="0">
+                                            Todas</option>
+<option value="1">
+                                            Arquivo Central</option>
+<option value="2">
+                                            Auditoria Interna</option>
+<option value="3">
+                                            Biblioteca Central</option>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</select>
+</div>
+<div class="form-group">
+<label for="filtro_linha_extensao">Linha de Extensão</label>
+<select class="form-control" id="filtro_linha_extensao" name="filtro_linha_extensao">
+<option selected="" value="0">
+                                            Todas</option>
+<option value="1">
+                                            Alfabetizacao, Leitura e Escrita</option>
+<option value="2">
+                                            Artes cenicas</option>
+<option value="3">
+                                            Artes integradas</option>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</select>
+</div>
+<div class="form-group">
+<label for="filtro_area_tematica">Área temática</label>
+<select class="form-control" id="filtro_area_tematica" name="filtro_area_tematica">
+<option selected="" value="0">
+                                            Todas</option>
+<option value="1">
+                                            Comunicacao</option>
+<option value="2">
+                                            Cultura</option>
+<option value="3">
+                                            Direitos Humanos e Justica</option>
+
+
+
+
+
+</select>
+</div>
+<div class="form-group">
+<label for="filtro_coordenador">Coordenador</label>
+<select class="form-control" id="filtro_coordenador" name="filtro_coordenador">
+<option selected="" value="0">
+                                            Todos</option>
+<option value="1">
+                                            ADALTO SOARES</option>
+<option value="2">
+                                            ADRIANA FERREIRA BONFATTI</option>
+<option value="3">
+                                            ADRIANA HOFFMANN FERNANDES</option>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</select>
+</div>
+<div class="form-group">
+<label for="filtro_status">Situação</label>
+<select class="form-control" id="filtro_status" name="filtro_status">
+<option value="0">
+                                            Todas</option>
+<option selected="" value="1">
+                                            Em andamento                                                                                        </option>
+<option value="2">
+                                            Em tramite para registro                                                                            </option>
+<option value="3">
+                                            Concluído/Publicado                                                                                 </option>
+
+
+
+
+</select>
+</div>
+<div class="form-group">
+<label for="filtro_centro">Centro</label>
+<select class="form-control" id="filtro_centro" name="filtro_centro">
+<option selected="" value="0">
+                                            Todos
+                                        </option>
+<option value="1">
+                                            Arquivo Central                                                                                                                                                                                                                                               
+                                        </option>
+<option value="2">
+                                            Biblioteca Central                                                                                                                                                                                                                                            
+                                        </option>
+<option value="3">
+                                            Centro de Ciências Biológicas e da Saúde                                                                                                                                                                                                                      
+                                        </option>
+
+
+
+
+
+
+</select>
+</div>
+<button class="btn btn-success btn-block" type="submit">Filtrar</button>
+</div>
+</div>
+<div class="col-sm col-md-9 col-xl-9">
+<ul class="list-group list-group-flush">
+<li class="list-group-item">
+<div><a href="/extensao/detalhes?ID_PROJETO=6637">Maré de Saúde</a></div>
+<small>Departamento de Interpretacao Teatral</small><br/>
+<small>ANA PAULA SOUZA, BRUNO LIMA</small><br/>
+<small>2018</small>
+</li>
+<li class="list-group-item">
+<div><a href="/extensao/detalhes?ID_PROJETO=6648">Maré de espetáculos</a></div>
+<small>Departamento de Ensino do Teatro</small><br/>
+<small>CARLA MENEZES DE SOUZA, BRUNO LIMA</small><br/>
+<small>2018</small>
+</li>
+<li class="list-group-item">
+<div><a href="/extensao/detalhes?ID_PROJETO=6658">PERCEPÇÃO</a></div>
+<small>Departamento de Composicao e Regencia</small><br/>
+<small>DIEGO FARIAS</small><br/>
+<small>2018</small>
+</li>
+<li class="list-group-item">
+<div><a href="/extensao/detalhes?ID_PROJETO=6686">Teatro na Prisão: Uma experiência pedagógica em busca do sujeito cidadão</a></div>
+<small>Departamento de Interpretacao Teatral</small><br/>
+<small>ELISA RAMOS NUNES</small><br/>
+<small>2018</small>
+</li>
+<li class="list-group-item">
+<div><a href="/extensao/detalhes?ID_PROJETO=6703">Documentação e Divulgação do Monumento Natural do Pão de Açúcar</a></div>
+<small>Departamento de Botanica</small><br/>
+<small>FABIO TEIXEIRA</small><br/>
+<small>2018</small>
+</li>
+</ul>
+</div>
+</div>
+<br/>
+<nav aria-label="Navegação da página">
+<ul class="pagination">
+
+<li class="page-item"><a class="page-link" href="/extensao/busca/projetos?cat_termos=titulo&amp;f_ano=0&amp;f_area=0&amp;f_centro=0&amp;f_cor=0&amp;f_lin=0&amp;f_status=1&amp;f_uni=0&amp;pag=1&amp;termos=">Anterior</a></li>
+<li class="page-item">
+<a class="page-link" href="/extensao/busca/projetos?cat_termos=titulo&amp;f_ano=0&amp;f_area=0&amp;f_centro=0&amp;f_cor=0&amp;f_lin=0&amp;f_status=1&amp;f_uni=0&amp;pag=1&amp;termos=" style="font-weight: bold">1</a>
+</li>
+<li class="page-item">
+<a class="page-link" href="/extensao/busca/projetos?cat_termos=titulo&amp;f_ano=0&amp;f_area=0&amp;f_centro=0&amp;f_cor=0&amp;f_lin=0&amp;f_status=1&amp;f_uni=0&amp;pag=2&amp;termos=">2</a>
+</li>
+<li class="page-item">
+<a class="page-link" href="/extensao/busca/projetos?cat_termos=titulo&amp;f_ano=0&amp;f_area=0&amp;f_centro=0&amp;f_cor=0&amp;f_lin=0&amp;f_status=1&amp;f_uni=0&amp;pag=3&amp;termos=">3</a>
+</li>
+<li class="page-item">
+<a class="page-link" href="/extensao/busca/projetos?cat_termos=titulo&amp;f_ano=0&amp;f_area=0&amp;f_centro=0&amp;f_cor=0&amp;f_lin=0&amp;f_status=1&amp;f_uni=0&amp;pag=4&amp;termos=">4</a>
+</li>
+<li class="page-item">
+<a class="page-link" href="/extensao/busca/projetos?cat_termos=titulo&amp;f_ano=0&amp;f_area=0&amp;f_centro=0&amp;f_cor=0&amp;f_lin=0&amp;f_status=1&amp;f_uni=0&amp;pag=5&amp;termos=">5</a>
+</li>
+<li class="page-item">
+<a class="page-link" href="/extensao/busca/projetos?cat_termos=titulo&amp;f_ano=0&amp;f_area=0&amp;f_centro=0&amp;f_cor=0&amp;f_lin=0&amp;f_status=1&amp;f_uni=0&amp;pag=6&amp;termos=">6</a>
+</li>
+<li class="page-item">
+<a class="page-link" href="/extensao/busca/projetos?cat_termos=titulo&amp;f_ano=0&amp;f_area=0&amp;f_centro=0&amp;f_cor=0&amp;f_lin=0&amp;f_status=1&amp;f_uni=0&amp;pag=7&amp;termos=">7</a>
+</li>
+<li class="page-item">
+<a class="page-link" href="/extensao/busca/projetos?cat_termos=titulo&amp;f_ano=0&amp;f_area=0&amp;f_centro=0&amp;f_cor=0&amp;f_lin=0&amp;f_status=1&amp;f_uni=0&amp;pag=8&amp;termos=">8</a>
+</li>
+<li class="page-item">
+<a class="page-link" href="/extensao/busca/projetos?cat_termos=titulo&amp;f_ano=0&amp;f_area=0&amp;f_centro=0&amp;f_cor=0&amp;f_lin=0&amp;f_status=1&amp;f_uni=0&amp;pag=9&amp;termos=">9</a>
+</li>
+<li class="page-item">
+<a class="page-link" href="/extensao/busca/projetos?cat_termos=titulo&amp;f_ano=0&amp;f_area=0&amp;f_centro=0&amp;f_cor=0&amp;f_lin=0&amp;f_status=1&amp;f_uni=0&amp;pag=10&amp;termos=">10</a>
+</li>
+<li class="page-item"><a class="page-link" href="/extensao/busca/projetos?cat_termos=titulo&amp;f_ano=0&amp;f_area=0&amp;f_centro=0&amp;f_cor=0&amp;f_lin=0&amp;f_status=1&amp;f_uni=0&amp;pag=2&amp;termos=">Próximo</a></li>
+
+</ul>
+</nav>
+</form>
+<br/>
+</div>
+</div>
+
+
+</div>
+</section>
+
+<footer class="footer" id="irrodape">
+<div class="container-fluid">
+<div class="container">
+<div class="container_footer">
+<span class="rodape">Desenvolvido por <a class="link_rodape" href="http://www.unirio.br/dtic">
+<img alt="marca DTIC UNIRIO" class="logo_dtic" src="/extensao/static/images/logo_dtic_pb.png"/></a>
+</span>
+</div>
+</div>
+</div>
+</footer>
+<div class="enabled" vw="">
+<div class="active" vw-access-button=""></div>
+<div vw-plugin-wrapper="">
+<div class="vw-plugin-top-wrapper"></div>
+</div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

@@ -82,6 +82,7 @@ jobs:
           UNIRIO_MAX_DETALHES: ${{ inputs.max_detalhes || vars.UNIRIO_MAX_DETALHES }}
           UNIRIO_EXTENSAO_STATUS: ${{ vars.UNIRIO_EXTENSAO_STATUS }}
           UNIRIO_PESQUISA_DETALHE_PREFIXO: ${{ vars.UNIRIO_PESQUISA_DETALHE_PREFIXO }}
+          UNIRIO_PESQUISA_ANOS: ${{ vars.UNIRIO_PESQUISA_ANOS }}
           UNIRIO_CAPTURA_DIR: captura
 
       - name: Publicar HTML capturado

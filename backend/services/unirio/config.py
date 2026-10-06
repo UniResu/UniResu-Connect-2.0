@@ -38,6 +38,9 @@ class UnirioConfig:
     # Filtro de status da busca de extensão (f_status). 1 = em andamento (o link
     # público usado como referência); 0 = todos.
     extensao_status: str = "1"
+    # Anos de referência consultados no Portal da Pesquisa quando a busca sem
+    # filtro não lista nada. Vazio = todos os anos oferecidos pelo formulário.
+    pesquisa_anos: list[str] = field(default_factory=list)
     # Teto de páginas percorridas por listagem (proteção contra loop de paginação).
     # Ao bater no teto a listagem é marcada incompleta e nada é desativado.
     max_paginas: int = 300
@@ -75,6 +78,7 @@ class UnirioConfig:
         cfg = cls()
         cfg.modulos = [m.lower() for m in _lista(_env("UNIRIO_MODULOS", ",".join(cfg.modulos)))] or cfg.modulos
         cfg.extensao_status = str(_env("UNIRIO_EXTENSAO_STATUS", cfg.extensao_status))
+        cfg.pesquisa_anos = _lista(_env("UNIRIO_PESQUISA_ANOS", ""))
         cfg.max_paginas = max(1, int(_env("UNIRIO_MAX_PAGINAS", cfg.max_paginas)))
         cfg.max_detalhes = max(0, int(_env("UNIRIO_MAX_DETALHES", cfg.max_detalhes)))
         cfg.pausa_segundos = max(1.0, float(_env("UNIRIO_PAUSA_SEGUNDOS", cfg.pausa_segundos)))
