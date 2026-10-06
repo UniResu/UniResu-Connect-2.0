@@ -79,7 +79,7 @@ A aba **Projetos Acadêmicos** lista, além dos projetos cadastrados pelos profe
 * Uma listagem que parou antes da última página (teto `UNIRIO_MAX_PAGINAS` ou paginação não reconhecida) é tratada como falha: o que foi lido é gravado, mas **nada é desativado** e o alerta é enviado. Se o processo for morto pelo timeout do Actions, a run fica `abortada`.
 * O parser ainda foi escrito sem acesso ao HTML real dos portais (a rede do ambiente de desenvolvimento não alcançava a UNIRIO). As fixtures em `backend/tests/test_unirio.py` são sintéticas: rode o modo `captura` abaixo, baixe o artifact `captura-unirio` e substitua as fixtures pelo HTML real antes do primeiro `sync`.
 * As execuções ficam em `sigaa_sync_runs` com `fonte: "unirio"` (mesma collection do SIGAA, para reaproveitar o usuário restrito do Atlas). A rota `GET /api/projetos/fontes/status` devolve a última coleta de cada fonte.
-* Agendamento: GitHub Actions, toda segunda às 10:00 UTC (`.github/workflows/sync-unirio.yml`).
+* Agendamento: GitHub Actions, toda segunda às 10:00 UTC (`.github/workflows/sync-unirio.yml`). **Está comentado no workflow** até o parser ser validado com o HTML real; até lá, só execução manual.
 * Execução manual (**Actions → Sync UNIRIO → Run workflow**) com três modos:
   * `sync`: coleta e grava (o que o agendamento roda);
   * `dry-run`: coleta e imprime estatísticas e amostras, sem gravar nada — use antes do primeiro `sync` e sempre que o layout dos portais mudar;
