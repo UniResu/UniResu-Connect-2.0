@@ -52,6 +52,9 @@ class ProjetoPublicoResponse(BaseModel):
     # Extras dos portais da UNIRIO.
     area_tematica: Optional[str] = None
     palavras_chave: Optional[List[str]] = None
+    linhas_extensao: Optional[List[str]] = None
+    grupo_pesquisa: Optional[str] = None
+    financiamento: Optional[str] = None
 
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 

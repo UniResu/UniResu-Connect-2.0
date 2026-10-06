@@ -35,6 +35,9 @@ interface Projeto {
   periodo_fim?: string;
   area_tematica?: string;
   palavras_chave?: string[];
+  linhas_extensao?: string[];
+  grupo_pesquisa?: string;
+  financiamento?: string;
 }
 
 interface FonteStatus {
@@ -547,7 +550,18 @@ export default function ProjetosPage() {
                 <div className={modalStyles.infoLine}><strong>Unidade/Departamento:</strong> {selectedProjeto.unidade}</div>
               )}
               {selectedProjeto.area_tematica && (
-                <div className={modalStyles.infoLine}><strong>Área temática:</strong> {selectedProjeto.area_tematica}</div>
+                <div className={modalStyles.infoLine}><strong>Área:</strong> {selectedProjeto.area_tematica}</div>
+              )}
+              {selectedProjeto.grupo_pesquisa && (
+                <div className={modalStyles.infoLine}><strong>Grupo de pesquisa:</strong> {selectedProjeto.grupo_pesquisa}</div>
+              )}
+              {selectedProjeto.linhas_extensao && selectedProjeto.linhas_extensao.length > 0 && (
+                <div className={modalStyles.infoLine}>
+                  <strong>Linhas de extensão:</strong> {selectedProjeto.linhas_extensao.join(", ")}
+                </div>
+              )}
+              {selectedProjeto.financiamento && (
+                <div className={modalStyles.infoLine}><strong>Financiamento:</strong> {selectedProjeto.financiamento}</div>
               )}
               {selectedProjeto.ano && (
                 <div className={modalStyles.infoLine}><strong>Ano:</strong> {selectedProjeto.ano}</div>

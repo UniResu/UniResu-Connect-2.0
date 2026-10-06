@@ -204,11 +204,26 @@ class TestHtmlRealPesquisa:
         assert parser.proxima_pagina(html, URL_PESQ) is None
         assert scraper.exige_busca(html) is False
 
+    def test_detalhe_em_tabela_de_pares(self):
+        d = parser.parse_detalhe(fixture("unirio_pesquisa_detalhe.html"))
+        assert d["titulo"].startswith("Práticas curriculares e artes de formação")
+        assert d["coordenador"] == "ANA PAULA SOUZA"             # "NOME( e-mail )" separado
+        assert d["email"] == "coordenador@unirio.br"
+        assert d["unidade"] == "Departamento de Didatica"       # "Unidade Responsável" não é o coordenador
+        assert d["situacao"] == "FINALIZADO"                    # "Concluído/Publicado"
+        assert (d["periodo_inicio"], d["periodo_fim"]) == ("2013-09-01", "2017-07-31")
+        assert d["ano"] == "2013"
+        assert d["categoria"] is None                           # cabeçalho "Tipo | Classificação" ignorado
+        assert d["descricao"].startswith("Projeto de pesquisa sobre currículos")
+        assert d["extras"]["area_tematica"] == "CIÊNCIAS HUMANAS"   # Classificação CNPq (principal)
+        assert d["extras"]["grupo_pesquisa"] == "Práticas Educativas e Formação de Professores"
+        assert d["extras"]["palavras_chave"] == ["curriculo formacao de professores cotidiano emancipacacao social"]
+
     def test_coleta_pesquisa_com_html_real_e_corte_por_ano(self):
         listagem = fixture("unirio_pesquisa_listagem.html")
         rotas = {URL_PESQ_FORM: FORM_PESQUISA, URL_PESQ_FORM + "#post": listagem}
         for link in parser.links_de_detalhe(listagem, "pesquisa", URL_PESQ):
-            rotas[link] = DETALHE_PESQUISA
+            rotas[link] = fixture("unirio_pesquisa_detalhe.html")
         res = scraper.coletar_pesquisa(ClienteRoteado(UnirioConfig(), rotas))
         assert len(res.itens) == 8 and res.completa is True and res.erros == []
         assert res.paginas == 2  # GET do formulário + POST (uma página só)

@@ -380,7 +380,7 @@ _MAPA_DETALHE = [
     (("TITULO",), "titulo", ()),
     (("PROCESSO", "CODIGO"), "codigo", ()),
     (("COORDENADOR", "RESPONSAVEL", "PROPONENTE", "DOCENTE"), "coordenador",
-     ("VICE", "ADJUNTO", "TELEFONE", "LATTES", "SUBSTITUTO")),
+     ("VICE", "ADJUNTO", "TELEFONE", "LATTES", "SUBSTITUTO", "UNIDADE", "CENTRO", "DEPARTAMENTO")),
     (("UNIDADE", "CENTRO", "DEPARTAMENTO", "ESCOLA", "INSTITUTO", "LOTACAO", "FACULDADE"), "unidade",
      ("CUSTO", "COMUNIDADE", "ESCOLARIDADE", "ATENDIDA")),
     (("SITUACAO", "STATUS"), "situacao_raw", ()),
@@ -391,10 +391,16 @@ _MAPA_DETALHE = [
     (("RESUMO", "DESCRICAO", "OBJETIVO", "APRESENTACAO", "JUSTIFICATIVA"), "descricao", ()),
     (("PALAVRA",), "palavras_chave_raw", ()),
     (("LINHA",), "linhas_raw", ()),
+    # Portal da Pesquisa: "Classificação CPNq (principal)" é a grande área do CNPq.
+    (("PRINCIPAL",), "area_tematica", ()),
     (("AREA", "TEMATICA"), "area_tematica", ()),
+    (("GRUPO DO CNPQ", "GRUPO CNPQ", "GRUPO DE PESQUISA"), "grupo_pesquisa", ()),
     (("FINANCIAMENTO",), "financiamento", ()),
     (("TIPO", "MODALIDADE", "NATUREZA"), "categoria", ("BOLSA",)),
 ]
+
+# Valores que os portais usam para "campo vazio".
+_VALORES_VAZIOS = {"-", "NAO CADASTRADO", "NAO INFORMADO", "NAO CADASTRADA", "N/A", "NENHUM", "NENHUMA"}
 
 # Cards (seções) da ficha cujos rótulos não são do projeto, e sim de outras
 # pessoas/anexos — "Situação" e "E-mail" ali são dos participantes.
@@ -426,8 +432,10 @@ def _valor_apos(tag: Tag) -> str:
 
 def _guardar_em(campos: dict, rotulo, valor) -> None:
     r = normalizar(rotulo).rstrip(":").strip()
+    # "Coordenador(a)" → "COORDENADOR"; "Palavras-chave(s)" → "PALAVRAS-CHAVE"
+    r = re.sub(r"\s*\((?:A|AS|ES|S|O|OS)\)$", "", r)
     v = limpar(valor)
-    if re.fullmatch(r"[-–—.*/]+", v):  # "-" = campo vazio nos portais
+    if re.fullmatch(r"[-–—.*/]+", v) or normalizar(v) in _VALORES_VAZIOS:  # campo vazio nos portais
         v = ""
     if r and v and r not in campos:
         campos[r] = v
@@ -478,6 +486,8 @@ def _pares_rotulo_valor(soup: BeautifulSoup) -> dict:
         if dd is not None:
             guardar(dt.get_text(" "), dd.get_text(" "))
     for tr in soup.find_all("tr"):
+        if tr.find_parent("thead") is not None:
+            continue  # cabeçalho de tabela de duas colunas não é um par rótulo/valor
         tds = tr.find_all("td", recursive=False)
         if len(tds) == 2:
             guardar(tds[0].get_text(" "), tds[1].get_text(" "))
@@ -540,11 +550,17 @@ def parse_detalhe(html: str, hoje: Optional[date] = None) -> dict:
         inicio, _ = periodo(m.get("inicio_raw"))
     if not fim:
         fim, _ = periodo(m.get("fim_raw"))
+    coordenador = m.get("coordenador") or None
+    contato = email(m.get("email_raw"))
+    if coordenador and "@" in coordenador:
+        # Portal da Pesquisa: "NOME DA PESSOA( email@unirio.br )"
+        contato = contato or email(coordenador)
+        coordenador = limpar(re.sub(r"\(.*?\)|" + _RE_EMAIL.pattern, "", coordenador)) or None
     return {
         "titulo": m.get("titulo") or None,
         "codigo": m.get("codigo") or None,
-        "coordenador": m.get("coordenador") or None,
-        "email": email(m.get("email_raw")),
+        "coordenador": coordenador,
+        "email": contato,
         "unidade": m.get("unidade") or None,
         "situacao": situacao_normalizada(m.get("situacao_raw"), inicio, fim, hoje),
         "periodo_inicio": inicio,
@@ -557,6 +573,7 @@ def parse_detalhe(html: str, hoje: Optional[date] = None) -> dict:
             # itens de <ul> chegam separados por ";" e podem conter vírgulas
             "linhas_extensao": _lista(m.get("linhas_raw"), r"[;|]") or None,
             "palavras_chave": _lista(m.get("palavras_chave_raw")) or None,
+            "grupo_pesquisa": m.get("grupo_pesquisa") or None,
             "financiamento": m.get("financiamento") or None,
         }.items() if v},
     }
