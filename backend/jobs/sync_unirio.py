@@ -260,19 +260,24 @@ def _diagnostico_pesquisa(client: UnirioClient, url_form: str, html_form: str, p
           f"cookies após GET: {sorted(client.session.cookies.get_dict().keys())}", flush=True)
     variantes = [("vazia", None), (anos[-1], anos[-1])] if anos else [("vazia", None)]
     escolhido = (html_form, url_form)
-    for nome, ano in variantes:
+    for i, (nome, ano) in enumerate(variantes):
+        if i > 0:
+            # o _formkey do web2py é de uso único: formulário novo a cada POST
+            html_form = client.get(url_form)
         try:
             resp = client.request_raw("POST", url_form, data=payload_pesquisa(html_form, ano))
         except ErroColeta as e:
             print(f"### pesquisa POST {nome}: FALHOU ({e})", flush=True)
             continue
         historico = [(r.status_code, r.headers.get("Location")) for r in resp.history]
+        itens = parser.parse_listagem(resp.text, "pesquisa", str(resp.url))
         print(f"### pesquisa POST {nome}: status={resp.status_code} final={resp.url} "
-              f"redirecionamentos={historico} tamanho={len(resp.text)} exige_busca={exige_busca(resp.text)}",
-              flush=True)
+              f"redirecionamentos={historico} tamanho={len(resp.text)} exige_busca={exige_busca(resp.text)} "
+              f"itens={len(itens)}", flush=True)
         _salvar(pasta / f"pesquisa_post_{nome}.html", f"pesquisa POST {nome}", str(resp.url), resp.text)
-        if not exige_busca(resp.text):
+        if itens:
             escolhido = (resp.text, str(resp.url))
+            break  # a busca sem filtro já lista tudo; não precisamos das outras variantes
     return escolhido
 
 
