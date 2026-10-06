@@ -9,7 +9,11 @@ paginação por link e detalhe em URL estável, por exemplo
 `/extensao/detalhes/index?ID_PROJETO=8620`.
 
 Os rótulos dos campos de detalhe variam entre os dois portais, então o
-mapeamento é feito por palavras-chave (ver `_MAPA_DETALHE`).
+mapeamento é feito por palavras-chave casadas por palavra inteira
+(ver `_MAPA_DETALHE`). Enquanto o HTML real não for capturado
+(`python -m jobs.sync_unirio --captura`), tudo aqui é heurística defensiva:
+na dúvida o parser prefere devolver menos (o job marca falha e alerta) a
+inventar projetos.
 """
 
 import re
@@ -17,20 +21,33 @@ from datetime import date, datetime
 from typing import Optional
 from urllib.parse import parse_qs, urljoin, urlparse
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString, Tag
 
 from services.sigaa.parser import SITUACAO_EM_EXECUCAO, limpar, normalizar
-
-BASE_PESQUISA = "https://sistemas.unirio.br"
-BASE_EXTENSAO = "https://sistemas2.unirio.br"
 
 _RE_EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 _RE_DATA = re.compile(r"(\d{2}/\d{2}/\d{4})")
 _RE_ANO = re.compile(r"\b(20\d{2}|19\d{2})\b")
-_RE_ID_URL = re.compile(r"(?:ID_PROJETO|id_projeto|id|ID|codigo)=(\d+)|/(\d+)(?:/|$|\?)")
 
-# Textos de link que indicam "próxima página" nas paginações comuns em PHP.
-_PROXIMA = {"PROXIMA", "PROXIMO", ">", ">>", "»", "NEXT", "PROXIMA PAGINA", "SEGUINTE"}
+# Nomes de parâmetro de id aceitos nas URLs de detalhe (comparados em minúsculas).
+_CHAVES_ID = ("id_projeto", "idprojeto", "projeto_id", "id", "codigo", "cod")
+# Última parte do caminho que identifica uma ação de detalhe (Yii/CakePHP/Laravel).
+_ACOES_DETALHE = {"view", "detalhe", "detalhes", "visualizar", "show", "detail", "exibir"}
+
+# Textos de link que NÃO são título (botões "ver detalhes" etc.).
+_TITULO_GENERICO = {
+    "", "+", ">", "»", "›", "DETALHES", "DETALHE", "VER", "VER MAIS", "VER DETALHES", "VISUALIZAR",
+    "ABRIR", "ACESSAR", "ACESSE", "SAIBA MAIS", "MAIS", "VIEW", "EXIBIR", "CONSULTAR", "VER PROJETO",
+}
+
+# Paginação: palavras (só letras, prefixo) e glifos de "próxima página".
+_PROXIMA_PALAVRAS = ("PROXIM", "NEXT", "SEGUINTE", "AVANCAR")
+_PROXIMA_GLIFOS = {">", "›", "»"}
+
+# Situação: os negativos são testados ANTES dos positivos ("INATIVO" contém "ATIVO").
+_SITUACOES_NEGATIVAS = ("CONCLU", "FINALIZ", "ENCERR", "CANCEL", "INATIV", "DESATIV", "SUSPENS",
+                        "INDEFER", "REPROV", "NAO APROV", "ARQUIV", "EXPIR")
+_SITUACOES_POSITIVAS = ("ANDAMENTO", "EXECUCAO", "ATIVO", "ATIVA", "VIGENTE", "APROVADO", "EM CURSO")
 
 
 def _soup(html: str) -> BeautifulSoup:
@@ -42,14 +59,16 @@ def _soup(html: str) -> BeautifulSoup:
 # ─────────────────────────────────────────────
 
 def id_da_url(url: Optional[str]) -> Optional[str]:
-    """Extrai o id numérico do projeto de uma URL de detalhe."""
+    """Extrai o id numérico do projeto de uma URL de detalhe (query ou caminho)."""
     if not url:
         return None
-    qs = parse_qs(urlparse(url).query)
-    for chave in ("ID_PROJETO", "id_projeto", "id", "ID", "codigo"):
-        if qs.get(chave):
-            return qs[chave][0]
-    m = re.search(r"/(\d+)/?$", urlparse(url).path)
+    partes = urlparse(url)
+    qs = {k.lower(): v for k, v in parse_qs(partes.query).items()}
+    for chave in _CHAVES_ID:
+        valores = qs.get(chave)
+        if valores and valores[0].strip().isdigit():
+            return valores[0].strip()
+    m = re.search(r"/(\d+)/?$", partes.path)
     return m.group(1) if m else None
 
 
@@ -80,10 +99,10 @@ def situacao_normalizada(valor: Optional[str], inicio: Optional[str] = None, fim
     ("EM EXECUÇÃO" habilita o projeto na busca padrão)."""
     v = normalizar(valor)
     if v:
-        if any(p in v for p in ("ANDAMENTO", "EXECUCAO", "ATIVO", "VIGENTE", "APROVADO", "EM CURSO")):
-            return SITUACAO_EM_EXECUCAO
-        if any(p in v for p in ("CONCLU", "FINALIZ", "ENCERR", "CANCEL", "INATIV", "SUSPENS", "INDEFER")):
+        if any(p in v for p in _SITUACOES_NEGATIVAS):
             return "FINALIZADO"
+        if any(p in v for p in _SITUACOES_POSITIVAS):
+            return SITUACAO_EM_EXECUCAO
         return limpar(valor).upper()
     if inicio and fim:
         hoje = hoje or date.today()
@@ -95,87 +114,212 @@ def situacao_normalizada(valor: Optional[str], inicio: Optional[str] = None, fim
     return None
 
 
+def prefixo_do_controller(url_listagem: str) -> str:
+    """Diretório do controller da listagem: ".../projetos/search/index" → "/projetos/search/"."""
+    caminho = urlparse(url_listagem).path or "/"
+    return caminho.rsplit("/", 1)[0] + "/"
+
+
 # ─────────────────────────────────────────────
-#  Listagens
+#  Links de detalhe
 # ─────────────────────────────────────────────
 
-def _eh_link_detalhe(href: str, modulo: str) -> bool:
-    h = href.lower()
+def _eh_link_detalhe(url: str, modulo: str, prefixo: Optional[str] = None) -> bool:
+    partes = urlparse(url)
+    caminho = partes.path.lower()
     if modulo == "extensao":
-        return "detalhes" in h and "id_projeto" in h
-    # Portal da Pesquisa: /projetos/<controller>/view?id=N ou /projetos/view/N
-    return "/projetos/" in h and ("view" in h or "detal" in h or "visualiz" in h) and bool(id_da_url(href))
+        # /extensao/detalhes/index?ID_PROJETO=8620
+        return "detalhes" in caminho and id_da_url(url) is not None
+    # Portal da Pesquisa (Yii): só links do mesmo controller da listagem
+    # (ex.: /projetos/search/view?id=5), para não confundir perfis de pessoas
+    # ou unidades (/projetos/pessoa/view?id=7) com projetos.
+    if prefixo and not caminho.startswith(prefixo.lower()):
+        return False
+    segmentos = [s for s in caminho.split("/") if s]
+    if not segmentos:
+        return False
+    acao = segmentos[-2] if segmentos[-1].isdigit() and len(segmentos) >= 2 else segmentos[-1]
+    return acao in _ACOES_DETALHE and id_da_url(url) is not None
 
 
-def links_de_detalhe(html: str, modulo: str, base: str) -> list[str]:
+def _chave_link(url: str) -> str:
+    return urlparse(url).path.lower() + "|" + (id_da_url(url) or "")
+
+
+def links_de_detalhe(html: str, modulo: str, url_pagina: str, prefixo: Optional[str] = None) -> list[str]:
     """Todos os links de detalhe da página, na ordem, sem repetição (usado no modo captura)."""
     vistos: list[str] = []
     for a in _soup(html).find_all("a", href=True):
-        url = urljoin(base, a["href"])
-        if _eh_link_detalhe(url, modulo) and url not in vistos:
+        url = urljoin(url_pagina, a["href"])
+        if _eh_link_detalhe(url, modulo, prefixo) and url not in vistos:
             vistos.append(url)
     return vistos
 
 
-def _linha_do_link(a):
-    """Linha (tr) ou bloco (li/div/article) que contém o link de detalhe."""
+# ─────────────────────────────────────────────
+#  Listagem
+# ─────────────────────────────────────────────
+
+# Cabeçalho da tabela → campo do item (casamento por palavra inteira).
+_MAPA_COLUNAS = [
+    (("TITULO", "PROJETO", "NOME"), "titulo"),
+    (("COORDENADOR", "RESPONSAVEL", "PROPONENTE", "DOCENTE"), "coordenador"),
+    (("UNIDADE", "CENTRO", "ESCOLA", "INSTITUTO", "DEPARTAMENTO", "LOTACAO"), "unidade"),
+    (("SITUACAO", "STATUS"), "situacao"),
+    (("ANO",), "ano"),
+]
+
+
+def _casa_palavra(palavra: str, texto: str) -> bool:
+    """`palavra` aparece em `texto` como palavra inteira, aceitando sufixos
+    simples (COORDENADORA, OBJETIVOS, PALAVRAS-CHAVE)."""
+    return re.search(rf"(?<![A-Z]){re.escape(palavra)}(?:A|AS|O|OS|S|ES)?(?![A-Z])", texto) is not None
+
+
+def _titulo_generico(texto: str) -> bool:
+    n = normalizar(texto)
+    return n in _TITULO_GENERICO or len(n) < 4 or n.isdigit()
+
+
+def _parece_status_ou_data(texto: str) -> bool:
+    n = normalizar(texto)
+    return bool(_RE_DATA.search(n)) or any(p in n for p in _SITUACOES_NEGATIVAS + _SITUACOES_POSITIVAS)
+
+
+def _cabecalhos(tabela: Tag) -> list[str]:
+    """Textos normalizados dos <th> da primeira linha de cabeçalho da tabela."""
+    for tr in tabela.find_all("tr"):
+        ths = tr.find_all("th", recursive=False)
+        if ths:
+            return [normalizar(th.get_text(" ")) for th in ths]
+    return []
+
+
+def _campos_por_cabecalho(cabecalhos: list[str], celulas: list[str]) -> dict:
+    campos: dict = {}
+    for i, cab in enumerate(cabecalhos):
+        if i >= len(celulas) or not celulas[i]:
+            continue
+        for palavras, campo in _MAPA_COLUNAS:
+            if campo not in campos and any(_casa_palavra(p, cab) for p in palavras):
+                campos[campo] = celulas[i]
+                break
+    return campos
+
+
+def _linha_do_link(a: Tag):
+    """Linha (tr) ou bloco (li/article/div) que contém o link de detalhe."""
     return a.find_parent("tr") or a.find_parent(["li", "article"]) or a.find_parent("div")
 
 
-def parse_listagem(html: str, modulo: str, base: str) -> list[dict]:
-    """Itens da listagem: título + link de detalhe + colunas da linha.
+def _escolher_titulo(texto_link: str, colunas: list[str], por_cabecalho: dict) -> Optional[str]:
+    if por_cabecalho.get("titulo") and not _titulo_generico(por_cabecalho["titulo"]):
+        return por_cabecalho["titulo"]
+    if not _titulo_generico(texto_link):
+        return texto_link
+    candidatos = [c for c in colunas if not _titulo_generico(c) and not _parece_status_ou_data(c)
+                  and not ano_de(c) == c]
+    return max(candidatos, key=len) if candidatos else None
 
-    Cada linha/bloco com um link de detalhe vira um item. As demais células
-    da linha vão em `colunas` (texto limpo), e o parser tenta reconhecer
-    ano, unidade e coordenador por heurística; o detalhe completa o resto.
+
+def parse_listagem(html: str, modulo: str, url_pagina: str, prefixo_detalhe: Optional[str] = None) -> list[dict]:
+    """Itens da listagem: título + link de detalhe + colunas reconhecidas.
+
+    Cada linha/bloco com um link de detalhe vira um item. Quando a tabela tem
+    cabeçalho, as células são mapeadas por ele (título, coordenador, unidade,
+    situação, ano); sem cabeçalho, o título é o texto do link (se não for um
+    botão genérico) ou a maior célula de texto da linha. Linhas sem título
+    utilizável são descartadas: melhor faltar do que gravar "Detalhes" como
+    projeto. Os hrefs são resolvidos contra a URL da própria página.
     """
     soup = _soup(html)
     itens: list[dict] = []
     vistos: set[str] = set()
+    cabecalhos_por_tabela: dict[int, list[str]] = {}
+
     for a in soup.find_all("a", href=True):
-        url = urljoin(base, a["href"])
-        if not _eh_link_detalhe(url, modulo):
+        url = urljoin(url_pagina, a["href"])
+        if not _eh_link_detalhe(url, modulo, prefixo_detalhe):
             continue
         id_ = id_da_url(url)
-        if not id_ or id_ in vistos:
+        chave = _chave_link(url)
+        if not id_ or chave in vistos:
             continue
-        titulo = limpar(a.get_text(" "))
+
+        texto_link = limpar(a.get_text(" "))
         linha = _linha_do_link(a)
-        colunas = []
+        colunas: list[str] = []
+        por_cabecalho: dict = {}
         if linha is not None:
-            celulas = linha.find_all(["td", "th"]) if linha.name == "tr" else linha.find_all(["p", "span", "div"])
-            colunas = [limpar(c.get_text(" ")) for c in celulas]
-            colunas = [c for c in colunas if c and c != titulo]
-        if not titulo and colunas:
-            titulo = colunas[0]
+            if linha.name == "tr":
+                celulas = [limpar(td.get_text(" ")) for td in linha.find_all(["td", "th"], recursive=False)]
+                tabela = linha.find_parent("table")
+                if tabela is not None:
+                    cabecalhos = cabecalhos_por_tabela.setdefault(id(tabela), _cabecalhos(tabela))
+                    por_cabecalho = _campos_por_cabecalho(cabecalhos, celulas)
+            else:
+                celulas = [limpar(c.get_text(" ")) for c in linha.find_all(["p", "span", "div", "h3", "h4", "h5"])]
+            colunas = [c for c in celulas if c and c != texto_link]
+
+        titulo = _escolher_titulo(texto_link, colunas, por_cabecalho)
         if not titulo:
             continue
-        vistos.add(id_)
+        vistos.add(chave)
+        ano = ano_de(por_cabecalho.get("ano")) or next(
+            (ano_de(c) for c in colunas if ano_de(c) and len(c) <= 12), None)
         itens.append({
             "unirio_id": id_,
             "titulo": titulo,
             "link_detalhe": url,
-            "ano": next((ano_de(c) for c in colunas if ano_de(c) and len(c) <= 12), None),
+            "coordenador": por_cabecalho.get("coordenador"),
+            "unidade": por_cabecalho.get("unidade"),
+            "situacao": situacao_normalizada(por_cabecalho.get("situacao")) if por_cabecalho.get("situacao") else None,
+            "ano": ano,
             "colunas": colunas,
         })
     return itens
 
 
+def _desabilitado(a: Tag) -> bool:
+    classes = " ".join(a.get("class") or [])
+    if isinstance(a.parent, Tag):
+        classes += " " + " ".join(a.parent.get("class") or [])
+    return "disabled" in classes.lower() or (a.get("aria-disabled") or "").lower() == "true"
+
+
+def _eh_proxima(a: Tag) -> bool:
+    href = (a.get("href") or "").strip()
+    if not href or href.startswith("#") or href.lower().startswith("javascript"):
+        return False
+    if _desabilitado(a):
+        return False
+    rels = a.get("rel") or []
+    if any(r.lower() == "next" for r in (rels if isinstance(rels, list) else [rels])):
+        return True
+    for texto in (a.get_text(" "), a.get("aria-label") or "", a.get("title") or ""):
+        n = normalizar(texto)
+        letras = re.sub(r"[^A-Z]", "", n)
+        if letras:
+            if any(letras.startswith(p) for p in _PROXIMA_PALAVRAS):
+                return True
+        elif n.strip() in _PROXIMA_GLIFOS:
+            return True
+    classes = (" ".join(a.get("class") or []) + " "
+               + (" ".join(a.parent.get("class") or []) if isinstance(a.parent, Tag) else "")).lower()
+    return re.search(r"(^|[\s_-])next([\s_-]|$)", classes) is not None
+
+
 def proxima_pagina(html: str, url_atual: str) -> Optional[str]:
-    """URL da próxima página da listagem, ou None na última."""
-    soup = _soup(html)
-    a = soup.find("a", rel=lambda r: r and "next" in [x.lower() for x in (r if isinstance(r, list) else [r])])
-    if a and a.get("href"):
-        return urljoin(url_atual, a["href"])
-    for a in soup.find_all("a", href=True):
-        texto = normalizar(a.get_text(" "))
-        if texto in _PROXIMA or (a.get("aria-label") and normalizar(a["aria-label"]) in _PROXIMA):
-            if "javascript" in a["href"].lower() or a["href"] in ("#", ""):
-                continue
-            classes = " ".join(a.get("class") or []) + " " + " ".join((a.parent.get("class") or []) if a.parent else [])
-            if "disabled" in classes.lower():
-                return None
-            return urljoin(url_atual, a["href"])
+    """URL da próxima página da listagem, ou None na última.
+
+    Reconhece rel="next", rótulos "Próxima", "Próximo »", "Next >", "Seguinte",
+    glifos isolados (›, », >) e classes `next` (Bootstrap/Yii), ignorando links
+    desabilitados, `#` e `javascript:`. ">>"/"»»" costumam ser "última" e não contam.
+    """
+    for a in _soup(html).find_all("a", href=True):
+        if _eh_proxima(a):
+            destino = urljoin(url_atual, a["href"])
+            return destino if destino != url_atual else None
     return None
 
 
@@ -183,27 +327,54 @@ def proxima_pagina(html: str, url_atual: str) -> Optional[str]:
 #  Detalhe
 # ─────────────────────────────────────────────
 
-# (palavras no rótulo normalizado) -> campo do registro
+# (palavras do rótulo, campo, palavras que excluem o rótulo) — ordem importa:
+# E-MAIL antes de COORDENADOR ("E-mail do coordenador"), ANO antes de INÍCIO/TÉRMINO.
 _MAPA_DETALHE = [
-    (("COORDENADOR", "RESPONSAVEL", "PROPONENTE", "DOCENTE RESPONSAVEL"), "coordenador"),
-    (("E-MAIL", "EMAIL"), "email_raw"),
-    (("UNIDADE", "CENTRO", "DEPARTAMENTO", "ESCOLA", "INSTITUTO", "LOTACAO"), "unidade"),
-    (("SITUACAO", "STATUS"), "situacao_raw"),
-    (("PERIODO", "VIGENCIA", "DURACAO"), "periodo_raw"),
-    (("INICIO",), "inicio_raw"),
-    (("TERMINO", "FIM", "CONCLUSAO"), "fim_raw"),
-    (("RESUMO", "DESCRICAO", "OBJETIVO", "APRESENTACAO", "JUSTIFICATIVA"), "descricao"),
-    (("PALAVRA",), "palavras_chave_raw"),
-    (("AREA", "LINHA"), "area_tematica"),
-    (("TITULO",), "titulo"),
-    (("ANO",), "ano"),
-    (("TIPO", "MODALIDADE", "NATUREZA"), "categoria"),
+    (("E-MAIL", "EMAIL", "E MAIL"), "email_raw", ()),
+    (("TITULO",), "titulo", ()),
+    (("COORDENADOR", "RESPONSAVEL", "PROPONENTE", "DOCENTE"), "coordenador",
+     ("VICE", "ADJUNTO", "TELEFONE", "LATTES", "SUBSTITUTO")),
+    (("UNIDADE", "CENTRO", "DEPARTAMENTO", "ESCOLA", "INSTITUTO", "LOTACAO", "FACULDADE"), "unidade",
+     ("CUSTO", "COMUNIDADE", "ESCOLARIDADE", "ATENDIDA")),
+    (("SITUACAO", "STATUS"), "situacao_raw", ()),
+    (("ANO",), "ano", ()),
+    (("PERIODO", "VIGENCIA", "DURACAO"), "periodo_raw", ()),
+    (("INICIO",), "inicio_raw", ()),
+    (("TERMINO", "FIM", "CONCLUSAO", "ENCERRAMENTO"), "fim_raw", ()),
+    (("RESUMO", "DESCRICAO", "OBJETIVO", "APRESENTACAO", "JUSTIFICATIVA"), "descricao", ()),
+    (("PALAVRA",), "palavras_chave_raw", ()),
+    (("AREA", "LINHA", "TEMATICA"), "area_tematica", ()),
+    (("TIPO", "MODALIDADE", "NATUREZA"), "categoria", ("BOLSA",)),
 ]
+
+_ROTULOS = ("label", "strong", "b", "h4", "h5")
+_BLOCOS = {"p", "div", "li", "tr", "td", "table", "ul", "ol", "dl", "dt", "dd", "section", "article",
+           "h1", "h2", "h3", "h4", "h5", "h6", "hr", "form", "fieldset"}
+
+
+def _valor_apos(tag: Tag) -> str:
+    """Texto que segue o rótulo dentro do mesmo pai, até um <br>, um bloco ou
+    outro rótulo. Para `<strong>Coordenador:</strong> Fulano<br><strong>E-mail:</strong>…`
+    devolve só "Fulano"."""
+    partes: list[str] = []
+    for no in tag.next_siblings:
+        if isinstance(no, NavigableString):
+            partes.append(str(no))
+        elif isinstance(no, Tag):
+            if no.name == "br":
+                if limpar(" ".join(partes)):
+                    break
+                continue
+            if no.name in _ROTULOS or no.name in _BLOCOS:
+                break
+            partes.append(no.get_text(" "))
+    return limpar(" ".join(partes))
 
 
 def _pares_rotulo_valor(soup: BeautifulSoup) -> dict:
-    """Mapa {RÓTULO NORMALIZADO: valor} a partir de th/td, dt/dd, label/+texto e
-    blocos "Rótulo: valor"."""
+    """Mapa {RÓTULO NORMALIZADO: valor} a partir de th/td, dt/dd, linhas de
+    duas células e rótulos em label/strong/b/h4/h5 (valor no texto seguinte,
+    no bloco irmão ou na seção seguinte)."""
     campos: dict = {}
 
     def guardar(rotulo, valor):
@@ -224,31 +395,47 @@ def _pares_rotulo_valor(soup: BeautifulSoup) -> dict:
         tds = tr.find_all("td", recursive=False)
         if len(tds) == 2:
             guardar(tds[0].get_text(" "), tds[1].get_text(" "))
-    for tag in soup.find_all(["label", "strong", "b", "h4", "h5", "dt"]):
+    for tag in soup.find_all(list(_ROTULOS)):
         rotulo = limpar(tag.get_text(" "))
         if not rotulo or len(rotulo) > 60:
             continue
-        # "Rótulo:" seguido do valor no mesmo bloco ou no irmão seguinte
+        if tag.name in ("h4", "h5"):
+            # Títulos de seção ("Resumo", "Objetivos") não levam ":" — o valor é
+            # o bloco seguinte, como em services.sigaa.parser._secao_h4.
+            irmao = tag.find_next_sibling()
+            if irmao is not None and irmao.name not in ("h1", "h2", "h3", "h4", "h5", "h6"):
+                guardar(rotulo, irmao.get_text(" "))
+            continue
+        valor = _valor_apos(tag)
         pai = tag.parent
-        if pai is None:
-            continue
-        texto_pai = limpar(pai.get_text(" "))
-        if texto_pai.startswith(rotulo) and len(texto_pai) > len(rotulo) + 1:
-            guardar(rotulo, texto_pai[len(rotulo):].lstrip(" :"))
-            continue
-        irmao = tag.find_next_sibling()
-        if irmao is not None and rotulo.endswith(":"):
-            guardar(rotulo, irmao.get_text(" "))
+        if not valor and isinstance(pai, Tag) and limpar(pai.get_text(" ")) == rotulo:
+            # Rótulo sozinho no seu bloco (ex.: <div class="col-md-3"><strong>Coordenador:</strong></div>
+            # <div class="col-md-9">valor</div>): o valor está no bloco irmão.
+            irmao = pai.find_next_sibling()
+            if irmao is not None:
+                valor = limpar(irmao.get_text(" "))
+        if valor:
+            guardar(rotulo, valor)
     return campos
 
 
 def _mapear(campos: dict) -> dict:
+    """Rótulos → campos do registro. Duas passadas: rótulo igual à palavra, depois
+    palavra inteira dentro do rótulo; o primeiro rótulo que casa vence."""
     saida: dict = {}
-    for rotulo, valor in campos.items():
-        for palavras, campo in _MAPA_DETALHE:
-            if any(p in rotulo for p in palavras) and campo not in saida:
-                saida[campo] = valor
-                break
+
+    def tentar(exato: bool):
+        for rotulo, valor in campos.items():
+            for palavras, campo, negativas in _MAPA_DETALHE:
+                if campo in saida or any(_casa_palavra(n, rotulo) for n in negativas):
+                    continue
+                casou = (rotulo in palavras) if exato else any(_casa_palavra(p, rotulo) for p in palavras)
+                if casou:
+                    saida[campo] = valor
+                    break
+
+    tentar(exato=True)
+    tentar(exato=False)
     return saida
 
 

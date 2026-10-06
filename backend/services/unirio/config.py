@@ -5,14 +5,23 @@ de ambiente. Todas têm default seguro: o job roda só com MONGO_URI.
 Fontes:
 - Portal da Pesquisa (SISPP): https://sistemas.unirio.br/projetos/search/index
 - Portal da Extensão (ProExC): https://sistemas2.unirio.br/extensao/busca/projetos
+
+Uma variável vazia conta como ausente: o workflow exporta
+`${{ inputs.x || vars.X }}`, que vira "" quando nada está definido.
 """
 
 import os
 from dataclasses import dataclass, field
+from urllib.parse import urlparse
 
 
 def _lista(valor: str) -> list[str]:
     return [v.strip() for v in valor.split(",") if v.strip()]
+
+
+def _env(nome: str, padrao):
+    valor = os.getenv(nome)
+    return valor.strip() if valor is not None and valor.strip() else padrao
 
 
 URL_PESQUISA = "https://sistemas.unirio.br/projetos/search/index"
@@ -30,8 +39,10 @@ class UnirioConfig:
     # público usado como referência); 0 = todos.
     extensao_status: str = "1"
     # Teto de páginas percorridas por listagem (proteção contra loop de paginação).
+    # Ao bater no teto a listagem é marcada incompleta e nada é desativado.
     max_paginas: int = 300
     # Teto de itens cujo detalhe é consultado por módulo (0 = sem limite).
+    # Só vale em --dry-run/--captura: no sync real é ignorado.
     max_detalhes: int = 0
     # Pausa mínima entre requisições (nunca menos que 1s).
     pausa_segundos: float = 1.5
@@ -41,22 +52,32 @@ class UnirioConfig:
 
     @property
     def url_pesquisa(self) -> str:
-        return os.getenv("UNIRIO_URL_PESQUISA") or URL_PESQUISA
+        return _env("UNIRIO_URL_PESQUISA", URL_PESQUISA)
 
     @property
     def url_extensao(self) -> str:
-        return os.getenv("UNIRIO_URL_EXTENSAO") or URL_EXTENSAO.format(status=self.extensao_status)
+        return _env("UNIRIO_URL_EXTENSAO", URL_EXTENSAO.format(status=self.extensao_status))
+
+    @property
+    def pesquisa_detalhe_prefixo(self) -> str:
+        """Prefixo de caminho dos links de detalhe do Portal da Pesquisa.
+
+        Padrão: o diretório do controller da listagem ("/projetos/search/"),
+        para que links de outros controllers (perfil de pessoa, unidade) não
+        sejam tomados por projetos. Ajustável por UNIRIO_PESQUISA_DETALHE_PREFIXO
+        caso o detalhe more em outro controller (ex.: "/projetos/projeto/").
+        """
+        caminho = urlparse(self.url_pesquisa).path or "/"
+        return _env("UNIRIO_PESQUISA_DETALHE_PREFIXO", caminho.rsplit("/", 1)[0] + "/")
 
     @classmethod
     def from_env(cls) -> "UnirioConfig":
         cfg = cls()
-        if os.getenv("UNIRIO_MODULOS"):
-            cfg.modulos = [m.lower() for m in _lista(os.environ["UNIRIO_MODULOS"])]
-        if os.getenv("UNIRIO_EXTENSAO_STATUS"):
-            cfg.extensao_status = os.environ["UNIRIO_EXTENSAO_STATUS"].strip()
-        cfg.max_paginas = max(1, int(os.getenv("UNIRIO_MAX_PAGINAS", cfg.max_paginas)))
-        cfg.max_detalhes = max(0, int(os.getenv("UNIRIO_MAX_DETALHES", cfg.max_detalhes)))
-        cfg.pausa_segundos = max(1.0, float(os.getenv("UNIRIO_PAUSA_SEGUNDOS", cfg.pausa_segundos)))
-        cfg.timeout_segundos = float(os.getenv("UNIRIO_TIMEOUT_SEGUNDOS", cfg.timeout_segundos))
-        cfg.max_tentativas = max(1, int(os.getenv("UNIRIO_MAX_TENTATIVAS", cfg.max_tentativas)))
+        cfg.modulos = [m.lower() for m in _lista(_env("UNIRIO_MODULOS", ",".join(cfg.modulos)))] or cfg.modulos
+        cfg.extensao_status = str(_env("UNIRIO_EXTENSAO_STATUS", cfg.extensao_status))
+        cfg.max_paginas = max(1, int(_env("UNIRIO_MAX_PAGINAS", cfg.max_paginas)))
+        cfg.max_detalhes = max(0, int(_env("UNIRIO_MAX_DETALHES", cfg.max_detalhes)))
+        cfg.pausa_segundos = max(1.0, float(_env("UNIRIO_PAUSA_SEGUNDOS", cfg.pausa_segundos)))
+        cfg.timeout_segundos = float(_env("UNIRIO_TIMEOUT_SEGUNDOS", cfg.timeout_segundos))
+        cfg.max_tentativas = max(1, int(_env("UNIRIO_MAX_TENTATIVAS", cfg.max_tentativas)))
         return cfg

@@ -46,10 +46,25 @@ async def test_grava_campos_para_listagem(db):
     doc = await db.projetos.find_one({})
     assert doc["origem"] == "sigaa"
     assert doc["tipo"] == "Pesquisa"
+    assert doc["modulo"] == "pesquisa"
+    assert doc["tipo_sigaa"] == "pesquisa"  # nome histórico, mantido para índices e leitores antigos
+    assert doc["instituicao"] == "UNIR"
     assert doc["nome_professor"] == "ANA PAULA SOUZA"
     assert doc["email_professor"] == "ana@unir.br"
     assert doc["ativo"] is True
     assert doc["primeira_coleta"] == doc["ultima_coleta"]
+
+
+async def test_garantir_modulo_migra_docs_antigos_do_sigaa(db):
+    await db.projetos.insert_many([
+        {"origem": "sigaa", "tipo_sigaa": "extensao", "titulo": "Antigo", "chave_sigaa": "x"},
+        {"origem": "sigaa", "tipo_sigaa": "pesquisa", "modulo": "pesquisa", "titulo": "Já migrado", "chave_sigaa": "y"},
+        {"titulo": "Manual", "tipo_sigaa": "pesquisa"},
+    ])
+    assert await repositorio.garantir_modulo(db) == 1
+    assert (await db.projetos.find_one({"titulo": "Antigo"}))["modulo"] == "extensao"
+    assert "modulo" not in await db.projetos.find_one({"titulo": "Manual"})
+    assert await repositorio.garantir_modulo(db) == 0  # idempotente
 
 
 async def test_nunca_toca_projetos_manuais(db):

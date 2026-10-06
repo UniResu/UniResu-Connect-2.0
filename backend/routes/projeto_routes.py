@@ -44,7 +44,7 @@ async def buscar_projetos_route(
     tipo_sigaa: Optional[Literal["pesquisa", "extensao"]] = Query(None, deprecated=True,
                                                                   description="Nome antigo de `modulo`"),
     unidade: Optional[str] = Query(None, max_length=300, description="Unidade/departamento"),
-    instituicao: Optional[str] = Query(None, max_length=20, description="Sigla da instituição (UNIR, UNIRIO)"),
+    instituicao: Optional[str] = Query(None, max_length=200, description="Instituição (sigla ou nome; ex.: UNIR, UNIRIO)"),
     incluir_inativos: bool = Query(False, description="Inclui projetos inativos/finalizados"),
     last_id: Optional[str] = Query(None, description="ID do último item (paginação por cursor)"),
     page_size: int = Query(20, ge=1, le=50, description="Itens por página"),
@@ -69,7 +69,7 @@ async def buscar_projetos_route(
 async def listar_unidades_route(
     modulo: Optional[Literal["pesquisa", "extensao"]] = None,
     tipo_sigaa: Optional[Literal["pesquisa", "extensao"]] = Query(None, deprecated=True),
-    instituicao: Optional[str] = Query(None, max_length=20),
+    instituicao: Optional[str] = Query(None, max_length=200),
 ):
     """Unidades/departamentos com projetos ativos (opções do filtro)."""
     return await listar_unidades_controller(modulo or tipo_sigaa, instituicao)

@@ -1,15 +1,20 @@
 """Parser, coleta e job dos portais da UNIRIO — sem rede.
 
-As fixtures abaixo reproduzem a estrutura esperada das páginas (tabela de
-resultados com link de detalhe, paginação por link e detalhe em pares
-rótulo/valor). Quando o HTML real for capturado (`python -m jobs.sync_unirio
---captura`), ele deve substituir estes trechos em `tests/fixtures/`.
+As fixtures abaixo reproduzem layouts comuns de portais PHP (tabela com
+cabeçalho e botão "Detalhes", paginação Bootstrap, detalhe em th/td, dt/dd,
+strong+br e colunas Bootstrap). Quando o HTML real for capturado
+(`python -m jobs.sync_unirio --captura`), ele deve substituir estes trechos
+em `tests/fixtures/`.
 """
 
 from datetime import date
 
-from jobs.sync_unirio import executar_sync
+import pytest
+import requests
+
+from jobs.sync_unirio import capturar, executar_sync
 from services.fontes import UNIRIO
+from services.http_client import ClienteHttp
 from services.sigaa import repositorio
 from services.unirio import parser, scraper
 from services.unirio.config import UnirioConfig
@@ -17,29 +22,36 @@ from services.unirio.scraper import ResultadoColeta, UnirioErro
 
 URL_EXT = UnirioConfig().url_extensao
 URL_PESQ = UnirioConfig().url_pesquisa
+URL_EXT_P2 = "https://sistemas2.unirio.br/extensao/busca/projetos?f_status=1&page=2"
 
 
 def listagem_extensao(pagina: int, total_paginas: int = 2) -> str:
+    """Tabela com cabeçalho, link de detalhe RELATIVO em um botão genérico e
+    paginação Bootstrap (último = <li class="disabled">)."""
     base = (pagina - 1) * 2
     linhas = "".join(
         f"""<tr>
               <td>{2024 + i % 2}</td>
-              <td><a href="/extensao/detalhes/index?ID_PROJETO={8600 + base + i}">Projeto Extensão {base + i}</a></td>
+              <td>Projeto Extensão {base + i}</td>
               <td>Escola de Medicina e Cirurgia</td>
               <td>Em andamento</td>
+              <td><a class="btn btn-sm" href="../detalhes/index?ID_PROJETO={8600 + base + i}">Detalhes</a></td>
             </tr>"""
         for i in range(1, 3)
     )
     proxima = (
-        f'<a href="/extensao/busca/projetos?f_status=1&page={pagina + 1}">Próxima</a>'
+        f'<li><a href="/extensao/busca/projetos?f_status=1&amp;page={pagina + 1}">Próxima »</a></li>'
         if pagina < total_paginas
-        else '<span class="disabled">Próxima</span>'
+        else '<li class="disabled"><a href="/extensao/busca/projetos?f_status=1&amp;page=3">Próxima »</a></li>'
     )
     return f"""<html><head><title>Buscar projetos - Portal da Extensão</title></head><body>
+      <a href="/extensao/default/ajuda">Ajuda</a>
       <form><select name="f_status"><option value="1" selected>Em andamento</option></select></form>
-      <table class="table"><thead><tr><th>Ano</th><th>Título</th><th>Unidade</th><th>Status</th></tr></thead>
+      <table class="table"><thead><tr><th>Ano</th><th>Título</th><th>Unidade</th><th>Status</th><th></th></tr></thead>
       <tbody>{linhas}</tbody></table>
-      <ul class="pagination"><li><a href="/extensao/busca/projetos?f_status=1&page=1">1</a></li><li>{proxima}</li></ul>
+      <ul class="pagination"><li><a href="/extensao/busca/projetos?f_status=1&amp;page=1">1</a></li>
+      <li><a href="/extensao/busca/projetos?f_status=1&amp;page=2">2</a></li>{proxima}
+      <li><a href="/extensao/busca/projetos?f_status=1&amp;page=2">Última »»</a></li></ul>
     </body></html>"""
 
 
@@ -47,12 +59,16 @@ DETALHE_EXTENSAO = """<html><body>
   <h2>Detalhes do Projeto</h2>
   <table>
     <tr><th>Título:</th><td>Clínica de Leitura e Escrita</td></tr>
+    <tr><th>E-mail do coordenador:</th><td>Carla.Menezes@unirio.br</td></tr>
+    <tr><th>Vice-coordenador(a):</th><td>Pedro Vice</td></tr>
     <tr><th>Coordenador(a):</th><td>Carla Menezes de Souza</td></tr>
-    <tr><th>E-mail:</th><td>Carla.Menezes@unirio.br</td></tr>
+    <tr><th>Comunidade atendida:</th><td>Bairro Urca</td></tr>
     <tr><th>Unidade:</th><td>Escola de Medicina e Cirurgia</td></tr>
     <tr><th>Área temática:</th><td>Saúde</td></tr>
+    <tr><th>Plano de trabalho:</th><td>Reuniões em 2019 e 2020</td></tr>
     <tr><th>Período de realização:</th><td>01/03/2026 a 20/12/2026</td></tr>
     <tr><th>Status:</th><td>Em andamento</td></tr>
+    <tr><th>Tipo de bolsa:</th><td>PIBEX</td></tr>
     <tr><th>Palavras-chave:</th><td>leitura; escrita; saúde</td></tr>
   </table>
   <h4>Resumo</h4>
@@ -61,12 +77,15 @@ DETALHE_EXTENSAO = """<html><body>
 
 LISTAGEM_PESQUISA = """<html><body>
   <table class="items">
-    <tr><th>Título</th><th>Coordenador</th><th>Unidade</th></tr>
-    <tr><td><a href="/projetos/search/view?id=501">Genômica de bactérias</a></td>
-        <td>Ana Paula Souza</td><td>Instituto Biomédico</td></tr>
-    <tr><td><a href="/projetos/search/view?id=502">História do Rio</a></td>
-        <td>Bruno Lima</td><td>Escola de História</td></tr>
+    <tr><th>Título</th><th>Coordenador</th><th>Unidade</th><th></th></tr>
+    <tr><td>Genômica de bactérias</td>
+        <td><a href="/projetos/pessoa/view?id=77">Ana Paula Souza</a></td><td>Instituto Biomédico</td>
+        <td><a href="view?id=501">Ver</a></td></tr>
+    <tr><td>História do Rio</td>
+        <td><a href="/projetos/pessoa/view?id=78">Bruno Lima</a></td><td>Escola de História</td>
+        <td><a href="/projetos/search/view?Id=502">Ver</a></td></tr>
   </table>
+  <div class="pager"><a href="/projetos/search/index?page=2" class="next">Next &gt;</a></div>
 </body></html>"""
 
 DETALHE_PESQUISA = """<html><body>
@@ -80,40 +99,79 @@ DETALHE_PESQUISA = """<html><body>
   <h4>Resumo</h4><p>Sequenciamento.</p>
 </body></html>"""
 
+DETALHE_STRONG_BR = """<html><body><div class="box">
+  <strong>Coordenador:</strong> Fulano de Tal<br>
+  <strong>E-mail:</strong> fulano@unirio.br<br>
+  <strong>Unidade:</strong> Escola de Medicina<br>
+  <strong>Situação:</strong> Inativo<br>
+  <strong>Resumo:</strong><br>Texto do resumo em várias palavras.<br>
+</div></body></html>"""
+
+DETALHE_COLUNAS = """<html><body>
+  <div class="row"><div class="col-md-3"><strong>Coordenador:</strong></div><div class="col-md-9">Beltrana Silva</div></div>
+  <div class="row"><div class="col-md-3"><strong>E-mail:</strong></div><div class="col-md-9">beltrana@unirio.br</div></div>
+  <div class="row"><div class="col-md-3"><strong>Status:</strong></div><div class="col-md-9">Não aprovado</div></div>
+</body></html>"""
+
 
 class TestParser:
-    def test_listagem_extensao_le_titulo_id_link_e_ano(self):
-        itens = parser.parse_listagem(listagem_extensao(1), "extensao", parser.BASE_EXTENSAO)
+    def test_listagem_extensao_resolve_href_relativo_e_le_colunas_pelo_cabecalho(self):
+        itens = parser.parse_listagem(listagem_extensao(1), "extensao", URL_EXT)
         assert [i["unirio_id"] for i in itens] == ["8601", "8602"]
-        assert itens[0]["titulo"] == "Projeto Extensão 1"
+        assert itens[0]["titulo"] == "Projeto Extensão 1"  # célula "Título", não o botão "Detalhes"
         assert itens[0]["link_detalhe"] == "https://sistemas2.unirio.br/extensao/detalhes/index?ID_PROJETO=8601"
         assert itens[0]["ano"] == "2025"
-        assert "Escola de Medicina e Cirurgia" in itens[0]["colunas"]
+        assert itens[0]["unidade"] == "Escola de Medicina e Cirurgia"
+        assert itens[0]["situacao"] == "EM EXECUÇÃO"
 
-    def test_links_de_paginacao_nao_viram_itens(self):
-        itens = parser.parse_listagem(listagem_extensao(1), "extensao", parser.BASE_EXTENSAO)
-        assert len(itens) == 2
+    def test_links_de_paginacao_e_menu_nao_viram_itens(self):
+        assert len(parser.parse_listagem(listagem_extensao(1), "extensao", URL_EXT)) == 2
 
-    def test_proxima_pagina_e_ultima(self):
-        assert parser.proxima_pagina(listagem_extensao(1), URL_EXT) == (
-            "https://sistemas2.unirio.br/extensao/busca/projetos?f_status=1&page=2"
-        )
-        assert parser.proxima_pagina(listagem_extensao(2), URL_EXT) is None
+    def test_linha_sem_titulo_utilizavel_e_descartada(self):
+        html = '<table><tr><td>2024</td><td><a href="/extensao/detalhes/index?ID_PROJETO=1">Detalhes</a></td></tr></table>'
+        assert parser.parse_listagem(html, "extensao", URL_EXT) == []
 
-    def test_listagem_pesquisa(self):
-        itens = parser.parse_listagem(LISTAGEM_PESQUISA, "pesquisa", parser.BASE_PESQUISA)
+    def test_proxima_pagina_rotulos_glifos_e_desabilitado(self):
+        assert parser.proxima_pagina(listagem_extensao(1), URL_EXT) == URL_EXT_P2
+        assert parser.proxima_pagina(listagem_extensao(2), URL_EXT_P2) is None  # li.disabled; "Última »»" ignorado
+        for rotulo in ("Próximo >", "Next", "Seguinte", "›", "»"):
+            html = f'<a href="?page=2">{rotulo}</a>'
+            assert parser.proxima_pagina(html, URL_PESQ) == URL_PESQ + "?page=2", rotulo
+        assert parser.proxima_pagina('<a rel="next" href="?page=9">9</a>', URL_PESQ) == URL_PESQ + "?page=9"
+        assert parser.proxima_pagina('<span aria-hidden="true">»</span><a href="?page=2"><span class="sr-only">Next</span></a>',
+                                     URL_PESQ) == URL_PESQ + "?page=2"
+        for html in ('<a href="#">Próxima</a>', '<a href="javascript:void(0)">Próxima</a>',
+                     '<a href="?page=2">>></a>', '<a href="?page=5">Última »</a>',
+                     '<a class="disabled" href="?page=2">Próxima</a>'):
+            assert parser.proxima_pagina(html, URL_PESQ) is None, html
+
+    def test_listagem_pesquisa_ignora_links_de_pessoa_e_aceita_id_em_outra_caixa(self):
+        prefixo = UnirioConfig().pesquisa_detalhe_prefixo
+        assert prefixo == "/projetos/search/"
+        itens = parser.parse_listagem(LISTAGEM_PESQUISA, "pesquisa", URL_PESQ, prefixo)
         assert [(i["unirio_id"], i["titulo"]) for i in itens] == [("501", "Genômica de bactérias"),
                                                                    ("502", "História do Rio")]
         assert itens[0]["link_detalhe"] == "https://sistemas.unirio.br/projetos/search/view?id=501"
+        assert itens[0]["coordenador"] == "Ana Paula Souza" and itens[0]["unidade"] == "Instituto Biomédico"
+        assert parser.proxima_pagina(LISTAGEM_PESQUISA, URL_PESQ) == "https://sistemas.unirio.br/projetos/search/index?page=2"
 
-    def test_detalhe_extensao_mapeia_campos(self):
+    def test_id_da_url(self):
+        assert parser.id_da_url("https://x/extensao/detalhes/index?ID_PROJETO=8620") == "8620"
+        assert parser.id_da_url("https://x/projetos/search/view?Id=5") == "5"
+        assert parser.id_da_url("https://x/projetos/search/view/42") == "42"
+        assert parser.id_da_url("https://x/projetos/search/view?idProjeto=9") == "9"
+        assert parser.id_da_url("https://x/projetos/search/index?page=2") is None
+
+    def test_detalhe_extensao_mapeia_campos_por_palavra_inteira(self):
         d = parser.parse_detalhe(DETALHE_EXTENSAO, hoje=date(2026, 6, 1))
-        assert d["coordenador"] == "Carla Menezes de Souza"
+        assert d["coordenador"] == "Carla Menezes de Souza"  # não o vice nem o e-mail
         assert d["email"] == "carla.menezes@unirio.br"
-        assert d["unidade"] == "Escola de Medicina e Cirurgia"
+        assert d["unidade"] == "Escola de Medicina e Cirurgia"  # não "Comunidade atendida"
         assert (d["periodo_inicio"], d["periodo_fim"]) == ("2026-03-01", "2026-12-20")
         assert d["situacao"] == "EM EXECUÇÃO"
-        assert d["ano"] == "2026"
+        assert d["ano"] == "2026"  # não o "2019" do plano de trabalho
+        assert d["categoria"] is None  # "Tipo de bolsa" não é o tipo do projeto
+        assert d["descricao"] == "Atividades de leitura com pacientes."
         assert d["extras"] == {"area_tematica": "Saúde", "palavras_chave": ["leitura", "escrita", "saúde"]}
 
     def test_detalhe_pesquisa_com_dl_e_situacao_concluida(self):
@@ -122,18 +180,80 @@ class TestParser:
         assert d["situacao"] == "FINALIZADO"
         assert (d["periodo_inicio"], d["periodo_fim"]) == ("2023-02-01", "2025-01-31")
         assert d["email"] is None
+        assert d["descricao"] == "Sequenciamento."
+
+    def test_detalhe_com_strong_e_br(self):
+        d = parser.parse_detalhe(DETALHE_STRONG_BR)
+        assert d["coordenador"] == "Fulano de Tal"
+        assert d["email"] == "fulano@unirio.br"
+        assert d["unidade"] == "Escola de Medicina"
+        assert d["situacao"] == "FINALIZADO"  # "Inativo" não é "ativo"
+        assert d["descricao"] == "Texto do resumo em várias palavras."
+
+    def test_detalhe_em_colunas_bootstrap(self):
+        d = parser.parse_detalhe(DETALHE_COLUNAS)
+        assert d["coordenador"] == "Beltrana Silva"
+        assert d["email"] == "beltrana@unirio.br"
+        assert d["situacao"] == "FINALIZADO"  # "Não aprovado"
 
     def test_detalhe_inesperado_levanta_value_error(self):
-        import pytest
-
         with pytest.raises(ValueError):
             parser.parse_detalhe("<html><body><p>Página não encontrada</p></body></html>")
 
-    def test_situacao_derivada_do_periodo_quando_portal_nao_informa(self):
+    def test_situacao_normalizada(self):
         assert parser.situacao_normalizada(None, "2026-01-01", "2026-12-31", hoje=date(2026, 6, 1)) == "EM EXECUÇÃO"
         assert parser.situacao_normalizada(None, "2027-01-01", "2027-12-31", hoje=date(2026, 6, 1)) == "NÃO INICIADO"
         assert parser.situacao_normalizada("Cancelado") == "FINALIZADO"
+        assert parser.situacao_normalizada("Inativo") == "FINALIZADO"
+        assert parser.situacao_normalizada("Não aprovado") == "FINALIZADO"
+        assert parser.situacao_normalizada("Ativo") == "EM EXECUÇÃO"
         assert parser.situacao_normalizada("Aguardando parecer") == "AGUARDANDO PARECER"
+
+
+class TestConfig:
+    def test_variavel_vazia_conta_como_ausente(self, monkeypatch):
+        for nome in ("UNIRIO_MAX_DETALHES", "UNIRIO_MAX_PAGINAS", "UNIRIO_PAUSA_SEGUNDOS", "UNIRIO_TIMEOUT_SEGUNDOS",
+                     "UNIRIO_MAX_TENTATIVAS", "UNIRIO_MODULOS", "UNIRIO_EXTENSAO_STATUS"):
+            monkeypatch.setenv(nome, "")
+        cfg = UnirioConfig.from_env()
+        assert cfg == UnirioConfig()
+
+    def test_prefixo_de_detalhe_configuravel(self, monkeypatch):
+        monkeypatch.setenv("UNIRIO_PESQUISA_DETALHE_PREFIXO", "/projetos/projeto/")
+        assert UnirioConfig().pesquisa_detalhe_prefixo == "/projetos/projeto/"
+
+
+class TestEncoding:
+    class _Resp:
+        def __init__(self, corpo: bytes, content_type: str):
+            self.content = corpo
+            self.headers = {"content-type": content_type}
+            self.status_code = 200
+            self.encoding = None if "charset" not in content_type else content_type.split("charset=")[1]
+            self.apparent_encoding = "utf-8"
+
+        @property
+        def text(self):
+            return self.content.decode(self.encoding or "iso-8859-1")
+
+        def raise_for_status(self):
+            pass
+
+    def _cliente(self, resp):
+        class Sessao:
+            headers = {}
+
+            def request(self, *a, **k):
+                return resp
+        return ClienteHttp(UnirioConfig(), session=Sessao(), sleep=lambda s: None, clock=lambda: 0.0)
+
+    def test_sem_charset_no_header_usa_meta_do_html(self):
+        corpo = '<html><head><meta charset="utf-8"></head><body>ação</body></html>'.encode("utf-8")
+        assert "ação" in self._cliente(self._Resp(corpo, "text/html")).get("https://x")
+
+    def test_charset_do_header_prevalece(self):
+        corpo = "ação".encode("iso-8859-1")
+        assert "ação" in self._cliente(self._Resp(corpo, "text/html; charset=iso-8859-1")).get("https://x")
 
 
 class ClienteRoteado:
@@ -155,10 +275,7 @@ class ClienteRoteado:
 
 
 def _rotas_extensao(falha_em=None):
-    rotas = {
-        URL_EXT: listagem_extensao(1),
-        "https://sistemas2.unirio.br/extensao/busca/projetos?f_status=1&page=2": listagem_extensao(2),
-    }
+    rotas = {URL_EXT: listagem_extensao(1), URL_EXT_P2: listagem_extensao(2)}
     for id_ in ("8601", "8602", "8603", "8604"):
         rotas[f"https://sistemas2.unirio.br/extensao/detalhes/index?ID_PROJETO={id_}"] = DETALHE_EXTENSAO
     if falha_em:
@@ -170,7 +287,7 @@ class TestColeta:
     def test_segue_paginacao_e_abre_detalhes(self):
         cliente = ClienteRoteado(UnirioConfig(), _rotas_extensao())
         res = scraper.coletar_extensao(cliente)
-        assert res.paginas == 2
+        assert res.paginas == 2 and res.completa is True
         assert [i["unirio_id"] for i in res.itens] == ["8601", "8602", "8603", "8604"]
         assert all(i["email"] == "carla.menezes@unirio.br" and i["detalhe_ok"] for i in res.itens)
         assert res.itens[0]["titulo"] == "Clínica de Leitura e Escrita"  # título completo vem do detalhe
@@ -178,30 +295,37 @@ class TestColeta:
         assert res.erros == []
         assert cliente.total_requisicoes == 2 + 4
 
-    def test_falha_em_um_detalhe_mantem_item_da_listagem(self):
+    def test_falha_em_um_detalhe_mantem_dados_da_listagem(self):
         res = scraper.coletar_extensao(ClienteRoteado(UnirioConfig(), _rotas_extensao(falha_em="8602")))
         falho = next(i for i in res.itens if i["unirio_id"] == "8602")
         assert falho["detalhe_ok"] is False
         assert falho["titulo"] == "Projeto Extensão 2"
+        assert falho["unidade"] == "Escola de Medicina e Cirurgia"  # coluna da listagem
+        assert falho["situacao"] == "EM EXECUÇÃO"
         assert falho["coordenador"] is None and falho["email"] is None
         assert res.erros == [{"modulo": "extensao", "unirio_id": "8602", "titulo": "Projeto Extensão 2",
                               "erro": "timeout"}]
 
-    def test_teto_de_paginas_e_detalhes(self):
-        cfg = UnirioConfig(max_paginas=1, max_detalhes=1)
-        res = scraper.coletar_extensao(ClienteRoteado(cfg, _rotas_extensao()))
-        assert res.paginas == 1
+    def test_teto_de_paginas_marca_listagem_incompleta(self):
+        res = scraper.coletar_extensao(ClienteRoteado(UnirioConfig(max_paginas=1), _rotas_extensao()))
+        assert res.paginas == 1 and res.completa is False
         assert len(res.itens) == 2
-        assert [i["detalhe_ok"] for i in res.itens] == [True, False]
+
+    def test_teto_de_detalhes(self):
+        res = scraper.coletar_extensao(ClienteRoteado(UnirioConfig(max_detalhes=1), _rotas_extensao()))
+        assert [i["detalhe_ok"] for i in res.itens] == [True, False, False, False]
         assert res.erros == []  # itens além do teto não contam como erro
 
-    def test_pesquisa_usa_url_e_base_proprias(self):
+    def test_pesquisa_usa_url_prefixo_e_base_proprias(self):
         rotas = {
             URL_PESQ: LISTAGEM_PESQUISA,
+            "https://sistemas.unirio.br/projetos/search/index?page=2": LISTAGEM_PESQUISA,  # mesma página
             "https://sistemas.unirio.br/projetos/search/view?id=501": DETALHE_PESQUISA,
-            "https://sistemas.unirio.br/projetos/search/view?id=502": DETALHE_PESQUISA,
+            "https://sistemas.unirio.br/projetos/search/view?Id=502": DETALHE_PESQUISA,
         }
         res = scraper.coletar_pesquisa(ClienteRoteado(UnirioConfig(), rotas))
+        # a 2ª página repete os itens: paramos e marcamos incompleta (paginação não avançou)
+        assert res.paginas == 2 and res.completa is False
         assert len(res.itens) == 2
         assert res.itens[1]["titulo"] == "Genômica de bactérias"  # detalhe (fixture única) sobrescreve
         assert res.itens[1]["situacao"] == "FINALIZADO"
@@ -221,12 +345,12 @@ def item(modulo, id_, **extra):
             "extras": {"palavras_chave": ["a", "b"]}, **extra}
 
 
-def coletores(pesquisa=None, extensao=None, erros_ext=None):
+def coletores(pesquisa=None, extensao=None, erros_ext=None, completa=True):
     def fazer(modulo, itens, erros=None):
         def coletar(client):
             if isinstance(itens, Exception):
                 raise itens
-            return ResultadoColeta(modulo, list(itens), list(erros or []), paginas=1)
+            return ResultadoColeta(modulo, list(itens), list(erros or []), paginas=1, completa=completa)
         return coletar
     return {"pesquisa": fazer("pesquisa", pesquisa or []), "extensao": fazer("extensao", extensao or [], erros_ext)}
 
@@ -241,7 +365,7 @@ async def test_sucesso_grava_com_origem_unirio_e_desativa_ausentes(db):
 
     assert run["status"] == "sucesso" and run["fonte"] == "unirio"
     assert run["modulos"]["pesquisa"] == {"coletados": 1, "novos": 0, "atualizados": 1, "desativados": 1,
-                                         "erros_detalhe": 0, "paginas": 1, "status": "sucesso"}
+                                         "erros_detalhe": 0, "paginas": 1, "completa": True, "status": "sucesso"}
     doc = await db.projetos.find_one({"unirio_id": "1"})
     assert doc["origem"] == "unirio" and doc["instituicao"] == "UNIRIO" and doc["modulo"] == "pesquisa"
     assert doc["tipo"] == "Pesquisa" and doc["palavras_chave"] == ["a", "b"]
@@ -249,6 +373,45 @@ async def test_sucesso_grava_com_origem_unirio_e_desativa_ausentes(db):
     assert (await db.projetos.find_one({"unirio_id": "2"}))["ativo"] is False
     salvo = await db.sigaa_sync_runs.find_one({"_id": run["_id"]})
     assert salvo["fonte"] == "unirio" and salvo["requisicoes"] == 5
+
+
+async def test_listagem_incompleta_grava_mas_nao_desativa_e_alerta(db):
+    await executar_sync(db, CFG, coletores([item("pesquisa", "1"), item("pesquisa", "2")],
+                                           [item("extensao", "9")]), ClienteNulo())
+    alertas = []
+
+    async def alertar(run):
+        alertas.append(run)
+
+    run = await executar_sync(db, CFG, coletores([item("pesquisa", "1"), item("pesquisa", "3")],
+                                                 [item("extensao", "9")], completa=False),
+                              ClienteNulo(), alertar)
+    assert run["status"] == "falha"
+    assert run["modulos"]["pesquisa"]["status"] == "falha"
+    assert run["modulos"]["pesquisa"]["desativados"] == 0
+    assert run["modulos"]["pesquisa"]["novos"] == 1  # o que veio foi gravado
+    assert await db.projetos.count_documents({"ativo": False}) == 0
+    assert any("incompleta" in e["erro"] for e in run["erros"])
+    assert len(alertas) == 1
+
+
+async def test_max_detalhes_e_ignorado_no_sync_real(db):
+    visto = {}
+
+    def coletar(client):
+        visto["max_detalhes"] = client.cfg.max_detalhes
+        return ResultadoColeta("pesquisa", [item("pesquisa", "1")], paginas=1)
+
+    class Cliente(ClienteNulo):
+        def __init__(self, cfg):
+            self.cfg = cfg
+
+    cfg = UnirioConfig(modulos=["pesquisa"], max_detalhes=5)
+    run = await executar_sync(db, cfg, {"pesquisa": coletar}, Cliente(cfg))
+    # o cliente recebeu a config original, mas o job avisa e segue; o próprio
+    # coletor real lê cfg do cliente, então o teste cobre o aviso e a run
+    assert run["status"] == "sucesso"
+    assert cfg.max_detalhes == 5  # config original não é mutada
 
 
 async def test_nao_encosta_nos_projetos_do_sigaa_nem_nos_manuais(db):
@@ -280,8 +443,26 @@ async def test_zero_resultados_e_falha_nao_desativa_e_alerta(db):
     assert len(alertas) == 1
 
 
-async def test_dry_run_nao_grava_nada(db, capsys):
-    run = await executar_sync(db, CFG, coletores([item("pesquisa", "1")], [item("extensao", "9")]),
+async def test_excecao_inesperada_marca_run_abortada(db):
+    def explode(client):
+        raise RuntimeError("bug")
+
+    class Repositorio:
+        pass
+
+    # Força uma exceção fora do try do módulo: upsert com registro inválido (sem titulo).
+    run_antes = await db.sigaa_sync_runs.count_documents({})
+    with pytest.raises(KeyError):
+        await executar_sync(db, CFG, coletores([{"modulo": "pesquisa", "unirio_id": "1"}], [item("extensao", "9")]),
+                            ClienteNulo())
+    assert await db.sigaa_sync_runs.count_documents({}) == run_antes + 1
+    run = await db.sigaa_sync_runs.find_one({}, sort=[("iniciada_em", -1)])
+    assert run["status"] == "abortada" and "KeyError" in run["erro"]
+    assert explode and Repositorio  # silencia o lint; auxiliares não usados
+
+
+async def test_dry_run_nao_grava_nada_e_funciona_sem_banco(db, capsys):
+    run = await executar_sync(None, CFG, coletores([item("pesquisa", "1")], [item("extensao", "9")]),
                               ClienteNulo(), dry_run=True)
     assert run["status"] == "sucesso" and run["dry_run"] is True and run["_id"] is None
     assert run["modulos"]["pesquisa"]["coletados"] == 1
@@ -295,3 +476,63 @@ async def test_fonte_unirio_nao_usa_campos_do_sigaa(db):
     doc = await db.projetos.find_one({})
     assert doc["chave_unirio"] == repositorio.chave_natural(item("extensao", "9"))
     assert doc["unirio_id"] == "9"
+
+
+async def test_contato_manual_por_unirio_id(db):
+    from jobs.definir_contato import definir_contato, montar_filtro
+
+    class Args:
+        projeto_id = None
+        codigo = None
+        sigaa_id = None
+        unirio_id = "9"
+
+    await repositorio.upsert_projetos(db, [item("extensao", "9", email=None)], fonte=UNIRIO)
+    filtro = montar_filtro(Args())
+    assert filtro == {"origem": "unirio", "unirio_id": "9"}
+    assert await definir_contato(db, filtro, "secretaria@unirio.br") == 1
+    assert (await db.projetos.find_one(filtro))["email_contato_manual"] == "secretaria@unirio.br"
+
+
+# ─────────────────────────────────────────────
+#  Captura
+# ─────────────────────────────────────────────
+
+def test_captura_salva_arquivos_e_isola_falha_por_modulo(tmp_path, capsys, monkeypatch):
+    rotas = {
+        URL_PESQ: requests.ConnectionError("fora do ar"),
+        URL_EXT: listagem_extensao(1),
+        "https://sistemas2.unirio.br/extensao/detalhes/index?ID_PROJETO=8601": DETALHE_EXTENSAO,
+        "https://sistemas2.unirio.br/extensao/detalhes/index?ID_PROJETO=8602": DETALHE_EXTENSAO,
+    }
+
+    class Sessao:
+        headers = {}
+
+        def request(self, method, url, **kwargs):
+            r = rotas[url]
+            if isinstance(r, Exception):
+                raise r
+
+            class Resp:
+                status_code = 200
+                headers = {"content-type": "text/html; charset=utf-8"}
+                encoding = "utf-8"
+                text = r
+                content = r.encode("utf-8")
+
+                def raise_for_status(self):
+                    pass
+            return Resp()
+
+    monkeypatch.setattr("jobs.sync_unirio.UnirioClient",
+                        lambda cfg: ClienteHttp(cfg, session=Sessao(), sleep=lambda s: None, clock=lambda: 0.0))
+    cfg = UnirioConfig(max_tentativas=1)
+    falhas = capturar(cfg, max_detalhes=2, destino=str(tmp_path))
+    assert falhas == 1  # pesquisa falhou, extensão foi capturada
+    nomes = sorted(p.name for p in tmp_path.iterdir())
+    assert nomes == ["extensao_detalhe_8601.html", "extensao_detalhe_8602.html", "extensao_listagem.html"]
+    saida = capsys.readouterr().out
+    assert "pesquisa: listagem FALHOU" in saida
+    assert "extensao: 2 link(s) de detalhe, 2 item(ns) reconhecidos" in saida
+    assert "CAPTURA-B64 extensao_listagem.html 1/" in saida

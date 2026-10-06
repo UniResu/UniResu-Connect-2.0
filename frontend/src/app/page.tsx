@@ -66,9 +66,11 @@ const ICONES: Record<Simbolo, React.ReactNode> = {
   ),
 };
 
-function Avatar({ simbolo, nome }: { simbolo: Simbolo; nome: string }) {
+// Decorativo: o nome já aparece em texto logo abaixo, então o avatar fica
+// fora da árvore de acessibilidade para não ser anunciado duas vezes.
+function Avatar({ simbolo }: { simbolo: Simbolo }) {
   return (
-    <div className={`${styles.avatar} ${styles[`avatar_${simbolo}`]}`} role="img" aria-label={nome}>
+    <div className={`${styles.avatar} ${styles[`avatar_${simbolo}`]}`} aria-hidden="true">
       <svg
         className={styles.avatarIcon}
         viewBox="0 0 24 24"
@@ -186,7 +188,7 @@ export default function HomePage() {
                 <div className={styles.avatarGrid}>
                   {equipe.pessoas.map((pessoa) => (
                     <div key={pessoa.nome} className={styles.teamMember}>
-                      <Avatar simbolo={pessoa.simbolo} nome={pessoa.nome} />
+                      <Avatar simbolo={pessoa.simbolo} />
                       <div className={styles.memberInfo}>
                         <p className={styles.memberName}>{pessoa.nome}</p>
                         {pessoa.cargo && <p className={styles.memberRole}>{pessoa.cargo}</p>}

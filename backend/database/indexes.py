@@ -53,7 +53,10 @@ async def criar_indices(db) -> None:
     )
     logger.info("Índices do MongoDB verificados/criados.")
 
-    # Migração leve: docs do SIGAA anteriores ao campo `modulo`.
+
+async def migrar_dados(db) -> None:
+    """Migrações leves de dados, independentes dos índices (uma falha em
+    create_index não pode impedir que rodem). Idempotentes."""
     from services.sigaa.repositorio import garantir_modulo
 
     migrados = await garantir_modulo(db)

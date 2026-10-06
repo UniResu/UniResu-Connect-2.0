@@ -1,13 +1,15 @@
 """
 Cadastro manual do e-mail de contato de um projeto (fallback do admin).
 
-Usado quando o SIGAA não traz o e-mail do coordenador — ou traz um e-mail
-que não deve receber candidaturas. O valor fica em `email_contato_manual`,
-tem prioridade sobre o e-mail coletado e nunca é sobrescrito pelo sync.
+Usado quando a fonte (SIGAA/UNIR ou portais da UNIRIO) não traz o e-mail do
+coordenador — ou traz um e-mail que não deve receber candidaturas. O valor
+fica em `email_contato_manual`, tem prioridade sobre o e-mail coletado e
+nunca é sobrescrito pelo sync.
 
 Uso (a partir de backend/):
     python -m jobs.definir_contato --codigo PVC2148-2026 --email prof@unir.br
     python -m jobs.definir_contato --sigaa-id 4527 --email prof@unir.br
+    python -m jobs.definir_contato --unirio-id 8620 --email prof@unirio.br
     python -m jobs.definir_contato --projeto-id 66f... --remover
 """
 
@@ -25,6 +27,8 @@ def montar_filtro(args) -> dict:
         return {"_id": ObjectId(args.projeto_id)}
     if args.codigo:
         return {"origem": "sigaa", "codigo": args.codigo}
+    if getattr(args, "unirio_id", None):
+        return {"origem": "unirio", "unirio_id": args.unirio_id}
     return {"origem": "sigaa", "sigaa_id": args.sigaa_id}
 
 
@@ -45,6 +49,7 @@ async def main() -> int:
     alvo.add_argument("--projeto-id", help="_id do projeto no MongoDB")
     alvo.add_argument("--codigo", help="código do projeto de pesquisa no SIGAA (ex.: PVC2148-2026)")
     alvo.add_argument("--sigaa-id", help="id da ação de extensão/projeto no SIGAA")
+    alvo.add_argument("--unirio-id", help="id do projeto nos portais da UNIRIO (ID_PROJETO/id do detalhe)")
     acao = ap.add_mutually_exclusive_group(required=True)
     acao.add_argument("--email", help="e-mail que passa a receber as candidaturas")
     acao.add_argument("--remover", action="store_true", help="remove o contato manual")

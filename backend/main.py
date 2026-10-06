@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from database.connection import Database
-from database.indexes import criar_indices
+from database.indexes import criar_indices, migrar_dados
 from routes.usuario_routes import router as router_usuario
 from routes.projeto_routes import router as router_projeto
 from routes.forum_routes import router as router_forum
@@ -38,6 +38,10 @@ async def lifespan(app: FastAPI):
     """Gerencia o ciclo de vida da aplicação (startup/shutdown)."""
     # ── Startup ──
     await Database.connect()
+    try:
+        await migrar_dados(Database.get_db())
+    except Exception as e:
+        logging.getLogger(__name__).error("Falha na migração leve de dados do MongoDB: %s", e)
     try:
         await criar_indices(Database.get_db())
     except Exception as e:

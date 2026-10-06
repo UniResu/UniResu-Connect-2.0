@@ -110,11 +110,20 @@
 .projetoTitulo { font-size: var(--font-size-lg); font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-sm); line-height: 1.4; }
 .projetoDesc { color: var(--text-secondary); font-size: var(--font-size-sm); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
+/* Rodapé do card: grupo de tags à esquerda (quebra livremente) e a situação à direita. */
 .projetoMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.metaTags {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-sm);
   align-items: center;
+  min-width: 0;
 }
 
 .metaTag {
@@ -146,10 +155,10 @@
   font-weight: 600;
 }
 
-/* Sigla da instituição: contorno, sem fundo, para não competir com o tipo. */
+/* Sigla da instituição (só fontes externas): contorno, sem fundo, para não competir com o tipo. */
 .metaInstituicao {
   background: transparent;
-  border: 1px solid var(--border);
+  border: 1px solid var(--primary-200);
   color: var(--text-primary);
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -168,30 +177,36 @@
 .metaDate {
   font-size: var(--font-size-xs);
   color: var(--text-muted);
-  margin-left: auto;
+  flex-shrink: 0;
+  padding-top: var(--space-xs);
 }
 
-/* Situação: indicador de estado à direita, com ponto colorido. */
+/*
+ * Situação: indicador de estado à direita. A cor fica só no ponto; o texto
+ * usa um cinza com contraste AA (#6b7280 sobre branco = 4,8:1), já que o
+ * verde e o âmbar dos tokens não passam de 2,6:1 em 12px.
+ */
 .metaStatus {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
-  margin-left: auto;
+  flex-shrink: 0;
+  padding-top: var(--space-xs);
   font-size: var(--font-size-xs);
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 .statusDot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: currentColor;
+  background: var(--text-muted);
 }
-.status_ativa { color: var(--success); }
-.status_futura { color: var(--warning); }
-.status_encerrada { color: var(--text-muted); }
-.status_neutra { color: var(--text-secondary); }
+.status_ativa .statusDot { background: var(--success); }
+.status_futura .statusDot { background: var(--warning); }
+.status_encerrada .statusDot { background: var(--text-muted); }
+.status_neutra .statusDot { background: var(--text-secondary); }
 
 /* ── Empty State ── */
 
@@ -216,7 +231,8 @@
 
 @media (max-width: 640px) {
   .searchGroup { flex-direction: column; }
-  .metaDate, .metaStatus { margin-left: 0; }
+  .projetoMeta { flex-direction: column; align-items: flex-start; }
+  .metaDate, .metaStatus { padding-top: 0; }
   .metaUnidade { max-width: 100%; }
 }
 
@@ -233,12 +249,6 @@
   font-weight: 500;
   color: var(--text-secondary);
   margin-bottom: var(--space-xs);
-}
-
-.metaTipo {
-  background: var(--primary-100);
-  color: var(--primary);
-  font-weight: 600;
 }
 
 .loadMoreWrapper {

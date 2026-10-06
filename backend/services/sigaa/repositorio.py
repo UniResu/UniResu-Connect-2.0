@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Iterable, Optional
 
-from services.fontes import MODULO_LABEL, SIGAA, Fonte
+from services.fontes import MODULO_LABEL, MODULOS, SIGAA, Fonte
 from services.sigaa.parser import normalizar
 
 # Compatibilidade com o código antigo, que só conhecia o SIGAA.
@@ -180,11 +180,11 @@ async def desativar_ausentes(
 
 async def garantir_modulo(db) -> int:
     """Migração leve: docs do SIGAA gravados antes do campo `modulo` ganham o
-    valor de `tipo_sigaa`. Idempotente; roda no startup da API e no início do job."""
-    n = 0
-    cursor = db.projetos.find({"origem": SIGAA.origem, "modulo": {"$exists": False}}, {"tipo_sigaa": 1})
-    async for doc in cursor:
-        if doc.get("tipo_sigaa"):
-            await db.projetos.update_one({"_id": doc["_id"]}, {"$set": {"modulo": doc["tipo_sigaa"]}})
-            n += 1
-    return n
+    valor de `tipo_sigaa`. Idempotente, uma única operação no servidor
+    (update com pipeline, MongoDB >= 4.2); roda no startup da API e no início
+    dos jobs. Devolve quantos docs foram migrados."""
+    resultado = await db.projetos.update_many(
+        {"origem": SIGAA.origem, "modulo": {"$exists": False}, "tipo_sigaa": {"$in": list(MODULOS)}},
+        [{"$set": {"modulo": "$tipo_sigaa"}}],
+    )
+    return resultado.modified_count

@@ -133,6 +133,7 @@ export default function ProjetosPage() {
 
   // Ignora respostas de buscas antigas (filtros mudaram no meio do caminho).
   const buscaAtual = useRef(0);
+  const unidadesAtual = useRef(0);
 
   // Modal State
   const [selectedProjeto, setSelectedProjeto] = useState<Projeto | null>(null);
@@ -187,15 +188,22 @@ export default function ProjetosPage() {
   }, [busca]);
 
   const carregarUnidades = useCallback(async () => {
+    const id = ++unidadesAtual.current;
+    let lista: string[] = [];
     try {
       const params = new URLSearchParams();
       if (tipoFiltro) params.set("modulo", tipoFiltro);
       if (instituicaoFiltro) params.set("instituicao", instituicaoFiltro);
       const qs = params.toString() ? `?${params.toString()}` : "";
-      setUnidades(await api.get<string[]>(`/api/projetos/unidades${qs}`));
+      lista = await api.get<string[]>(`/api/projetos/unidades${qs}`);
     } catch {
-      setUnidades([]);
+      lista = [];
     }
+    if (id !== unidadesAtual.current) return;
+    setUnidades(lista);
+    // Uma unidade escolhida enquanto a lista antiga ainda estava na tela pode
+    // não existir na nova lista: nesse caso o filtro volta para "todas".
+    setUnidadeFiltro((atual) => (atual && !lista.includes(atual) ? "" : atual));
   }, [tipoFiltro, instituicaoFiltro]);
 
   useEffect(() => {
@@ -308,10 +316,10 @@ export default function ProjetosPage() {
         </p>
         {fontes.length > 0 && (
           <p className={styles.updatedAt}>
-            Última coleta:{" "}
-            {fontes
-              .map((f) => `${f.rotulo} em ${formatarData(f.ultima_atualizacao || undefined)}`)
-              .join(" e ")}
+            {fontes.length > 1 ? "Últimas coletas: " : "Última coleta: "}
+            {new Intl.ListFormat("pt-BR", { type: "conjunction" }).format(
+              fontes.map((f) => `${f.rotulo} em ${formatarData(f.ultima_atualizacao || undefined)}`)
+            )}
           </p>
         )}
       </div>
@@ -345,7 +353,8 @@ export default function ProjetosPage() {
             <option value="pesquisa">Pesquisa</option>
             <option value="extensao">Extensão</option>
           </select>
-          {instituicoes.length > 0 && (
+          {/* Só faz sentido filtrar por instituição quando há mais de uma. */}
+          {instituicoes.length > 1 && (
             <select
               value={instituicaoFiltro}
               onChange={(e) => {
@@ -436,43 +445,51 @@ export default function ProjetosPage() {
                 </div>
                 {/*
                   Tags em ordem fixa, do mais geral ao mais específico:
-                  tipo (Pesquisa/Extensão) → instituição → unidade → ano → remoto,
-                  e a situação sozinha à direita, como um indicador de estado.
+                  tipo (Pesquisa/Extensão) → instituição → unidade → ano → remoto.
+                  A situação fica fora do grupo, à direita, como indicador de estado,
+                  para não virar um item solto quando as tags quebram de linha.
                 */}
                 <div className={styles.projetoMeta}>
-                  {projeto.tipo && (
-                    <span
-                      className={`${styles.metaTag} ${
-                        moduloDoProjeto(projeto) === "pesquisa"
-                          ? styles.metaPesquisa
-                          : moduloDoProjeto(projeto) === "extensao"
-                            ? styles.metaExtensao
-                            : styles.metaTipo
-                      }`}
-                    >
-                      {projeto.tipo}
-                    </span>
-                  )}
-                  {projeto.instituicao && (
-                    <span className={`${styles.metaTag} ${styles.metaInstituicao}`}>
-                      {projeto.instituicao}
-                    </span>
-                  )}
-                  {projeto.unidade && (
-                    <span className={`${styles.metaTag} ${styles.metaUnidade}`} title={projeto.unidade}>
-                      <span aria-hidden="true">🏛️</span> {projeto.unidade}
-                    </span>
-                  )}
-                  {projeto.ano && (
-                    <span className={styles.metaTag}>
-                      <span aria-hidden="true">📅</span> {projeto.ano}
-                    </span>
-                  )}
-                  {projeto.e_remoto && (
-                    <span className={`${styles.metaTag} ${styles.metaRemoto}`}>
-                      <span aria-hidden="true">🌐</span> Remoto
-                    </span>
-                  )}
+                  <div className={styles.metaTags}>
+                    {projeto.tipo && (
+                      <span
+                        className={`${styles.metaTag} ${
+                          moduloDoProjeto(projeto) === "pesquisa"
+                            ? styles.metaPesquisa
+                            : moduloDoProjeto(projeto) === "extensao"
+                              ? styles.metaExtensao
+                              : ""
+                        }`}
+                      >
+                        {projeto.tipo}
+                      </span>
+                    )}
+                    {projeto.instituicao && (
+                      // Sigla (UNIR, UNIRIO) para fontes externas; nome livre dos projetos
+                      // manuais recebe o mesmo tratamento longo da unidade.
+                      <span
+                        className={`${styles.metaTag} ${projeto.origem ? styles.metaInstituicao : styles.metaUnidade}`}
+                        title={projeto.instituicao}
+                      >
+                        {!projeto.origem && <span aria-hidden="true">🏛️</span>} {projeto.instituicao}
+                      </span>
+                    )}
+                    {projeto.unidade && (
+                      <span className={`${styles.metaTag} ${styles.metaUnidade}`} title={projeto.unidade}>
+                        <span aria-hidden="true">🏛️</span> {projeto.unidade}
+                      </span>
+                    )}
+                    {projeto.ano && (
+                      <span className={styles.metaTag}>
+                        <span aria-hidden="true">📅</span> {projeto.ano}
+                      </span>
+                    )}
+                    {projeto.e_remoto && (
+                      <span className={`${styles.metaTag} ${styles.metaRemoto}`}>
+                        <span aria-hidden="true">🌐</span> Remoto
+                      </span>
+                    )}
+                  </div>
                   {projeto.situacao ? (
                     <span className={`${styles.metaStatus} ${styles[`status_${tomDaSituacao(projeto.situacao)}`]}`}>
                       <span className={styles.statusDot} aria-hidden="true" />

@@ -10,6 +10,7 @@ import time
 from typing import Callable, Optional, Protocol
 
 import requests
+from bs4.dammit import EncodingDetector
 
 logger = logging.getLogger(__name__)
 
@@ -68,8 +69,7 @@ class ClienteHttp:
                 if resp.status_code >= 500 or resp.status_code == 429:
                     raise self.erro(f"HTTP {resp.status_code} em {url}")
                 resp.raise_for_status()
-                if self.encoding_padrao:
-                    resp.encoding = resp.encoding or self.encoding_padrao
+                self._ajustar_encoding(resp)
                 return resp.text
             except (requests.RequestException, ErroColeta) as e:
                 self._ultima = self._clock()
@@ -80,6 +80,17 @@ class ClienteHttp:
                                    self.nome, tentativa, e, espera)
                     self._sleep(espera)
         raise self.erro(f"Falha após {self.cfg.max_tentativas} tentativas: {ultimo_erro}")
+
+    def _ajustar_encoding(self, resp) -> None:
+        """Sem charset no Content-Type, o `requests` assume ISO-8859-1 para text/*
+        e páginas UTF-8 viram mojibake. Preferimos o charset declarado no HTML
+        (<meta charset>), depois o padrão da fonte, depois a detecção do requests."""
+        cabecalhos = getattr(resp, "headers", None) or {}
+        if "charset=" in (cabecalhos.get("content-type") or "").lower():
+            return
+        conteudo = getattr(resp, "content", None)
+        declarado = EncodingDetector.find_declared_encoding(conteudo, is_html=True) if conteudo else None
+        resp.encoding = declarado or self.encoding_padrao or getattr(resp, "apparent_encoding", None) or "utf-8"
 
     def get(self, url: str, **kwargs) -> str:
         return self.request("GET", url, **kwargs)

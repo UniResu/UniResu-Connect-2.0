@@ -8,7 +8,8 @@
 # Modos da execução manual:
 #   sync     → coleta e grava (padrão; é o que o agendamento roda)
 #   dry-run  → coleta e imprime estatísticas/amostras, sem gravar nada
-#   captura  → imprime o HTML bruto das páginas (para atualizar o parser)
+#   captura  → salva o HTML bruto das páginas como artifact "captura-unirio"
+#              (para atualizar o parser e as fixtures de teste)
 
 name: Sync UNIRIO
 
@@ -42,7 +43,9 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # Um detalhe por projeto com pausa de 1,5 s: a primeira coleta completa dos
+    # dois portais pode levar bem mais de uma hora.
+    timeout-minutes: 180
     defaults:
       run:
         working-directory: backend
@@ -72,5 +75,17 @@ jobs:
           EMAIL_REMETENTE: ${{ vars.EMAIL_REMETENTE || 'UniResu <contato@uniresu.org>' }}
           UNIRIO_ALERTA_EMAIL: ${{ vars.UNIRIO_ALERTA_EMAIL || vars.SIGAA_ALERTA_EMAIL }}
           UNIRIO_MODULOS: ${{ inputs.modulos || vars.UNIRIO_MODULOS }}
+          # Só vale em dry-run/captura; o sync real ignora (com aviso no log).
           UNIRIO_MAX_DETALHES: ${{ inputs.max_detalhes || vars.UNIRIO_MAX_DETALHES }}
           UNIRIO_EXTENSAO_STATUS: ${{ vars.UNIRIO_EXTENSAO_STATUS }}
+          UNIRIO_PESQUISA_DETALHE_PREFIXO: ${{ vars.UNIRIO_PESQUISA_DETALHE_PREFIXO }}
+          UNIRIO_CAPTURA_DIR: captura
+
+      - name: Publicar HTML capturado
+        if: inputs.modo == 'captura'
+        uses: actions/upload-artifact@v4
+        with:
+          name: captura-unirio
+          path: backend/captura/
+          if-no-files-found: warn
+          retention-days: 14

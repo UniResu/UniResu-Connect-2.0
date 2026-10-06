@@ -43,6 +43,15 @@ def email_contato(projeto: Dict[str, Any]) -> Optional[str]:
     return projeto.get("email_contato_manual") or projeto.get("email_professor") or None
 
 
+def filtro_visiveis() -> Dict[str, Any]:
+    """Predicado padrão da listagem pública: ativo e em execução. Projetos
+    manuais, sem `situacao`, contam como ativos. Usado pela busca e pelos
+    endpoints de opções de filtro, para que um filtro nunca ofereça um valor
+    que a busca padrão não devolve."""
+    # $in com None também casa documentos sem o campo (projetos manuais).
+    return {"ativo": {"$ne": False}, "situacao": {"$in": [SITUACAO_EM_EXECUCAO, None]}}
+
+
 def formatar_projeto_publico(doc: Dict[str, Any]) -> Dict[str, Any]:
     """Como `formatar_projeto`, mas sem dados de contato (resposta pública)."""
     doc = formatar_projeto(doc)
@@ -101,9 +110,7 @@ async def buscar_projetos_controller(
             ]
         })
     if not incluir_inativos:
-        query_filter["ativo"] = {"$ne": False}
-        # $in com None também casa documentos sem o campo (projetos manuais).
-        query_filter["situacao"] = {"$in": [SITUACAO_EM_EXECUCAO, None]}
+        query_filter.update(filtro_visiveis())
     if modulo:
         query_filter["modulo"] = modulo
     if unidade:
@@ -151,7 +158,7 @@ async def listar_unidades_controller(
 ) -> List[str]:
     """Unidades/departamentos distintos dos projetos ativos (para o filtro)."""
     db = Database.get_db()
-    filtro: Dict[str, Any] = {"ativo": {"$ne": False}, "unidade": {"$nin": [None, ""]}}
+    filtro: Dict[str, Any] = {**filtro_visiveis(), "unidade": {"$nin": [None, ""]}}
     if modulo:
         filtro["modulo"] = modulo
     if instituicao:
@@ -161,9 +168,14 @@ async def listar_unidades_controller(
 
 
 async def listar_instituicoes_controller() -> List[str]:
-    """Siglas das instituições com projetos ativos (para o filtro)."""
+    """Siglas das instituições das fontes externas com projetos visíveis (para o filtro).
+
+    Só as siglas conhecidas (UNIR, UNIRIO): a `instituicao` dos projetos manuais
+    é texto livre do professor e não serve como opção de filtro.
+    """
     db = Database.get_db()
-    filtro = {"ativo": {"$ne": False}, "instituicao": {"$nin": [None, ""]}}
+    siglas = [f.instituicao for f in FONTES.values()]
+    filtro = {**filtro_visiveis(), "instituicao": {"$in": siglas}}
     return sorted(await db.projetos.distinct("instituicao", filtro), key=normalizar)
 
 
