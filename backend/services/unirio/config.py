@@ -45,6 +45,9 @@ class UnirioConfig:
     # Anos de referência consultados no Portal da Pesquisa quando a busca sem
     # filtro não lista nada. Vazio = todos os anos oferecidos pelo formulário.
     pesquisa_anos: list[str] = field(default_factory=list)
+    # Ignora projetos de pesquisa com ano de referência anterior a este
+    # (0 = nenhum corte; a listagem traz tudo desde 1992, ~2.300 projetos).
+    pesquisa_ano_minimo: int = 0
     # Teto de páginas percorridas por listagem (proteção contra loop de paginação).
     # Ao bater no teto a listagem é marcada incompleta e nada é desativado.
     max_paginas: int = 300
@@ -84,6 +87,7 @@ class UnirioConfig:
         cfg.modulos = [m.lower() for m in _lista(_env("UNIRIO_MODULOS", ",".join(cfg.modulos)))] or cfg.modulos
         cfg.extensao_status = str(_env("UNIRIO_EXTENSAO_STATUS", cfg.extensao_status))
         cfg.pesquisa_anos = _lista(_env("UNIRIO_PESQUISA_ANOS", ""))
+        cfg.pesquisa_ano_minimo = max(0, int(_env("UNIRIO_PESQUISA_ANO_MINIMO", cfg.pesquisa_ano_minimo)))
         cfg.max_paginas = max(1, int(_env("UNIRIO_MAX_PAGINAS", cfg.max_paginas)))
         cfg.max_detalhes = max(0, int(_env("UNIRIO_MAX_DETALHES", cfg.max_detalhes)))
         cfg.pausa_segundos = max(1.0, float(_env("UNIRIO_PAUSA_SEGUNDOS", cfg.pausa_segundos)))

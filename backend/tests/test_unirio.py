@@ -187,6 +187,36 @@ class TestHtmlRealExtensao:
         assert res.itens[0]["codigo"] == "X0272/2017" and res.itens[0]["email"] == "coordenador@unirio.br"
 
 
+class TestHtmlRealPesquisa:
+    """HTML real (anonimizado e reduzido) da listagem do Portal da Pesquisa: uma
+    tabela única com todos os projetos, sem paginação."""
+
+    def test_listagem_em_tabela_com_cabecalho(self):
+        html = fixture("unirio_pesquisa_listagem.html")
+        itens = parser.parse_listagem(html, "pesquisa", URL_PESQ)
+        assert len(itens) == 8
+        assert itens[0]["unirio_id"] == "1370"
+        assert itens[0]["link_detalhe"] == "https://sistemas.unirio.br/projetos/projeto/index?ID_PROJETO=1370"
+        assert itens[0]["titulo"].startswith("Práticas curriculares e artes de formação")
+        assert itens[0]["unidade"] == "Departamento de Didatica"
+        assert itens[0]["coordenador"] == "ANA PAULA SOUZA"
+        assert itens[0]["ano"] == "2013"
+        assert parser.proxima_pagina(html, URL_PESQ) is None
+        assert scraper.exige_busca(html) is False
+
+    def test_coleta_pesquisa_com_html_real_e_corte_por_ano(self):
+        listagem = fixture("unirio_pesquisa_listagem.html")
+        rotas = {URL_PESQ_FORM: FORM_PESQUISA, URL_PESQ_FORM + "#post": listagem}
+        for link in parser.links_de_detalhe(listagem, "pesquisa", URL_PESQ):
+            rotas[link] = DETALHE_PESQUISA
+        res = scraper.coletar_pesquisa(ClienteRoteado(UnirioConfig(), rotas))
+        assert len(res.itens) == 8 and res.completa is True and res.erros == []
+        assert res.paginas == 2  # GET do formulário + POST (uma página só)
+
+        res = scraper.coletar_pesquisa(ClienteRoteado(UnirioConfig(pesquisa_ano_minimo=2014), rotas))
+        assert all(int(i["ano"]) >= 2014 for i in res.itens) and 0 < len(res.itens) < 8
+
+
 class TestParser:
     def test_listagem_extensao_resolve_href_relativo_e_le_colunas_pelo_cabecalho(self):
         itens = parser.parse_listagem(listagem_extensao(1), "extensao", URL_EXT)

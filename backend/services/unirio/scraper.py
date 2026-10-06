@@ -95,7 +95,11 @@ def buscar_pesquisa(client: UnirioClient, ano: Optional[str] = None,
                     html_form: Optional[str] = None) -> tuple[str, str]:
     """GET do formulário (cookie de sessão + _formkey) e POST da busca na
     própria página do formulário (action="#"). O web2py responde com um
-    redirecionamento para a listagem; devolve (html, url final)."""
+    redirecionamento (303) para a listagem; devolve (html, url final).
+
+    O `_formkey` vale para um único POST: para uma nova busca, passe
+    `html_form=None` para buscar o formulário (e uma chave nova) de novo.
+    """
     url_form = client.cfg.url_pesquisa_formulario
     html_form = html_form or client.get(url_form)
     resp = client.request_raw("POST", url_form, data=payload_pesquisa(html_form, ano))
@@ -166,14 +170,20 @@ def listar(client: UnirioClient, modulo: str) -> tuple[list[dict], int, bool]:
             anos = cfg.pesquisa_anos or anos_disponiveis_pesquisa(html_form)
             logger.info("UNIRIO pesquisa: busca vazia não lista nada; buscando por ano: %s", anos)
             for ano in anos:
-                html, url = buscar_pesquisa(client, ano=ano, html_form=html_form)
-                paginas += 1
+                # formulário novo a cada busca: o _formkey do web2py é de uso único
+                html, url = buscar_pesquisa(client, ano=ano, html_form=None)
+                paginas += 2
                 lidas, ok = _paginar(client, modulo, html, url, itens, vistos, paginas)
                 paginas += lidas
                 completa = completa and ok
         else:
             lidas, completa = _paginar(client, modulo, html, url, itens, vistos, paginas)
             paginas += lidas
+        if cfg.pesquisa_ano_minimo:
+            antes = len(itens)
+            itens[:] = [i for i in itens if not i.get("ano") or int(i["ano"]) >= cfg.pesquisa_ano_minimo]
+            logger.info("UNIRIO pesquisa: %d de %d itens com ano de referência >= %d",
+                        len(itens), antes, cfg.pesquisa_ano_minimo)
     else:
         html = client.get(url)
         paginas = 1

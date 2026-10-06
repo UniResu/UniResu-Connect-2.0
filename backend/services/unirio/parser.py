@@ -124,22 +124,34 @@ def prefixo_do_controller(url_listagem: str) -> str:
 #  Links de detalhe
 # ─────────────────────────────────────────────
 
+def _tem_id_projeto(url: str) -> bool:
+    return any(k.lower() == "id_projeto" for k in parse_qs(urlparse(url).query))
+
+
 def _eh_link_detalhe(url: str, modulo: str, prefixo: Optional[str] = None) -> bool:
+    """Link de detalhe de projeto.
+
+    Os dois portais identificam o projeto pelo parâmetro ID_PROJETO:
+    extensão `/extensao/detalhes?ID_PROJETO=6637`, pesquisa
+    `/projetos/projeto/index?ID_PROJETO=1370`. Como fallback para outros
+    layouts, aceita-se um caminho terminado numa ação de detalhe (view,
+    detalhes...) com algum id. `prefixo`, se dado, restringe o caminho.
+    """
     partes = urlparse(url)
     caminho = partes.path.lower()
-    if modulo == "extensao":
-        # /extensao/detalhes/index?ID_PROJETO=8620
-        return "detalhes" in caminho and id_da_url(url) is not None
-    # Portal da Pesquisa (Yii): só links do mesmo controller da listagem
-    # (ex.: /projetos/search/view?id=5), para não confundir perfis de pessoas
-    # ou unidades (/projetos/pessoa/view?id=7) com projetos.
     if prefixo and not caminho.startswith(prefixo.lower()):
         return False
+    if id_da_url(url) is None:
+        return False
+    if _tem_id_projeto(url):
+        return True
+    if modulo == "extensao":
+        return "detalhes" in caminho
     segmentos = [s for s in caminho.split("/") if s]
     if not segmentos:
         return False
     acao = segmentos[-2] if segmentos[-1].isdigit() and len(segmentos) >= 2 else segmentos[-1]
-    return acao in _ACOES_DETALHE and id_da_url(url) is not None
+    return acao in _ACOES_DETALHE
 
 
 def _chave_link(url: str) -> str:
