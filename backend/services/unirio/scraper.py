@@ -61,6 +61,9 @@ def url_inicial(cfg: UnirioConfig, modulo: str) -> str:
 
 
 def prefixo_detalhe(cfg: UnirioConfig, modulo: str) -> Optional[str]:
+    # Enquanto o layout da listagem de pesquisa não for conhecido, não
+    # restringimos o controller dos links de detalhe (o prefixo configurado,
+    # se houver, continua valendo).
     return cfg.pesquisa_detalhe_prefixo if modulo == "pesquisa" else None
 
 
@@ -88,11 +91,15 @@ def payload_pesquisa(html_form: str, ano: Optional[str] = None) -> dict:
     return dados
 
 
-def buscar_pesquisa(client: UnirioClient, ano: Optional[str] = None, html_form: Optional[str] = None) -> str:
-    """GET do formulário (cookie de sessão + _formkey) e POST da busca."""
-    url = client.cfg.url_pesquisa
-    html_form = html_form or client.get(url)
-    return client.post(url, payload_pesquisa(html_form, ano))
+def buscar_pesquisa(client: UnirioClient, ano: Optional[str] = None,
+                    html_form: Optional[str] = None) -> tuple[str, str]:
+    """GET do formulário (cookie de sessão + _formkey) e POST da busca na
+    própria página do formulário (action="#"). O web2py responde com um
+    redirecionamento para a listagem; devolve (html, url final)."""
+    url_form = client.cfg.url_pesquisa_formulario
+    html_form = html_form or client.get(url_form)
+    resp = client.request_raw("POST", url_form, data=payload_pesquisa(html_form, ano))
+    return resp.text, str(resp.url or url_form)
 
 
 def exige_busca(html: str) -> bool:
@@ -151,15 +158,15 @@ def listar(client: UnirioClient, modulo: str) -> tuple[list[dict], int, bool]:
     url = url_inicial(cfg, modulo)
 
     if modulo == "pesquisa":
-        html_form = client.get(url)
+        html_form = client.get(cfg.url_pesquisa_formulario)
         paginas += 1
-        html = buscar_pesquisa(client, html_form=html_form)
+        html, url = buscar_pesquisa(client, html_form=html_form)
         paginas += 1
         if exige_busca(html) or not parser.parse_listagem(html, modulo, url, prefixo_detalhe(cfg, modulo)):
             anos = cfg.pesquisa_anos or anos_disponiveis_pesquisa(html_form)
             logger.info("UNIRIO pesquisa: busca vazia não lista nada; buscando por ano: %s", anos)
             for ano in anos:
-                html = buscar_pesquisa(client, ano=ano, html_form=html_form)
+                html, url = buscar_pesquisa(client, ano=ano, html_form=html_form)
                 paginas += 1
                 lidas, ok = _paginar(client, modulo, html, url, itens, vistos, paginas)
                 paginas += lidas

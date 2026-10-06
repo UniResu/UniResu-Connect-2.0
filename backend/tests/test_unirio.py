@@ -23,6 +23,7 @@ from services.unirio.scraper import ResultadoColeta, UnirioErro
 
 URL_EXT = UnirioConfig().url_extensao
 URL_PESQ = UnirioConfig().url_pesquisa
+URL_PESQ_FORM = UnirioConfig().url_pesquisa_formulario
 URL_EXT_P2 = "https://sistemas2.unirio.br/extensao/busca/projetos?f_status=1&page=2"
 
 
@@ -217,7 +218,9 @@ class TestParser:
                      '<a class="disabled" href="?page=2">Próxima</a>'):
             assert parser.proxima_pagina(html, URL_PESQ) is None, html
 
-    def test_listagem_pesquisa_ignora_links_de_pessoa_e_aceita_id_em_outra_caixa(self):
+    def test_listagem_pesquisa_ignora_links_de_pessoa_e_aceita_id_em_outra_caixa(self, monkeypatch):
+        assert UnirioConfig().pesquisa_detalhe_prefixo is None  # sem restrição até conhecer a listagem real
+        monkeypatch.setenv("UNIRIO_PESQUISA_DETALHE_PREFIXO", "/projetos/search/")
         prefixo = UnirioConfig().pesquisa_detalhe_prefixo
         assert prefixo == "/projetos/search/"
         itens = parser.parse_listagem(LISTAGEM_PESQUISA, "pesquisa", URL_PESQ, prefixo)
@@ -355,10 +358,24 @@ class ClienteRoteado:
         return self._resp(url)
 
     def post(self, url, data):
-        self.posts.append(data)
-        ano = data.get(scraper.CAMPO_ANO_PESQUISA)
+        return self.request_raw("POST", url, data=data).text
+
+    def request_raw(self, method, url, data=None, **kwargs):
+        """POST roteado por `url#post[:ANO]`; a "resposta" simula o 303 do web2py
+        para a URL de resultados (`...#post` → URL_PESQ)."""
+        self.posts.append(data or {})
+        ano = (data or {}).get(scraper.CAMPO_ANO_PESQUISA)
         chave = f"{url}#post:{ano}" if ano else f"{url}#post"
-        return self._resp(chave)
+        texto = self._resp(chave)
+
+        class Resp:
+            text = texto
+            status_code = 200
+            history = []
+            headers = {}
+            url = URL_PESQ
+
+        return Resp()
 
 
 def _rotas_extensao(falha_em=None):
@@ -403,14 +420,22 @@ class TestColeta:
         assert [i["detalhe_ok"] for i in res.itens] == [True, False, False, False]
         assert res.erros == []  # itens além do teto não contam como erro
 
-    def test_pesquisa_posta_o_formulario_e_segue_a_listagem(self):
+    def test_pesquisa_posta_o_formulario_e_segue_a_listagem(self, monkeypatch):
         rotas = {
-            URL_PESQ: FORM_PESQUISA,
-            URL_PESQ + "#post": LISTAGEM_PESQUISA,
+            URL_PESQ_FORM: FORM_PESQUISA,
+            URL_PESQ_FORM + "#post": LISTAGEM_PESQUISA,
             "https://sistemas.unirio.br/projetos/search/index?page=2": LISTAGEM_PESQUISA,  # mesma página
             "https://sistemas.unirio.br/projetos/search/view?id=501": DETALHE_PESQUISA,
             "https://sistemas.unirio.br/projetos/search/view?Id=502": DETALHE_PESQUISA,
+            "https://sistemas.unirio.br/projetos/pessoa/view?id=77": DETALHE_PESQUISA,
+            "https://sistemas.unirio.br/projetos/pessoa/view?id=78": DETALHE_PESQUISA,
         }
+        cliente = ClienteRoteado(UnirioConfig(), rotas)
+        res = scraper.coletar_pesquisa(cliente)
+        # sem prefixo configurado, os links de pessoa também entram (4 itens, 2 por linha)
+        assert len(res.itens) == 4
+        # com o prefixo do controller da listagem, só os projetos
+        monkeypatch.setenv("UNIRIO_PESQUISA_DETALHE_PREFIXO", "/projetos/search/")
         cliente = ClienteRoteado(UnirioConfig(), rotas)
         res = scraper.coletar_pesquisa(cliente)
         # POST leva o _formkey/_formname do web2py e os campos vazios
@@ -422,17 +447,19 @@ class TestColeta:
         assert res.itens[1]["titulo"] == "Genômica de bactérias"  # detalhe (fixture única) sobrescreve
         assert res.itens[1]["situacao"] == "FINALIZADO"
 
-    def test_pesquisa_busca_por_ano_quando_o_portal_exige_filtro(self):
+    def test_pesquisa_busca_por_ano_quando_o_portal_exige_filtro(self, monkeypatch):
         listagem_2025 = LISTAGEM_PESQUISA.replace("id=501", "id=601").replace("Id=502", "Id=602").replace(
             '<div class="pager"><a href="/projetos/search/index?page=2" class="next">Next &gt;</a></div>', "")
         assert "pager" not in listagem_2025
         listagem_2026 = listagem_2025.replace("id=601", "id=701").replace("Id=602", "Id=702")
         rotas = {
-            URL_PESQ: FORM_PESQUISA,
-            URL_PESQ + "#post": FORM_PESQUISA_EXIGE_BUSCA,      # busca vazia recusada
-            URL_PESQ + "#post:2025": listagem_2025,
-            URL_PESQ + "#post:2026": listagem_2026,
+            URL_PESQ_FORM: FORM_PESQUISA,
+            URL_PESQ_FORM + "#post": FORM_PESQUISA_EXIGE_BUSCA,      # busca vazia recusada
+            URL_PESQ_FORM + "#post:2025": listagem_2025,
+            URL_PESQ_FORM + "#post:2026": listagem_2026,
         }
+        # só links do controller da listagem contam como projeto
+        monkeypatch.setenv("UNIRIO_PESQUISA_DETALHE_PREFIXO", "/projetos/search/")
         for id_ in ("601", "602", "701", "702"):
             chave = "Id" if id_.endswith("2") else "id"
             rotas[f"https://sistemas.unirio.br/projetos/search/view?{chave}={id_}"] = DETALHE_PESQUISA

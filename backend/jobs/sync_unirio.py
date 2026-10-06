@@ -223,10 +223,12 @@ def capturar(cfg: UnirioConfig, max_detalhes: int = 2, destino: Optional[str] = 
         try:
             html = client.get(url)
             if modulo == "pesquisa":
-                # Portal da Pesquisa: a listagem só existe após o POST da busca.
-                html_form = html
-                _salvar(pasta / "pesquisa_formulario.html", "pesquisa formulário", url, html_form)
-                html = _diagnostico_pesquisa(client, url, html_form, pasta)
+                # Portal da Pesquisa: a listagem só existe após o POST da busca,
+                # enviado à página do formulário (default/index).
+                url_form = cfg.url_pesquisa_formulario
+                html_form = client.get(url_form)
+                _salvar(pasta / "pesquisa_formulario.html", "pesquisa formulário", url_form, html_form)
+                html, url = _diagnostico_pesquisa(client, url_form, html_form, pasta)
         except ErroColeta as e:
             print(f"### {modulo}: listagem FALHOU ({e})", flush=True)
             falhas += 1
@@ -247,36 +249,30 @@ def capturar(cfg: UnirioConfig, max_detalhes: int = 2, destino: Optional[str] = 
     return falhas
 
 
-def _diagnostico_pesquisa(client: UnirioClient, url: str, html_form: str, pasta: Path) -> str:
-    """Envia a busca do Portal da Pesquisa de algumas formas (sem filtro e com o
-    último ano; urlencoded e multipart) e registra status, redirecionamentos,
-    cookies e tamanho de cada resposta. Devolve o HTML da variante que listou
-    algo (ou o da última)."""
+def _diagnostico_pesquisa(client: UnirioClient, url_form: str, html_form: str, pasta: Path) -> tuple[str, str]:
+    """Envia a busca do Portal da Pesquisa sem filtro e com o último ano, e
+    registra status, redirecionamentos, cookies e tamanho de cada resposta.
+    Devolve (html, url final) da variante que listou algo (ou da última)."""
     from services.unirio.scraper import exige_busca, payload_pesquisa
 
     anos = anos_disponiveis_pesquisa(html_form)
     print(f"### pesquisa: anos no formulário: {anos[:3]}...{anos[-3:]} ({len(anos)}); "
           f"cookies após GET: {sorted(client.session.cookies.get_dict().keys())}", flush=True)
-    variantes = [("vazia_urlencoded", None, False), (f"{anos[-1]}_urlencoded", anos[-1], False),
-                 (f"{anos[-1]}_multipart", anos[-1], True)] if anos else [("vazia_urlencoded", None, False)]
-    escolhido = html_form
-    for nome, ano, multipart in variantes:
-        dados = payload_pesquisa(html_form, ano)
+    variantes = [("vazia", None), (anos[-1], anos[-1])] if anos else [("vazia", None)]
+    escolhido = (html_form, url_form)
+    for nome, ano in variantes:
         try:
-            if multipart:
-                resp = client.request_raw("POST", url, files={k: (None, v) for k, v in dados.items()})
-            else:
-                resp = client.request_raw("POST", url, data=dados)
+            resp = client.request_raw("POST", url_form, data=payload_pesquisa(html_form, ano))
         except ErroColeta as e:
             print(f"### pesquisa POST {nome}: FALHOU ({e})", flush=True)
             continue
         historico = [(r.status_code, r.headers.get("Location")) for r in resp.history]
         print(f"### pesquisa POST {nome}: status={resp.status_code} final={resp.url} "
-              f"redirecionamentos={historico} tamanho={len(resp.text)} exige_busca={exige_busca(resp.text)} "
-              f"content-type={resp.headers.get('content-type')}", flush=True)
-        _salvar(pasta / f"pesquisa_post_{nome}.html", f"pesquisa POST {nome}", url, resp.text)
-        if not exige_busca(resp.text) and len(resp.text) != len(html_form):
-            escolhido = resp.text
+              f"redirecionamentos={historico} tamanho={len(resp.text)} exige_busca={exige_busca(resp.text)}",
+              flush=True)
+        _salvar(pasta / f"pesquisa_post_{nome}.html", f"pesquisa POST {nome}", str(resp.url), resp.text)
+        if not exige_busca(resp.text):
+            escolhido = (resp.text, str(resp.url))
     return escolhido
 
 

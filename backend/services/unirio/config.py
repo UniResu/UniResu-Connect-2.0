@@ -12,7 +12,7 @@ Uma variável vazia conta como ausente: o workflow exporta
 
 import os
 from dataclasses import dataclass, field
-from urllib.parse import urlparse
+from typing import Optional
 
 
 def _lista(valor: str) -> list[str]:
@@ -24,7 +24,11 @@ def _env(nome: str, padrao):
     return valor.strip() if valor is not None and valor.strip() else padrao
 
 
+# Portal da Pesquisa (web2py): o formulário de busca mora em default/index e,
+# aceito, redireciona (303) para search/index com os resultados. Um POST direto
+# em search/index volta para default/index com "Você precisa realizar uma busca".
 URL_PESQUISA = "https://sistemas.unirio.br/projetos/search/index"
+URL_PESQUISA_FORM = "https://sistemas.unirio.br/projetos/default/index"
 URL_EXTENSAO = (
     "https://sistemas2.unirio.br/extensao/busca/projetos"
     "?cat_termos=titulo&f_ano=0&f_area=0&f_centro=0&f_cor=0&f_lin=0&f_status={status}&f_uni=0&termos="
@@ -58,20 +62,21 @@ class UnirioConfig:
         return _env("UNIRIO_URL_PESQUISA", URL_PESQUISA)
 
     @property
+    def url_pesquisa_formulario(self) -> str:
+        return _env("UNIRIO_URL_PESQUISA_FORM", URL_PESQUISA_FORM)
+
+    @property
     def url_extensao(self) -> str:
         return _env("UNIRIO_URL_EXTENSAO", URL_EXTENSAO.format(status=self.extensao_status))
 
     @property
-    def pesquisa_detalhe_prefixo(self) -> str:
-        """Prefixo de caminho dos links de detalhe do Portal da Pesquisa.
-
-        Padrão: o diretório do controller da listagem ("/projetos/search/"),
-        para que links de outros controllers (perfil de pessoa, unidade) não
-        sejam tomados por projetos. Ajustável por UNIRIO_PESQUISA_DETALHE_PREFIXO
-        caso o detalhe more em outro controller (ex.: "/projetos/projeto/").
-        """
-        caminho = urlparse(self.url_pesquisa).path or "/"
-        return _env("UNIRIO_PESQUISA_DETALHE_PREFIXO", caminho.rsplit("/", 1)[0] + "/")
+    def pesquisa_detalhe_prefixo(self) -> Optional[str]:
+        """Prefixo de caminho dos links de detalhe do Portal da Pesquisa
+        (ex.: "/projetos/search/"), para que links de outros controllers
+        (perfil de pessoa, unidade) não sejam tomados por projetos. Vazio
+        (padrão) = sem restrição; defina UNIRIO_PESQUISA_DETALHE_PREFIXO
+        depois de conferir a listagem real."""
+        return _env("UNIRIO_PESQUISA_DETALHE_PREFIXO", None)
 
     @classmethod
     def from_env(cls) -> "UnirioConfig":
