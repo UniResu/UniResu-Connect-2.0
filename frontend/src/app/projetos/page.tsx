@@ -46,6 +46,26 @@ interface FonteStatus {
   ultima_atualizacao: string | null;
 }
 
+interface UnidadeFiltro {
+  nome: string;
+  total: number;
+  modulos: Record<string, number>;
+}
+
+interface InstituicaoFiltro {
+  sigla: string;
+  rotulo: string | null;
+  externa: boolean;
+  total: number;
+  modulos: Record<string, number>;
+  unidades: UnidadeFiltro[];
+}
+
+/** Unidades de uma instituição que têm projetos no módulo escolhido (ou em qualquer um). */
+function unidadesVisiveis(inst: InstituicaoFiltro, modulo: string) {
+  return inst.unidades.filter((u) => !modulo || (u.modulos[modulo] || 0) > 0);
+}
+
 interface FontesStatusResponse {
   ultima_atualizacao: string | null;
   fontes: Record<string, FonteStatus>;
@@ -130,13 +150,11 @@ export default function ProjetosPage() {
   const [unidadeFiltro, setUnidadeFiltro] = useState("");
   const [areaFiltro, setAreaFiltro] = useState("");
   const [remotoFiltro, setRemotoFiltro] = useState(false);
-  const [unidades, setUnidades] = useState<string[]>([]);
-  const [instituicoes, setInstituicoes] = useState<string[]>([]);
+  const [filtros, setFiltros] = useState<InstituicaoFiltro[]>([]);
   const [fontes, setFontes] = useState<FonteStatus[]>([]);
 
   // Ignora respostas de buscas antigas (filtros mudaram no meio do caminho).
   const buscaAtual = useRef(0);
-  const unidadesAtual = useRef(0);
 
   // Modal State
   const [selectedProjeto, setSelectedProjeto] = useState<Projeto | null>(null);
@@ -190,39 +208,34 @@ export default function ProjetosPage() {
     return () => clearTimeout(t);
   }, [busca]);
 
-  const carregarUnidades = useCallback(async () => {
-    const id = ++unidadesAtual.current;
-    let lista: string[] = [];
-    try {
-      const params = new URLSearchParams();
-      if (tipoFiltro) params.set("modulo", tipoFiltro);
-      if (instituicaoFiltro) params.set("instituicao", instituicaoFiltro);
-      const qs = params.toString() ? `?${params.toString()}` : "";
-      lista = await api.get<string[]>(`/api/projetos/unidades${qs}`);
-    } catch {
-      lista = [];
-    }
-    if (id !== unidadesAtual.current) return;
-    setUnidades(lista);
-    // Uma unidade escolhida enquanto a lista antiga ainda estava na tela pode
-    // não existir na nova lista: nesse caso o filtro volta para "todas".
-    setUnidadeFiltro((atual) => (atual && !lista.includes(atual) ? "" : atual));
-  }, [tipoFiltro, instituicaoFiltro]);
-
-  useEffect(() => {
-    carregarUnidades();
-  }, [carregarUnidades]);
-
   useEffect(() => {
     api
-      .get<string[]>("/api/projetos/instituicoes")
-      .then(setInstituicoes)
-      .catch(() => setInstituicoes([]));
+      .get<{ instituicoes: InstituicaoFiltro[] }>("/api/projetos/filtros")
+      .then((f) => setFiltros(f.instituicoes || []))
+      .catch(() => setFiltros([]));
     api
       .get<FontesStatusResponse>("/api/projetos/fontes/status")
       .then((s) => setFontes(Object.values(s.fontes || {}).filter((f) => f.ultima_atualizacao)))
       .catch(() => setFontes([]));
   }, []);
+
+  // Categorias: instituição > unidade/departamento. As unidades oferecidas
+  // dependem da instituição e do módulo escolhidos; a lista toda vem de uma
+  // única chamada a /api/projetos/filtros.
+  const instituicoesComUnidades = filtros.filter((i) => unidadesVisiveis(i, tipoFiltro).length > 0);
+  const gruposDeUnidades = (instituicaoFiltro
+    ? instituicoesComUnidades.filter((i) => i.sigla === instituicaoFiltro)
+    : instituicoesComUnidades
+  ).map((i) => ({ sigla: i.sigla, unidades: unidadesVisiveis(i, tipoFiltro) }));
+  const unidadesOferecidas = gruposDeUnidades.flatMap((g) => g.unidades.map((u) => u.nome));
+
+  // Uma unidade escolhida que saiu das opções (mudou a instituição ou o módulo)
+  // volta para "todas".
+  useEffect(() => {
+    if (unidadeFiltro && filtros.length > 0 && !unidadesOferecidas.includes(unidadeFiltro)) {
+      setUnidadeFiltro("");
+    }
+  }, [unidadeFiltro, unidadesOferecidas, filtros.length]);
 
   async function carregarMais() {
     const ultimo = projetos[projetos.length - 1];
@@ -356,8 +369,7 @@ export default function ProjetosPage() {
             <option value="pesquisa">Pesquisa</option>
             <option value="extensao">Extensão</option>
           </select>
-          {/* Só faz sentido filtrar por instituição quando há mais de uma. */}
-          {instituicoes.length > 1 && (
+          {filtros.length > 0 && (
             <select
               value={instituicaoFiltro}
               onChange={(e) => {
@@ -365,23 +377,47 @@ export default function ProjetosPage() {
                 setUnidadeFiltro("");
               }}
               className={styles.filterInput}
-              aria-label="Instituição"
+              aria-label="Instituição ou universidade"
             >
               <option value="">Todas as instituições</option>
-              {instituicoes.map((i) => (
-                <option key={i} value={i}>{i}</option>
-              ))}
+              {filtros.some((i) => i.externa) && (
+                <optgroup label="Universidades (coleta automática)">
+                  {filtros.filter((i) => i.externa).map((i) => (
+                    <option key={i.sigla} value={i.sigla}>
+                      {i.sigla} ({i.total})
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {filtros.some((i) => !i.externa) && (
+                <optgroup label="Cadastrados na plataforma">
+                  {filtros.filter((i) => !i.externa).map((i) => (
+                    <option key={i.sigla} value={i.sigla}>
+                      {i.sigla} ({i.total})
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
           )}
           <select
             value={unidadeFiltro}
             onChange={(e) => setUnidadeFiltro(e.target.value)}
             className={styles.filterInput}
-            aria-label="Unidade ou departamento"
+            aria-label="Unidade, departamento ou curso"
+            disabled={unidadesOferecidas.length === 0}
           >
-            <option value="">Unidades / Departamentos</option>
-            {unidades.map((u) => (
-              <option key={u} value={u}>{u}</option>
+            <option value="">
+              {instituicaoFiltro ? `Unidades da ${instituicaoFiltro}` : "Unidades / Departamentos"}
+            </option>
+            {gruposDeUnidades.map((g) => (
+              <optgroup key={g.sigla} label={g.sigla}>
+                {g.unidades.map((u) => (
+                  <option key={`${g.sigla}|${u.nome}`} value={u.nome}>
+                    {u.nome} ({u.total})
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
           <select

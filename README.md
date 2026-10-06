@@ -104,6 +104,20 @@ python -m jobs.definir_contato --projeto-id 66f0c1... --email coordenador@unir.b
 python -m jobs.definir_contato --codigo PVC2148-2026 --remover
 ```
 
+**Projetos de teste anteriores ao SIGAA**
+
+Os projetos cadastrados manualmente antes da primeira coleta do SIGAA eram apenas de teste. Para removê-los (o script lista primeiro; só apaga com `--confirmar`; precisa de um usuário do Atlas com permissão de remoção, não o usuário restrito dos jobs):
+
+```bash
+cd backend
+python -m jobs.remover_projetos_teste               # lista o que seria removido
+python -m jobs.remover_projetos_teste --confirmar   # remove (e as candidaturas ligadas)
+```
+
+**Filtros da busca**
+
+`GET /api/projetos/filtros` devolve as opções agrupadas por instituição (UNIR, UNIRIO e as instituições de projetos manuais), com as unidades/departamentos e contagens por módulo. A aba Projetos usa isso para mostrar categorias: primeiro a instituição, depois a unidade dentro dela.
+
 **Variáveis de ambiente novas**
 
 | Variável | Onde | Padrão | Descrição |

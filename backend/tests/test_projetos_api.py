@@ -117,6 +117,36 @@ async def test_unidades_distintas_de_projetos_ativos(api, base):
     assert r.json() == ["DEPARTAMENTO DE AGRONOMIA"]
 
 
+async def test_filtros_agrupados_por_instituicao(api, base):
+    r = await api.get("/api/projetos/filtros")
+    assert r.status_code == 200, r.text
+    insts = r.json()["instituicoes"]
+    # fontes externas primeiro (UNIR, UNIRIO), depois a instituição livre do projeto manual (nenhuma aqui)
+    assert [i["sigla"] for i in insts] == ["UNIR", "UNIRIO"]
+    unir = insts[0]
+    assert unir["externa"] is True and unir["rotulo"] == "SIGAA/UNIR"
+    # só projetos visíveis: "Projeto finalizado" e "Sumiu do SIGAA" ficam de fora
+    assert unir["total"] == 3 and unir["modulos"] == {"pesquisa": 2, "extensao": 1}
+    assert unir["unidades"] == [
+        {"nome": "CAMPUS PORTO VELHO", "total": 2, "modulos": {"pesquisa": 2}},
+        {"nome": "DEPARTAMENTO DE AGRONOMIA", "total": 1, "modulos": {"extensao": 1}},
+    ]
+    unirio = insts[1]
+    assert unirio["total"] == 1 and [u["nome"] for u in unirio["unidades"]] == ["ESCOLA DE MEDICINA E CIRURGIA"]
+
+
+async def test_filtros_incluem_instituicao_livre_dos_projetos_manuais(api, base):
+    await base.projetos.insert_one({"titulo": "Manual com instituição", "nome_professor": "Prof.",
+                                    "instituicao": "Universidade Federal de Minas Gerais"})
+    insts = (await api.get("/api/projetos/filtros")).json()["instituicoes"]
+    assert [i["sigla"] for i in insts] == ["UNIR", "UNIRIO", "Universidade Federal de Minas Gerais"]
+    assert insts[2] == {"sigla": "Universidade Federal de Minas Gerais", "rotulo": "Universidade Federal de Minas Gerais",
+                        "externa": False, "total": 1, "modulos": {}, "unidades": []}
+    # e o valor é aceito pelo filtro da busca (sem 422)
+    r = await api.get("/api/projetos/buscar", params={"instituicao": "Universidade Federal de Minas Gerais"})
+    assert titulos(r) == ["Manual com instituição"]
+
+
 async def test_status_sem_runs(api, db):
     r = (await api.get("/api/projetos/fontes/status")).json()
     assert r["ultima_atualizacao"] is None

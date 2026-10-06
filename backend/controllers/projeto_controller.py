@@ -179,6 +179,66 @@ async def listar_instituicoes_controller() -> List[str]:
     return sorted(await db.projetos.distinct("instituicao", filtro), key=normalizar)
 
 
+async def listar_filtros_controller() -> Dict[str, Any]:
+    """Opções de filtro agrupadas por instituição: para cada sigla das fontes
+    externas (UNIR, UNIRIO), as unidades/departamentos com projetos visíveis e
+    a contagem por módulo; projetos manuais entram como instituições à parte
+    (texto livre do professor), sem unidades.
+
+    Permite ao front mostrar categorias (instituição > unidade) em vez de uma
+    lista única de unidades em que tudo parece ser da mesma universidade.
+    """
+    db = Database.get_db()
+    siglas = [f.instituicao for f in FONTES.values()]
+    rotulos = {f.instituicao: f.rotulo for f in FONTES.values()}
+
+    pipeline = [
+        {"$match": {**filtro_visiveis(), "instituicao": {"$in": siglas}}},
+        {"$group": {"_id": {"instituicao": "$instituicao", "unidade": "$unidade", "modulo": "$modulo"},
+                    "total": {"$sum": 1}}},
+    ]
+    grupos: Dict[str, Dict[str, Any]] = {}
+    async for g in db.projetos.aggregate(pipeline):
+        chave = g["_id"]
+        inst = grupos.setdefault(chave["instituicao"], {"sigla": chave["instituicao"],
+                                                        "rotulo": rotulos.get(chave["instituicao"]),
+                                                        "externa": True, "total": 0,
+                                                        "modulos": {}, "unidades": {}})
+        inst["total"] += g["total"]
+        modulo = chave.get("modulo")
+        if modulo:
+            inst["modulos"][modulo] = inst["modulos"].get(modulo, 0) + g["total"]
+        if chave.get("unidade"):
+            unidade = inst["unidades"].setdefault(chave["unidade"], {"total": 0, "modulos": {}})
+            unidade["total"] += g["total"]
+            if modulo:
+                unidade["modulos"][modulo] = unidade["modulos"].get(modulo, 0) + g["total"]
+
+    manuais = await db.projetos.distinct(
+        "instituicao", {**filtro_visiveis(), "origem": {"$exists": False}, "instituicao": {"$nin": [None, ""]}})
+    for nome in manuais:
+        if nome in grupos:
+            continue
+        total = await db.projetos.count_documents({**filtro_visiveis(), "origem": {"$exists": False},
+                                                   "instituicao": nome})
+        grupos[nome] = {"sigla": nome, "rotulo": nome, "externa": False, "total": total, "modulos": {},
+                        "unidades": {}}
+
+    instituicoes = []
+    for sigla in sorted(grupos, key=lambda s: (not grupos[s]["externa"], normalizar(s))):
+        g = grupos[sigla]
+        instituicoes.append({
+            "sigla": g["sigla"],
+            "rotulo": g["rotulo"],
+            "externa": g["externa"],
+            "total": g["total"],
+            "modulos": g["modulos"],
+            "unidades": [{"nome": u, **dados} for u, dados in sorted(g["unidades"].items(),
+                                                                      key=lambda kv: normalizar(kv[0]))],
+        })
+    return {"instituicoes": instituicoes}
+
+
 def _iso_utc(dt) -> str:
     if dt.tzinfo is None:  # Mongo devolve datetimes "naive" em UTC
         dt = dt.replace(tzinfo=timezone.utc)

@@ -64,6 +64,26 @@ class ProjetoResponse(ProjetoPublicoResponse):
     email_professor: Optional[str] = None
 
 
+class UnidadeFiltro(BaseModel):
+    nome: str
+    total: int
+    modulos: Dict[str, int] = {}    # {"pesquisa": n, "extensao": n}
+
+
+class InstituicaoFiltro(BaseModel):
+    """Uma instituição nas opções de filtro, com suas unidades/departamentos."""
+    sigla: str
+    rotulo: Optional[str] = None
+    externa: bool = True            # fonte coletada (UNIR, UNIRIO) ou cadastro manual
+    total: int = 0
+    modulos: Dict[str, int] = {}    # {"pesquisa": n, "extensao": n}
+    unidades: List[UnidadeFiltro] = []
+
+
+class FiltrosResponse(BaseModel):
+    instituicoes: List[InstituicaoFiltro] = []
+
+
 class FonteStatus(BaseModel):
     instituicao: str
     rotulo: str

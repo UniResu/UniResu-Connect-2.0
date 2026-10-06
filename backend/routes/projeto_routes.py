@@ -8,13 +8,20 @@ from controllers.projeto_controller import (
     buscar_projetos_controller,
     listar_unidades_controller,
     listar_instituicoes_controller,
+    listar_filtros_controller,
     status_fontes_controller,
     criar_projeto_controller,
     listar_meus_projetos,
     editar_projeto_controller,
     deletar_projeto_controller,
 )
-from models.projeto_model import ProjetoResponse, ProjetoCreate, ProjetoPublicoResponse, FontesStatusResponse
+from models.projeto_model import (
+    ProjetoResponse,
+    ProjetoCreate,
+    ProjetoPublicoResponse,
+    FontesStatusResponse,
+    FiltrosResponse,
+)
 from auth.autenticacao import get_usuario_atual
 
 router = APIRouter()
@@ -79,6 +86,12 @@ async def listar_unidades_route(
 async def listar_instituicoes_route():
     """Instituições com projetos ativos (opções do filtro)."""
     return await listar_instituicoes_controller()
+
+
+@router.get("/projetos/filtros", response_model=FiltrosResponse)
+async def listar_filtros_route():
+    """Opções de filtro agrupadas: instituição > unidades/departamentos, com contagens."""
+    return await listar_filtros_controller()
 
 
 @router.get("/projetos/fontes/status", response_model=FontesStatusResponse)
