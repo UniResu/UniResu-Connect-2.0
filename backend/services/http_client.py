@@ -59,6 +59,11 @@ class ClienteHttp:
                 self._sleep(falta)
 
     def request(self, method: str, url: str, **kwargs) -> str:
+        return self.request_raw(method, url, **kwargs).text
+
+    def request_raw(self, method: str, url: str, **kwargs):
+        """Como `request`, mas devolve o objeto Response (status, histórico de
+        redirecionamentos, cabeçalhos) — útil no modo captura/diagnóstico."""
         ultimo_erro: Optional[Exception] = None
         for tentativa in range(1, self.cfg.max_tentativas + 1):
             self._aguardar_vez()
@@ -70,7 +75,7 @@ class ClienteHttp:
                     raise self.erro(f"HTTP {resp.status_code} em {url}")
                 resp.raise_for_status()
                 self._ajustar_encoding(resp)
-                return resp.text
+                return resp
             except (requests.RequestException, ErroColeta) as e:
                 self._ultima = self._clock()
                 ultimo_erro = e
