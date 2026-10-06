@@ -29,10 +29,33 @@ async def criar_indices(db) -> None:
         [("ativo", ASCENDING), ("tipo_sigaa", ASCENDING), ("unidade", ASCENDING)],
         name="listagem_filtros",
     )
+    # Chave natural dos projetos da UNIRIO (mesma ideia, campo e origem próprios).
+    await db.projetos.create_index(
+        [("chave_unirio", ASCENDING)],
+        name="uniq_chave_unirio",
+        unique=True,
+        partialFilterExpression={"origem": "unirio"},
+    )
+    await db.projetos.create_index(
+        [("origem", ASCENDING), ("modulo", ASCENDING), ("unirio_id", ASCENDING)],
+        name="unirio_id_por_modulo",
+    )
+    await db.projetos.create_index(
+        [("ativo", ASCENDING), ("instituicao", ASCENDING), ("modulo", ASCENDING), ("unidade", ASCENDING)],
+        name="listagem_filtros_v2",
+    )
     await db.sigaa_sync_runs.create_index([("iniciada_em", DESCENDING)], name="runs_recentes")
+    await db.sigaa_sync_runs.create_index([("fonte", ASCENDING), ("finalizada_em", DESCENDING)], name="runs_por_fonte")
     # Rate limit e checagem de duplicidade das candidaturas.
     await db.candidaturas.create_index(
         [("usuario_id", ASCENDING), ("data_candidatura", DESCENDING)],
         name="candidaturas_por_usuario",
     )
     logger.info("Índices do MongoDB verificados/criados.")
+
+    # Migração leve: docs do SIGAA anteriores ao campo `modulo`.
+    from services.sigaa.repositorio import garantir_modulo
+
+    migrados = await garantir_modulo(db)
+    if migrados:
+        logger.info("Campo `modulo` preenchido em %d projetos do SIGAA.", migrados)

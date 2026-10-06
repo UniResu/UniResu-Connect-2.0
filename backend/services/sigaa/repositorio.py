@@ -1,11 +1,14 @@
 """
-Persistência dos projetos do SIGAA na collection `projetos`.
+Persistência dos projetos coletados (SIGAA/UNIR, portais da UNIRIO) na
+collection `projetos`.
 
-Regra de ouro: TODA operação de escrita filtra por `origem: "sigaa"`.
+Regra de ouro: TODA operação de escrita filtra por `origem` da fonte.
 Projetos cadastrados manualmente pelos professores (sem `origem` ou com
-outro valor) nunca são tocados — nem sobrescritos, nem desativados.
+outro valor) nunca são tocados — nem sobrescritos, nem desativados — e uma
+fonte nunca encosta nos documentos de outra.
 
-Chave natural: tipo + ano + título + coordenador (normalizados).
+Chave natural: módulo + ano + título + coordenador (normalizados), gravada
+no campo exclusivo da fonte (`chave_sigaa`, `chave_unirio`).
 Campos editados por um administrador (`email_contato_manual`) nunca são
 sobrescritos pelo sync.
 """
@@ -14,15 +17,17 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Iterable, Optional
 
+from services.fontes import MODULO_LABEL, SIGAA, Fonte
 from services.sigaa.parser import normalizar
 
-ORIGEM = "sigaa"
-TIPO_LABEL = {"pesquisa": "Pesquisa", "extensao": "Extensão"}
+# Compatibilidade com o código antigo, que só conhecia o SIGAA.
+ORIGEM = SIGAA.origem
+TIPO_LABEL = MODULO_LABEL
 
 
 def chave_natural(registro: dict) -> str:
     partes = (
-        registro.get("tipo_sigaa"),
+        registro.get("modulo"),
         registro.get("ano"),
         registro.get("titulo"),
         registro.get("coordenador"),
@@ -38,47 +43,86 @@ class ResultadoUpsert:
     chaves: list[str] = field(default_factory=list)
 
 
-async def _registro_anterior_sem_coordenador(db, registro: dict) -> Optional[dict]:
+def _id_fonte(registro: dict, fonte: Fonte) -> Optional[str]:
+    return registro.get(fonte.campo_id) or registro.get("id_fonte")
+
+
+async def _registro_anterior_sem_coordenador(db, registro: dict, fonte: Fonte) -> Optional[dict]:
     """Se o detalhe falhou (sem coordenador), reaproveita o doc já existente
-    com o mesmo id do SIGAA — evita criar duplicata com chave incompleta."""
-    if registro.get("coordenador") or not registro.get("sigaa_id"):
+    com o mesmo id na fonte — evita criar duplicata com chave incompleta."""
+    id_fonte = _id_fonte(registro, fonte)
+    if registro.get("coordenador") or not id_fonte:
         return None
     return await db.projetos.find_one({
-        "origem": ORIGEM,
-        "tipo_sigaa": registro["tipo_sigaa"],
-        "sigaa_id": registro["sigaa_id"],
+        "origem": fonte.origem,
+        "modulo": registro["modulo"],
+        fonte.campo_id: id_fonte,
     })
 
 
-async def _promover_chave_incompleta(db, registro: dict, chave: str) -> None:
+async def _promover_chave_incompleta(db, registro: dict, chave: str, fonte: Fonte) -> None:
     """Item salvo antes sem coordenador (detalhe falhou) e que agora veio
     completo: atualiza a chave do doc existente em vez de criar outro, para
     preservar o _id (candidaturas apontam para ele)."""
-    if not registro.get("sigaa_id") or not registro.get("coordenador"):
+    id_fonte = _id_fonte(registro, fonte)
+    if not id_fonte or not registro.get("coordenador"):
         return
-    if await db.projetos.find_one({"origem": ORIGEM, "chave_sigaa": chave}, {"_id": 1}):
+    if await db.projetos.find_one({"origem": fonte.origem, fonte.campo_chave: chave}, {"_id": 1}):
         return
     await db.projetos.update_one(
         {
-            "origem": ORIGEM,
-            "tipo_sigaa": registro["tipo_sigaa"],
-            "sigaa_id": registro["sigaa_id"],
+            "origem": fonte.origem,
+            "modulo": registro["modulo"],
+            fonte.campo_id: id_fonte,
             "nome_professor": None,
         },
-        {"$set": {"chave_sigaa": chave}},
+        {"$set": {fonte.campo_chave: chave}},
     )
 
 
-async def upsert_projetos(db, registros: Iterable[dict], agora: Optional[datetime] = None) -> ResultadoUpsert:
+def _campos_completos(reg: dict, fonte: Fonte, agora: datetime) -> dict:
+    modulo = reg["modulo"]
+    campos = {
+        "modulo": modulo,
+        "tipo": MODULO_LABEL.get(modulo, modulo),
+        fonte.campo_id: _id_fonte(reg, fonte),
+        "codigo": reg.get("codigo"),
+        "titulo": reg["titulo"],
+        "descricao": reg.get("descricao"),
+        "nome_professor": reg.get("coordenador"),
+        "email_professor": reg.get("email"),
+        "unidade": reg.get("unidade"),
+        "situacao": reg.get("situacao"),
+        "ano": reg.get("ano"),
+        "categoria": reg.get("categoria"),
+        "link_detalhe": reg.get("link_detalhe"),
+        "periodo_inicio": reg.get("periodo_inicio"),
+        "periodo_fim": reg.get("periodo_fim"),
+        "instituicao": fonte.instituicao,
+        "ativo": True,
+        "ultima_coleta": agora,
+        "detalhe_ok": reg.get("detalhe_ok", False),
+    }
+    if fonte is SIGAA:
+        # Nome histórico do módulo nos docs do SIGAA (índices e dados antigos).
+        campos["tipo_sigaa"] = modulo
+    # Campos extras que a fonte queira guardar (ex.: área temática, palavras-chave).
+    campos.update(reg.get("extras") or {})
+    return campos
+
+
+async def upsert_projetos(
+    db, registros: Iterable[dict], agora: Optional[datetime] = None, fonte: Fonte = SIGAA
+) -> ResultadoUpsert:
     agora = agora or datetime.now(timezone.utc)
     res = ResultadoUpsert()
 
     for reg in registros:
-        anterior = await _registro_anterior_sem_coordenador(db, reg)
+        anterior = await _registro_anterior_sem_coordenador(db, reg, fonte)
         if anterior is not None:
             # Detalhe indisponível nesta run: mantém coordenador/contato já
             # conhecidos e só atualiza o que veio da listagem.
-            chave = anterior["chave_sigaa"]
+            chave = anterior[fonte.campo_chave]
             campos = {
                 "titulo": reg["titulo"],
                 "categoria": reg.get("categoria"),
@@ -89,34 +133,14 @@ async def upsert_projetos(db, registros: Iterable[dict], agora: Optional[datetim
             }
         else:
             chave = chave_natural(reg)
-            await _promover_chave_incompleta(db, reg, chave)
-            campos = {
-                "tipo_sigaa": reg["tipo_sigaa"],
-                "tipo": TIPO_LABEL.get(reg["tipo_sigaa"], reg["tipo_sigaa"]),
-                "sigaa_id": reg.get("sigaa_id"),
-                "codigo": reg.get("codigo"),
-                "titulo": reg["titulo"],
-                "descricao": reg.get("descricao"),
-                "nome_professor": reg.get("coordenador"),
-                "email_professor": reg.get("email"),
-                "unidade": reg.get("unidade"),
-                "situacao": reg.get("situacao"),
-                "ano": reg.get("ano"),
-                "categoria": reg.get("categoria"),
-                "link_detalhe": reg.get("link_detalhe"),
-                "periodo_inicio": reg.get("periodo_inicio"),
-                "periodo_fim": reg.get("periodo_fim"),
-                "instituicao": "UNIR",
-                "ativo": True,
-                "ultima_coleta": agora,
-                "detalhe_ok": reg.get("detalhe_ok", False),
-            }
+            await _promover_chave_incompleta(db, reg, chave, fonte)
+            campos = _campos_completos(reg, fonte, agora)
 
         resultado = await db.projetos.update_one(
-            {"origem": ORIGEM, "chave_sigaa": chave},
+            {"origem": fonte.origem, fonte.campo_chave: chave},
             {
                 "$set": campos,
-                "$setOnInsert": {"origem": ORIGEM, "chave_sigaa": chave, "primeira_coleta": agora},
+                "$setOnInsert": {"origem": fonte.origem, fonte.campo_chave: chave, "primeira_coleta": agora},
             },
             upsert=True,
         )
@@ -129,21 +153,38 @@ async def upsert_projetos(db, registros: Iterable[dict], agora: Optional[datetim
 
 
 async def desativar_ausentes(
-    db, tipo_sigaa: str, anos: list[str], chaves_vistas: list[str], agora: Optional[datetime] = None
+    db,
+    modulo: str,
+    anos: list[str],
+    chaves_vistas: list[str],
+    agora: Optional[datetime] = None,
+    fonte: Fonte = SIGAA,
 ) -> int:
-    """Marca como inativos os projetos SIGAA do escopo coletado que sumiram da fonte.
+    """Marca como inativos os projetos da fonte, no escopo coletado, que sumiram dela.
 
-    Só deve ser chamado quando a coleta daquele tipo teve sucesso (> 0 itens).
+    Só deve ser chamado quando a coleta daquele módulo teve sucesso (> 0 itens).
+    `anos` vazio significa "sem recorte por ano" (fontes que listam tudo de uma vez).
     """
     agora = agora or datetime.now(timezone.utc)
-    resultado = await db.projetos.update_many(
-        {
-            "origem": ORIGEM,
-            "tipo_sigaa": tipo_sigaa,
-            "ano": {"$in": anos},
-            "ativo": True,
-            "chave_sigaa": {"$nin": chaves_vistas},
-        },
-        {"$set": {"ativo": False, "desativado_em": agora}},
-    )
+    filtro = {
+        "origem": fonte.origem,
+        "modulo": modulo,
+        "ativo": True,
+        fonte.campo_chave: {"$nin": chaves_vistas},
+    }
+    if anos:
+        filtro["ano"] = {"$in": anos}
+    resultado = await db.projetos.update_many(filtro, {"$set": {"ativo": False, "desativado_em": agora}})
     return resultado.modified_count
+
+
+async def garantir_modulo(db) -> int:
+    """Migração leve: docs do SIGAA gravados antes do campo `modulo` ganham o
+    valor de `tipo_sigaa`. Idempotente; roda no startup da API e no início do job."""
+    n = 0
+    cursor = db.projetos.find({"origem": SIGAA.origem, "modulo": {"$exists": False}}, {"tipo_sigaa": 1})
+    async for doc in cursor:
+        if doc.get("tipo_sigaa"):
+            await db.projetos.update_one({"_id": doc["_id"]}, {"$set": {"modulo": doc["tipo_sigaa"]}})
+            n += 1
+    return n

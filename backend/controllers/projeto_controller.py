@@ -10,6 +10,7 @@ from datetime import timezone
 from typing import List, Optional, Dict, Any
 from bson import ObjectId
 from database.connection import Database
+from services.fontes import FONTES, SIGAA
 from services.sigaa.parser import SITUACAO_EM_EXECUCAO, normalizar
 
 
@@ -56,8 +57,9 @@ async def buscar_projetos_controller(
     area: Optional[str] = None,
     remoto: bool = False,
     tipos: Optional[str] = None,
-    tipo_sigaa: Optional[str] = None,
+    modulo: Optional[str] = None,
     unidade: Optional[str] = None,
+    instituicao: Optional[str] = None,
     incluir_inativos: bool = False,
     last_id: Optional[str] = None,
     page_size: int = 20,
@@ -70,8 +72,9 @@ async def buscar_projetos_controller(
         area: Filtro por área de estudo.
         remoto: Filtro para projetos remotos.
         tipos: Lista de tipos separados por vírgula.
-        tipo_sigaa: "pesquisa" ou "extensao" (projetos importados do SIGAA).
+        modulo: "pesquisa" ou "extensao" (projetos importados do SIGAA/UNIR ou da UNIRIO).
         unidade: Unidade/departamento (valor exato, vindo de /projetos/unidades).
+        instituicao: Sigla da instituição (ex.: "UNIR", "UNIRIO").
         incluir_inativos: Se False (padrão), mostra só projetos ativos e em
             execução — projetos manuais, sem situação, contam como ativos.
         last_id: ID do último item da página anterior (paginação por cursor).
@@ -101,10 +104,12 @@ async def buscar_projetos_controller(
         query_filter["ativo"] = {"$ne": False}
         # $in com None também casa documentos sem o campo (projetos manuais).
         query_filter["situacao"] = {"$in": [SITUACAO_EM_EXECUCAO, None]}
-    if tipo_sigaa:
-        query_filter["tipo_sigaa"] = tipo_sigaa
+    if modulo:
+        query_filter["modulo"] = modulo
     if unidade:
         query_filter["unidade"] = unidade
+    if instituicao:
+        query_filter["instituicao"] = instituicao
     if local:
         query_filter["local"] = {"$regex": local, "$options": "i"}
     if area:
@@ -141,29 +146,60 @@ async def buscar_projetos_controller(
         return []
 
 
-async def listar_unidades_controller(tipo_sigaa: Optional[str] = None) -> List[str]:
+async def listar_unidades_controller(
+    modulo: Optional[str] = None, instituicao: Optional[str] = None
+) -> List[str]:
     """Unidades/departamentos distintos dos projetos ativos (para o filtro)."""
     db = Database.get_db()
     filtro: Dict[str, Any] = {"ativo": {"$ne": False}, "unidade": {"$nin": [None, ""]}}
-    if tipo_sigaa:
-        filtro["tipo_sigaa"] = tipo_sigaa
+    if modulo:
+        filtro["modulo"] = modulo
+    if instituicao:
+        filtro["instituicao"] = instituicao
     unidades = await db.projetos.distinct("unidade", filtro)
     return sorted(unidades, key=normalizar)
 
 
-async def status_sigaa_controller() -> Dict[str, Any]:
-    """Data da última execução bem-sucedida do sync com o SIGAA."""
+async def listar_instituicoes_controller() -> List[str]:
+    """Siglas das instituições com projetos ativos (para o filtro)."""
     db = Database.get_db()
-    run = await db.sigaa_sync_runs.find_one(
-        {"status": {"$in": ["sucesso", "sucesso_com_erros"]}},
-        sort=[("finalizada_em", -1)],
-    )
-    if not run or not run.get("finalizada_em"):
-        return {"ultima_atualizacao": None}
-    finalizada = run["finalizada_em"]
-    if finalizada.tzinfo is None:  # Mongo devolve datetimes "naive" em UTC
-        finalizada = finalizada.replace(tzinfo=timezone.utc)
-    return {"ultima_atualizacao": finalizada.isoformat()}
+    filtro = {"ativo": {"$ne": False}, "instituicao": {"$nin": [None, ""]}}
+    return sorted(await db.projetos.distinct("instituicao", filtro), key=normalizar)
+
+
+def _iso_utc(dt) -> str:
+    if dt.tzinfo is None:  # Mongo devolve datetimes "naive" em UTC
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.isoformat()
+
+
+async def status_fontes_controller() -> Dict[str, Any]:
+    """Data da última execução bem-sucedida do sync de cada fonte externa.
+
+    `ultima_atualizacao` continua sendo a do SIGAA (compatibilidade); `fontes`
+    traz uma entrada por origem ("sigaa", "unirio"), com a sigla da instituição.
+    """
+    db = Database.get_db()
+    fontes: Dict[str, Any] = {}
+    for origem, fonte in FONTES.items():
+        filtro_fonte = {"fonte": origem}
+        if fonte is SIGAA:
+            # Runs antigas do SIGAA não têm o campo `fonte`.
+            filtro_fonte = {"$or": [{"fonte": origem}, {"fonte": {"$exists": False}}]}
+        run = await db.sigaa_sync_runs.find_one(
+            {"status": {"$in": ["sucesso", "sucesso_com_erros"]}, "dry_run": {"$ne": True}, **filtro_fonte},
+            sort=[("finalizada_em", -1)],
+        )
+        fontes[origem] = {
+            "instituicao": fonte.instituicao,
+            "rotulo": fonte.rotulo,
+            "ultima_atualizacao": _iso_utc(run["finalizada_em"]) if run and run.get("finalizada_em") else None,
+        }
+    return {"ultima_atualizacao": fontes[SIGAA.origem]["ultima_atualizacao"], "fontes": fontes}
+
+
+# Nome antigo, usado antes de existir mais de uma fonte.
+status_sigaa_controller = status_fontes_controller
 
 
 # ═══════════════════════════════════════════════════

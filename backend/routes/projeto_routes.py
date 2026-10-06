@@ -7,13 +7,14 @@ from typing import List, Literal, Optional
 from controllers.projeto_controller import (
     buscar_projetos_controller,
     listar_unidades_controller,
-    status_sigaa_controller,
+    listar_instituicoes_controller,
+    status_fontes_controller,
     criar_projeto_controller,
     listar_meus_projetos,
     editar_projeto_controller,
     deletar_projeto_controller,
 )
-from models.projeto_model import ProjetoResponse, ProjetoCreate, ProjetoPublicoResponse, SigaaStatusResponse
+from models.projeto_model import ProjetoResponse, ProjetoCreate, ProjetoPublicoResponse, FontesStatusResponse
 from auth.autenticacao import get_usuario_atual
 
 router = APIRouter()
@@ -39,8 +40,11 @@ async def buscar_projetos_route(
     area: Optional[str] = None,
     remoto: bool = False,
     tipos: Optional[str] = Query(None),
-    tipo_sigaa: Optional[Literal["pesquisa", "extensao"]] = Query(None, description="Pesquisa ou extensão (SIGAA)"),
+    modulo: Optional[Literal["pesquisa", "extensao"]] = Query(None, description="Pesquisa ou extensão"),
+    tipo_sigaa: Optional[Literal["pesquisa", "extensao"]] = Query(None, deprecated=True,
+                                                                  description="Nome antigo de `modulo`"),
     unidade: Optional[str] = Query(None, max_length=300, description="Unidade/departamento"),
+    instituicao: Optional[str] = Query(None, max_length=20, description="Sigla da instituição (UNIR, UNIRIO)"),
     incluir_inativos: bool = Query(False, description="Inclui projetos inativos/finalizados"),
     last_id: Optional[str] = Query(None, description="ID do último item (paginação por cursor)"),
     page_size: int = Query(20, ge=1, le=50, description="Itens por página"),
@@ -52,8 +56,9 @@ async def buscar_projetos_route(
         area=area,
         remoto=remoto,
         tipos=tipos,
-        tipo_sigaa=tipo_sigaa,
+        modulo=modulo or tipo_sigaa,
         unidade=unidade,
+        instituicao=instituicao,
         incluir_inativos=incluir_inativos,
         last_id=last_id,
         page_size=page_size,
@@ -61,15 +66,26 @@ async def buscar_projetos_route(
 
 
 @router.get("/projetos/unidades", response_model=List[str])
-async def listar_unidades_route(tipo_sigaa: Optional[Literal["pesquisa", "extensao"]] = None):
+async def listar_unidades_route(
+    modulo: Optional[Literal["pesquisa", "extensao"]] = None,
+    tipo_sigaa: Optional[Literal["pesquisa", "extensao"]] = Query(None, deprecated=True),
+    instituicao: Optional[str] = Query(None, max_length=20),
+):
     """Unidades/departamentos com projetos ativos (opções do filtro)."""
-    return await listar_unidades_controller(tipo_sigaa)
+    return await listar_unidades_controller(modulo or tipo_sigaa, instituicao)
 
 
-@router.get("/projetos/sigaa/status", response_model=SigaaStatusResponse)
-async def status_sigaa_route():
-    """Data da última atualização dos dados vindos do SIGAA."""
-    return await status_sigaa_controller()
+@router.get("/projetos/instituicoes", response_model=List[str])
+async def listar_instituicoes_route():
+    """Instituições com projetos ativos (opções do filtro)."""
+    return await listar_instituicoes_controller()
+
+
+@router.get("/projetos/fontes/status", response_model=FontesStatusResponse)
+@router.get("/projetos/sigaa/status", response_model=FontesStatusResponse, deprecated=True)
+async def status_fontes_route():
+    """Data da última atualização dos dados de cada fonte externa (SIGAA/UNIR, UNIRIO)."""
+    return await status_fontes_controller()
 
 
 # ── CRUD protegido ──

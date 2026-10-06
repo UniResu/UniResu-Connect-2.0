@@ -5,7 +5,7 @@ from services.sigaa import repositorio
 
 def reg(**campos):
     base = {
-        "tipo_sigaa": "pesquisa",
+        "modulo": "pesquisa",
         "sigaa_id": "100",
         "codigo": "PVC1-2026",
         "titulo": "Projeto Alfa",
@@ -54,7 +54,7 @@ async def test_grava_campos_para_listagem(db):
 
 async def test_nunca_toca_projetos_manuais(db):
     manual = {"titulo": "Projeto Alfa", "nome_professor": "ANA PAULA SOUZA", "ano": "2026",
-              "tipo_sigaa": "pesquisa", "ativo": True, "email_professor": "manual@unir.br"}
+              "modulo": "pesquisa", "ativo": True, "email_professor": "manual@unir.br"}
     manual_id = (await db.projetos.insert_one(dict(manual))).inserted_id
 
     await repositorio.upsert_projetos(db, [reg()])
@@ -72,7 +72,7 @@ async def test_desativa_ausentes_so_no_escopo(db):
         reg(),
         reg(sigaa_id="2", titulo="Some da fonte"),
         reg(sigaa_id="3", titulo="Outro ano", ano="2025"),
-        reg(sigaa_id="4", titulo="Extensão", tipo_sigaa="extensao"),
+        reg(sigaa_id="4", titulo="Extensão", modulo="extensao"),
     ])
     vistos = await repositorio.upsert_projetos(db, [reg()])
 
@@ -100,10 +100,10 @@ async def test_nao_sobrescreve_contato_manual_do_admin(db):
 
 
 async def test_detalhe_falho_preserva_coordenador_ja_conhecido(db):
-    await repositorio.upsert_projetos(db, [reg(tipo_sigaa="extensao")])
+    await repositorio.upsert_projetos(db, [reg(modulo="extensao")])
     original = await db.projetos.find_one({})
 
-    sem_detalhe = reg(tipo_sigaa="extensao", coordenador=None, email=None, detalhe_ok=False)
+    sem_detalhe = reg(modulo="extensao", coordenador=None, email=None, detalhe_ok=False)
     r = await repositorio.upsert_projetos(db, [sem_detalhe])
 
     doc = await db.projetos.find_one({})
@@ -116,13 +116,13 @@ async def test_detalhe_falho_preserva_coordenador_ja_conhecido(db):
 
 
 async def test_item_novo_sem_detalhe_e_salvo_sem_contato_e_depois_completado(db):
-    sem_detalhe = reg(tipo_sigaa="extensao", coordenador=None, email=None, detalhe_ok=False)
+    sem_detalhe = reg(modulo="extensao", coordenador=None, email=None, detalhe_ok=False)
     await repositorio.upsert_projetos(db, [sem_detalhe])
     primeiro = await db.projetos.find_one({})
     assert primeiro["email_professor"] is None
 
     # Na semana seguinte o detalhe funciona: mesmo doc (mesmo _id), agora completo.
-    await repositorio.upsert_projetos(db, [reg(tipo_sigaa="extensao")])
+    await repositorio.upsert_projetos(db, [reg(modulo="extensao")])
     docs = await db.projetos.find({}).to_list(None)
     assert len(docs) == 1
     assert docs[0]["_id"] == primeiro["_id"]

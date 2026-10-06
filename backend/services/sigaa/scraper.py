@@ -14,13 +14,12 @@ mantido com os dados da listagem e o erro é registrado.
 """
 
 import logging
-import time
 from dataclasses import dataclass, field
-from typing import Callable, Optional
+from typing import Optional
 
-import requests
 from bs4 import BeautifulSoup
 
+from services.http_client import ClienteHttp, ErroColeta
 from services.sigaa import parser
 from services.sigaa.config import SigaaConfig
 
@@ -31,10 +30,8 @@ URLS = {
     "extensao": parser.BASE_URL + "/sigaa/public/extensao/consulta_extensao.jsf?acao=2&aba=p-extensao",
 }
 
-USER_AGENT = "UniResuConnect/2.1 (+https://uniresu.org; coleta semanal de projetos publicos)"
 
-
-class SigaaErro(Exception):
+class SigaaErro(ErroColeta):
     """Falha de rede/HTTP após esgotar as tentativas, ou página inesperada."""
 
 
@@ -45,58 +42,16 @@ class ResultadoColeta:
     erros: list[dict] = field(default_factory=list)
 
 
-class SigaaClient:
-    """Sessão HTTP com throttle, timeout e retry com backoff."""
+class SigaaClient(ClienteHttp):
+    """Sessão HTTP com throttle, timeout e retry com backoff (ver services/http_client.py)."""
 
-    def __init__(
-        self,
-        cfg: SigaaConfig,
-        session: Optional[requests.Session] = None,
-        sleep: Callable[[float], None] = time.sleep,
-        clock: Callable[[], float] = time.monotonic,
-    ):
-        self.cfg = cfg
-        self.session = session or requests.Session()
-        self.session.headers.setdefault("User-Agent", USER_AGENT)
-        self._sleep = sleep
-        self._clock = clock
-        self._ultima: Optional[float] = None
-        self.total_requisicoes = 0
+    erro = SigaaErro
+    # O SIGAA responde em ISO-8859-1 (declarado no Content-Type).
+    encoding_padrao = "iso-8859-1"
+    nome = "SIGAA"
 
-    def _aguardar_vez(self) -> None:
-        if self._ultima is not None:
-            falta = self.cfg.pausa_segundos - (self._clock() - self._ultima)
-            if falta > 0:
-                self._sleep(falta)
-
-    def request(self, method: str, url: str, **kwargs) -> str:
-        ultimo_erro: Optional[Exception] = None
-        for tentativa in range(1, self.cfg.max_tentativas + 1):
-            self._aguardar_vez()
-            try:
-                self.total_requisicoes += 1
-                resp = self.session.request(method, url, timeout=self.cfg.timeout_segundos, **kwargs)
-                self._ultima = self._clock()
-                if resp.status_code >= 500 or resp.status_code == 429:
-                    raise SigaaErro(f"HTTP {resp.status_code} em {url}")
-                resp.raise_for_status()
-                # O SIGAA responde em ISO-8859-1 (declarado no Content-Type).
-                resp.encoding = resp.encoding or "iso-8859-1"
-                return resp.text
-            except (requests.RequestException, SigaaErro) as e:
-                self._ultima = self._clock()
-                ultimo_erro = e
-                if tentativa < self.cfg.max_tentativas:
-                    espera = self.cfg.backoff_base_segundos * (2 ** (tentativa - 1))
-                    logger.warning("SIGAA: tentativa %d falhou (%s); nova tentativa em %.0fs", tentativa, e, espera)
-                    self._sleep(espera)
-        raise SigaaErro(f"Falha após {self.cfg.max_tentativas} tentativas: {ultimo_erro}")
-
-    def get(self, url: str) -> str:
-        return self.request("GET", url)
-
-    def post(self, url: str, data: dict) -> str:
-        return self.request("POST", url, data=data)
+    def __init__(self, cfg: SigaaConfig, **kwargs):
+        super().__init__(cfg, **kwargs)
 
 
 # ─────────────────────────────────────────────
@@ -146,7 +101,7 @@ def coletar_pesquisa(client: SigaaClient, ano: str) -> ResultadoColeta:
                 dados.update(item.get("detalhe_params") or {})
                 detalhe = parser.parse_detalhe_pesquisa(client.post(URLS["pesquisa"], dados))
                 break
-            except (SigaaErro, ValueError) as e:
+            except (ErroColeta, ValueError) as e:
                 if tentativa == 1:
                     res.erros.append(_erro("pesquisa", item, e))
         res.itens.append(_registro("pesquisa", item, detalhe))
@@ -174,7 +129,7 @@ def coletar_extensao(client: SigaaClient, ano: str) -> ResultadoColeta:
             # Link público estável (GET) — não depende de ViewState.
             detalhe = parser.parse_detalhe_extensao(client.get(item["link_detalhe"]))
             detalhe["situacao"] = parser.situacao_por_periodo(detalhe["periodo_inicio"], detalhe["periodo_fim"])
-        except (SigaaErro, ValueError) as e:
+        except (ErroColeta, ValueError) as e:
             res.erros.append(_erro("extensao", item, e))
         res.itens.append(_registro("extensao", item, detalhe))
     return res
@@ -188,7 +143,7 @@ def _registro(modulo: str, item: dict, detalhe: Optional[dict]) -> dict:
     """Registro final: dados da listagem, enriquecidos pelo detalhe se houver."""
     d = detalhe or {}
     return {
-        "tipo_sigaa": modulo,
+        "modulo": modulo,
         "sigaa_id": item.get("sigaa_id"),
         "codigo": item.get("codigo"),
         "titulo": item.get("titulo"),

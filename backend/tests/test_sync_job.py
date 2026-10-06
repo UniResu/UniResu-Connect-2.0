@@ -10,7 +10,7 @@ class ClienteNulo:
 
 
 def item(modulo, titulo, **extra):
-    return {"tipo_sigaa": modulo, "sigaa_id": titulo, "titulo": titulo, "coordenador": "COORD",
+    return {"modulo": modulo, "sigaa_id": titulo, "titulo": titulo, "coordenador": "COORD",
             "email": "c@unir.br", "ano": "2026", "situacao": "EM EXECUÇÃO", "detalhe_ok": True, **extra}
 
 
@@ -77,4 +77,4 @@ async def test_erros_de_detalhe_nao_abortam(db):
     assert run["status"] == "sucesso_com_erros"
     assert run["modulos"]["extensao"]["coletados"] == 2
     assert run["modulos"]["extensao"]["erros_detalhe"] == 1
-    assert await db.projetos.count_documents({"tipo_sigaa": "extensao"}) == 2
+    assert await db.projetos.count_documents({"modulo": "extensao"}) == 2

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from typing import Dict, List, Optional
 
 
 class ProjetoCreate(BaseModel):
@@ -37,9 +37,10 @@ class ProjetoPublicoResponse(BaseModel):
     autor_id: Optional[str] = None
     tem_contato: bool = False
 
-    # Campos dos projetos importados do SIGAA (origem="sigaa").
+    # Campos dos projetos importados de fontes externas (origem="sigaa" | "unirio").
     origem: Optional[str] = None
-    tipo_sigaa: Optional[str] = None
+    modulo: Optional[str] = None       # "pesquisa" | "extensao"
+    tipo_sigaa: Optional[str] = None   # nome antigo de `modulo` (docs do SIGAA)
     codigo: Optional[str] = None
     unidade: Optional[str] = None
     situacao: Optional[str] = None
@@ -48,6 +49,9 @@ class ProjetoPublicoResponse(BaseModel):
     link_detalhe: Optional[str] = None
     periodo_inicio: Optional[str] = None
     periodo_fim: Optional[str] = None
+    # Extras dos portais da UNIRIO.
+    area_tematica: Optional[str] = None
+    palavras_chave: Optional[List[str]] = None
 
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
@@ -57,6 +61,20 @@ class ProjetoResponse(ProjetoPublicoResponse):
     email_professor: Optional[str] = None
 
 
-class SigaaStatusResponse(BaseModel):
-    """Data da última execução bem-sucedida do sync com o SIGAA."""
+class FonteStatus(BaseModel):
+    instituicao: str
+    rotulo: str
     ultima_atualizacao: Optional[str] = None
+
+
+class FontesStatusResponse(BaseModel):
+    """Data da última execução bem-sucedida do sync de cada fonte externa.
+
+    `ultima_atualizacao` é a do SIGAA/UNIR (compatibilidade com o front antigo).
+    """
+    ultima_atualizacao: Optional[str] = None
+    fontes: Dict[str, FonteStatus] = {}
+
+
+# Nome antigo.
+SigaaStatusResponse = FontesStatusResponse

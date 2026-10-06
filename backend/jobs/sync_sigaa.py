@@ -43,7 +43,9 @@ async def executar_sync(
     coletores = coletores or COLETORES
     client = client or SigaaClient(cfg)
     inicio = datetime.now(timezone.utc)
+    await repositorio.garantir_modulo(db)
     run = {
+        "fonte": "sigaa",
         "iniciada_em": inicio,
         "status": "executando",
         "config": {"anos": cfg.anos, "modulos": cfg.modulos, "pesquisa_situacao": cfg.pesquisa_situacao,
