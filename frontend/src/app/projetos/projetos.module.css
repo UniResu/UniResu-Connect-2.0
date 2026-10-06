@@ -134,11 +134,64 @@
   color: var(--success);
 }
 
+/* Tipo do projeto: cores distintas para pesquisa e extensão, legíveis de relance. */
+.metaPesquisa {
+  background: var(--primary-100);
+  color: var(--primary);
+  font-weight: 600;
+}
+.metaExtensao {
+  background: #e0f2fe;
+  color: #075985;
+  font-weight: 600;
+}
+
+/* Sigla da instituição: contorno, sem fundo, para não competir com o tipo. */
+.metaInstituicao {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Nomes de unidade são longos: corta com reticências e mostra o nome inteiro no title. */
+.metaUnidade {
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  line-height: 1.6;
+}
+
 .metaDate {
   font-size: var(--font-size-xs);
   color: var(--text-muted);
   margin-left: auto;
 }
+
+/* Situação: indicador de estado à direita, com ponto colorido. */
+.metaStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-left: auto;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.status_ativa { color: var(--success); }
+.status_futura { color: var(--warning); }
+.status_encerrada { color: var(--text-muted); }
+.status_neutra { color: var(--text-secondary); }
 
 /* ── Empty State ── */
 
@@ -163,10 +216,11 @@
 
 @media (max-width: 640px) {
   .searchGroup { flex-direction: column; }
-  .metaDate { margin-left: 0; }
+  .metaDate, .metaStatus { margin-left: 0; }
+  .metaUnidade { max-width: 100%; }
 }
 
-/* ── Projetos do SIGAA ── */
+/* ── Projetos coletados (SIGAA/UNIR, portais da UNIRIO) ── */
 
 .updatedAt {
   margin-top: var(--space-sm);

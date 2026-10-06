@@ -45,9 +45,9 @@ A presente plataforma web, **UniResu Connect**, propõe-se a ser um ecossistema 
 
 ---
 
-### **Projetos do SIGAA/UNIR e candidatura com carta de intenção**
+### **Projetos do SIGAA/UNIR e dos portais da UNIRIO, e candidatura com carta de intenção**
 
-A aba **Projetos Acadêmicos** lista, além dos projetos cadastrados pelos professores, os projetos de **pesquisa** e **extensão** coletados semanalmente das consultas públicas do SIGAA/UNIR. O aluno se candidata escrevendo uma **carta de intenção**, que chega no corpo do e-mail do(a) coordenador(a) — com *reply-to* no e-mail do aluno e o Lattes como link no final.
+A aba **Projetos Acadêmicos** lista, além dos projetos cadastrados pelos professores, os projetos de **pesquisa** e **extensão** coletados semanalmente de duas fontes públicas: as consultas do **SIGAA/UNIR** e os **portais da UNIRIO** (Portal da Pesquisa e Portal da Extensão). Os filtros permitem escolher módulo (pesquisa/extensão), instituição (UNIR, UNIRIO) e unidade. O aluno se candidata escrevendo uma **carta de intenção**, que chega no corpo do e-mail do(a) coordenador(a) — com *reply-to* no e-mail do aluno e o Lattes como link no final.
 
 **Como funciona o sync**
 
@@ -69,6 +69,24 @@ A aba **Projetos Acadêmicos** lista, além dos projetos cadastrados pelos profe
   python -m jobs.sync_sigaa
   # só um módulo / outros anos:
   SIGAA_MODULOS=pesquisa SIGAA_ANOS=2025,2026 python -m jobs.sync_sigaa
+  ```
+
+**Sync com a UNIRIO**
+
+* Fontes: [Portal da Pesquisa](https://sistemas.unirio.br/projetos/search/index) e [Portal da Extensão](https://sistemas2.unirio.br/extensao/busca/projetos?cat_termos=titulo&f_ano=0&f_area=0&f_centro=0&f_cor=0&f_lin=0&f_status=1&f_uni=0&termos=) (busca com status "em andamento").
+* `backend/jobs/sync_unirio.py` faz GET na busca, segue a paginação até a última página e abre a página de detalhe de cada projeto (coordenador(a), e-mail, unidade, período, resumo, palavras-chave). O parser fica em `backend/services/unirio/parser.py`; o cliente HTTP (pausa, timeout, retry) é o mesmo do SIGAA (`backend/services/http_client.py`).
+* Grava na collection `projetos` com `origem: "unirio"`, `instituicao: "UNIRIO"` e `modulo` (`pesquisa`/`extensao`), com chave natural em `chave_unirio`. As regras são as mesmas do SIGAA: projetos manuais nunca são tocados, uma fonte nunca encosta nos documentos da outra, e o que some da fonte fica `ativo: false`.
+* As execuções ficam em `sigaa_sync_runs` com `fonte: "unirio"` (mesma collection do SIGAA, para reaproveitar o usuário restrito do Atlas). A rota `GET /api/projetos/fontes/status` devolve a última coleta de cada fonte.
+* Agendamento: GitHub Actions, toda segunda às 10:00 UTC (`.github/workflows/sync-unirio.yml`).
+* Execução manual (**Actions → Sync UNIRIO → Run workflow**) com três modos:
+  * `sync`: coleta e grava (o que o agendamento roda);
+  * `dry-run`: coleta e imprime estatísticas e amostras, sem gravar nada — use antes do primeiro `sync` e sempre que o layout dos portais mudar;
+  * `captura`: imprime o HTML bruto da primeira página de cada listagem e dos primeiros detalhes, para atualizar o parser e as fixtures de teste.
+
+  ```bash
+  cd backend
+  python -m jobs.sync_unirio --dry-run
+  UNIRIO_MODULOS=extensao python -m jobs.sync_unirio
   ```
 
 **Projeto sem e-mail de contato**
@@ -94,6 +112,14 @@ python -m jobs.definir_contato --codigo PVC2148-2026 --remover
 | `SIGAA_TIMEOUT_SEGUNDOS` | job | `60` | Timeout de cada requisição |
 | `SIGAA_MAX_TENTATIVAS` | job | `3` | Tentativas por requisição (backoff 2 s, 4 s, …) |
 | `SIGAA_ALERTA_EMAIL` | job | `EMAIL_SUPORTE` | Quem recebe o alerta de falha do sync |
+| `UNIRIO_MODULOS` | job | `pesquisa,extensao` | Módulos coletados dos portais da UNIRIO |
+| `UNIRIO_EXTENSAO_STATUS` | job | `1` | Filtro `f_status` da busca de extensão (1 = em andamento, 0 = todos) |
+| `UNIRIO_MAX_PAGINAS` | job | `300` | Teto de páginas percorridas por listagem |
+| `UNIRIO_MAX_DETALHES` | job | `0` | Teto de detalhes consultados por módulo (0 = todos; útil no dry-run) |
+| `UNIRIO_PAUSA_SEGUNDOS` | job | `1.5` | Pausa entre requisições (mínimo 1) |
+| `UNIRIO_TIMEOUT_SEGUNDOS` | job | `60` | Timeout de cada requisição |
+| `UNIRIO_MAX_TENTATIVAS` | job | `3` | Tentativas por requisição (backoff 2 s, 4 s, …) |
+| `UNIRIO_ALERTA_EMAIL` | job | `SIGAA_ALERTA_EMAIL` | Quem recebe o alerta de falha do sync da UNIRIO |
 | `CANDIDATURA_LIMITE_HORA` | API | `5` | Máximo de candidaturas por aluno por hora |
 | `CANDIDATURA_LIMITE_DIA` | API | `20` | Máximo de candidaturas por aluno em 24 h |
 
@@ -102,7 +128,7 @@ O envio de e-mail continua usando `RESEND_API_KEY`, `EMAIL_REMETENTE` e `EMAIL_S
 **Configuração obrigatória para o job no GitHub Actions**
 
 1. **Atlas → Network Access:** liberar `0.0.0.0/0`. Os IPs dos runners do GitHub Actions mudam a cada execução, então não dá para usar uma allowlist fixa. A proteção passa a ser o usuário exclusivo abaixo, com senha forte.
-2. **Atlas → Database Access:** criar um usuário **exclusivo do job** com uma *custom role* que só permite `find`, `insert` e `update` nas collections `projetos` e `sigaa_sync_runs` do banco `UniResuDB`. Não reutilize o usuário da API.
+2. **Atlas → Database Access:** criar um usuário **exclusivo dos jobs** com uma *custom role* que só permite `find`, `insert` e `update` nas collections `projetos` e `sigaa_sync_runs` do banco `UniResuDB`. Não reutilize o usuário da API. O mesmo usuário serve aos dois syncs (SIGAA e UNIRIO).
 3. **GitHub → Settings → Secrets and variables → Actions:**
    * secret `MONGO_URI` com a connection string desse usuário;
    * secret `RESEND_API_KEY` (opcional, para o alerta de falha por e-mail);

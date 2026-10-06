@@ -21,8 +21,9 @@ interface Projeto {
   modalidade?: string;
   nome_professor?: string;
   tem_contato: boolean;
-  // Projetos importados do SIGAA
-  origem?: string;
+  // Projetos importados de fontes externas (SIGAA/UNIR, portais da UNIRIO)
+  origem?: "sigaa" | "unirio" | string;
+  modulo?: "pesquisa" | "extensao";
   tipo_sigaa?: "pesquisa" | "extensao";
   codigo?: string;
   unidade?: string;
@@ -32,7 +33,26 @@ interface Projeto {
   link_detalhe?: string;
   periodo_inicio?: string;
   periodo_fim?: string;
+  area_tematica?: string;
+  palavras_chave?: string[];
 }
+
+interface FonteStatus {
+  instituicao: string;
+  rotulo: string;
+  ultima_atualizacao: string | null;
+}
+
+interface FontesStatusResponse {
+  ultima_atualizacao: string | null;
+  fontes: Record<string, FonteStatus>;
+}
+
+/** Nome da fonte externa, para rótulos como "Ver no SIGAA". */
+const FONTE_NOME: Record<string, string> = {
+  sigaa: "SIGAA",
+  unirio: "Portal da UNIRIO",
+};
 
 const PAGE_SIZE = 20;
 const CARTA_MIN = 300;
@@ -48,6 +68,29 @@ function formatarData(iso?: string) {
   if (!iso) return "";
   const [ano, mes, dia] = iso.slice(0, 10).split("-");
   return `${dia}/${mes}/${ano}`;
+}
+
+/** "EM EXECUÇÃO" → "Em execução" (os portais publicam tudo em caixa alta). */
+function formatarSituacao(situacao?: string) {
+  if (!situacao) return "";
+  const s = situacao.trim();
+  if (s !== s.toUpperCase()) return s;
+  return s.charAt(0) + s.slice(1).toLowerCase();
+}
+
+type SituacaoTom = "ativa" | "encerrada" | "futura" | "neutra";
+
+function tomDaSituacao(situacao?: string): SituacaoTom {
+  const s = (situacao || "").toUpperCase();
+  if (!s) return "neutra";
+  if (s.includes("EXECU") || s.includes("ANDAMENTO")) return "ativa";
+  if (s.includes("NÃO INICIADO") || s.includes("NAO INICIADO")) return "futura";
+  if (s.includes("FINALIZ") || s.includes("CONCLU") || s.includes("ENCERR")) return "encerrada";
+  return "neutra";
+}
+
+function moduloDoProjeto(projeto: Projeto) {
+  return projeto.modulo || projeto.tipo_sigaa;
 }
 
 function cursoPeriodoDoUsuario(user: User | null) {
@@ -80,11 +123,13 @@ export default function ProjetosPage() {
   const [busca, setBusca] = useState("");
   const [buscaAplicada, setBuscaAplicada] = useState("");
   const [tipoFiltro, setTipoFiltro] = useState<"" | "pesquisa" | "extensao">("");
+  const [instituicaoFiltro, setInstituicaoFiltro] = useState("");
   const [unidadeFiltro, setUnidadeFiltro] = useState("");
   const [areaFiltro, setAreaFiltro] = useState("");
   const [remotoFiltro, setRemotoFiltro] = useState(false);
   const [unidades, setUnidades] = useState<string[]>([]);
-  const [ultimaAtualizacao, setUltimaAtualizacao] = useState<string | null>(null);
+  const [instituicoes, setInstituicoes] = useState<string[]>([]);
+  const [fontes, setFontes] = useState<FonteStatus[]>([]);
 
   // Ignora respostas de buscas antigas (filtros mudaram no meio do caminho).
   const buscaAtual = useRef(0);
@@ -102,13 +147,14 @@ export default function ProjetosPage() {
   const montarParams = useCallback(() => {
     const params = new URLSearchParams();
     if (buscaAplicada) params.set("q", buscaAplicada);
-    if (tipoFiltro) params.set("tipo_sigaa", tipoFiltro);
+    if (tipoFiltro) params.set("modulo", tipoFiltro);
+    if (instituicaoFiltro) params.set("instituicao", instituicaoFiltro);
     if (unidadeFiltro) params.set("unidade", unidadeFiltro);
     if (areaFiltro) params.set("area", areaFiltro);
     if (remotoFiltro) params.set("remoto", "true");
     params.set("page_size", String(PAGE_SIZE));
     return params;
-  }, [buscaAplicada, tipoFiltro, unidadeFiltro, areaFiltro, remotoFiltro]);
+  }, [buscaAplicada, tipoFiltro, instituicaoFiltro, unidadeFiltro, areaFiltro, remotoFiltro]);
 
   const carregarProjetos = useCallback(async () => {
     const id = ++buscaAtual.current;
@@ -142,12 +188,15 @@ export default function ProjetosPage() {
 
   const carregarUnidades = useCallback(async () => {
     try {
-      const qs = tipoFiltro ? `?tipo_sigaa=${tipoFiltro}` : "";
+      const params = new URLSearchParams();
+      if (tipoFiltro) params.set("modulo", tipoFiltro);
+      if (instituicaoFiltro) params.set("instituicao", instituicaoFiltro);
+      const qs = params.toString() ? `?${params.toString()}` : "";
       setUnidades(await api.get<string[]>(`/api/projetos/unidades${qs}`));
     } catch {
       setUnidades([]);
     }
-  }, [tipoFiltro]);
+  }, [tipoFiltro, instituicaoFiltro]);
 
   useEffect(() => {
     carregarUnidades();
@@ -155,9 +204,13 @@ export default function ProjetosPage() {
 
   useEffect(() => {
     api
-      .get<{ ultima_atualizacao: string | null }>("/api/projetos/sigaa/status")
-      .then((s) => setUltimaAtualizacao(s.ultima_atualizacao))
-      .catch(() => setUltimaAtualizacao(null));
+      .get<string[]>("/api/projetos/instituicoes")
+      .then(setInstituicoes)
+      .catch(() => setInstituicoes([]));
+    api
+      .get<FontesStatusResponse>("/api/projetos/fontes/status")
+      .then((s) => setFontes(Object.values(s.fontes || {}).filter((f) => f.ultima_atualizacao)))
+      .catch(() => setFontes([]));
   }, []);
 
   async function carregarMais() {
@@ -253,9 +306,12 @@ export default function ProjetosPage() {
         <p className={styles.subtitle}>
           Descubra oportunidades de pesquisa e extensão
         </p>
-        {ultimaAtualizacao && (
+        {fontes.length > 0 && (
           <p className={styles.updatedAt}>
-            Projetos do SIGAA/UNIR atualizados em {formatarData(ultimaAtualizacao)}
+            Última coleta:{" "}
+            {fontes
+              .map((f) => `${f.rotulo} em ${formatarData(f.ultima_atualizacao || undefined)}`)
+              .join(" e ")}
           </p>
         )}
       </div>
@@ -289,6 +345,22 @@ export default function ProjetosPage() {
             <option value="pesquisa">Pesquisa</option>
             <option value="extensao">Extensão</option>
           </select>
+          {instituicoes.length > 0 && (
+            <select
+              value={instituicaoFiltro}
+              onChange={(e) => {
+                setInstituicaoFiltro(e.target.value);
+                setUnidadeFiltro("");
+              }}
+              className={styles.filterInput}
+              aria-label="Instituição"
+            >
+              <option value="">Todas as instituições</option>
+              {instituicoes.map((i) => (
+                <option key={i} value={i}>{i}</option>
+              ))}
+            </select>
+          )}
           <select
             value={unidadeFiltro}
             onChange={(e) => setUnidadeFiltro(e.target.value)}
@@ -362,32 +434,53 @@ export default function ProjetosPage() {
                     <p className={styles.projetoDesc}>{projeto.descricao}</p>
                   )}
                 </div>
+                {/*
+                  Tags em ordem fixa, do mais geral ao mais específico:
+                  tipo (Pesquisa/Extensão) → instituição → unidade → ano → remoto,
+                  e a situação sozinha à direita, como um indicador de estado.
+                */}
                 <div className={styles.projetoMeta}>
                   {projeto.tipo && (
-                    <span className={`${styles.metaTag} ${projeto.tipo_sigaa ? styles.metaTipo : ""}`}>
+                    <span
+                      className={`${styles.metaTag} ${
+                        moduloDoProjeto(projeto) === "pesquisa"
+                          ? styles.metaPesquisa
+                          : moduloDoProjeto(projeto) === "extensao"
+                            ? styles.metaExtensao
+                            : styles.metaTipo
+                      }`}
+                    >
                       {projeto.tipo}
                     </span>
                   )}
-                  {projeto.unidade && (
-                    <span className={styles.metaTag}>🏛️ {projeto.unidade}</span>
+                  {projeto.instituicao && (
+                    <span className={`${styles.metaTag} ${styles.metaInstituicao}`}>
+                      {projeto.instituicao}
+                    </span>
                   )}
-                  {!projeto.unidade && projeto.instituicao && (
-                    <span className={styles.metaTag}>🏛️ {projeto.instituicao}</span>
+                  {projeto.unidade && (
+                    <span className={`${styles.metaTag} ${styles.metaUnidade}`} title={projeto.unidade}>
+                      <span aria-hidden="true">🏛️</span> {projeto.unidade}
+                    </span>
                   )}
                   {projeto.ano && (
-                    <span className={styles.metaTag}>📅 {projeto.ano}</span>
+                    <span className={styles.metaTag}>
+                      <span aria-hidden="true">📅</span> {projeto.ano}
+                    </span>
                   )}
                   {projeto.e_remoto && (
                     <span className={`${styles.metaTag} ${styles.metaRemoto}`}>
-                      🌐 Remoto
+                      <span aria-hidden="true">🌐</span> Remoto
                     </span>
                   )}
-                  {projeto.situacao && (
-                    <span className={styles.metaDate}>{projeto.situacao}</span>
-                  )}
-                  {!projeto.situacao && projeto.dataPublicacao && (
+                  {projeto.situacao ? (
+                    <span className={`${styles.metaStatus} ${styles[`status_${tomDaSituacao(projeto.situacao)}`]}`}>
+                      <span className={styles.statusDot} aria-hidden="true" />
+                      {formatarSituacao(projeto.situacao)}
+                    </span>
+                  ) : projeto.dataPublicacao ? (
                     <span className={styles.metaDate}>{projeto.dataPublicacao}</span>
-                  )}
+                  ) : null}
                 </div>
               </article>
             ))}
@@ -421,34 +514,42 @@ export default function ProjetosPage() {
             <div className={modalStyles.infoGrid}>
               {selectedProjeto.tipo && (
                 <div className={modalStyles.infoLine}><strong>Tipo:</strong> {selectedProjeto.tipo}
-                  {selectedProjeto.categoria && selectedProjeto.tipo_sigaa ? ` (${selectedProjeto.categoria})` : ""}
+                  {selectedProjeto.categoria && selectedProjeto.origem ? ` (${selectedProjeto.categoria})` : ""}
                 </div>
               )}
               {selectedProjeto.nome_professor && (
                 <div className={modalStyles.infoLine}>
-                  <strong>{selectedProjeto.origem === "sigaa" ? "Coordenador(a):" : "Professor/Pesquisador:"}</strong>{" "}
+                  <strong>{selectedProjeto.origem ? "Coordenador(a):" : "Professor/Pesquisador:"}</strong>{" "}
                   {selectedProjeto.nome_professor}
                 </div>
+              )}
+              {selectedProjeto.instituicao && (
+                <div className={modalStyles.infoLine}><strong>Instituição:</strong> {selectedProjeto.instituicao}</div>
               )}
               {selectedProjeto.unidade && (
                 <div className={modalStyles.infoLine}><strong>Unidade/Departamento:</strong> {selectedProjeto.unidade}</div>
               )}
-              {selectedProjeto.instituicao && (
-                <div className={modalStyles.infoLine}><strong>Instituição:</strong> {selectedProjeto.instituicao}</div>
+              {selectedProjeto.area_tematica && (
+                <div className={modalStyles.infoLine}><strong>Área temática:</strong> {selectedProjeto.area_tematica}</div>
               )}
               {selectedProjeto.ano && (
                 <div className={modalStyles.infoLine}><strong>Ano:</strong> {selectedProjeto.ano}</div>
               )}
               {selectedProjeto.situacao && (
-                <div className={modalStyles.infoLine}><strong>Situação:</strong> {selectedProjeto.situacao}</div>
+                <div className={modalStyles.infoLine}><strong>Situação:</strong> {formatarSituacao(selectedProjeto.situacao)}</div>
               )}
               {selectedProjeto.periodo_inicio && selectedProjeto.periodo_fim && (
                 <div className={modalStyles.infoLine}>
                   <strong>Período:</strong> {formatarData(selectedProjeto.periodo_inicio)} a {formatarData(selectedProjeto.periodo_fim)}
                 </div>
               )}
-              {selectedProjeto.codigo && (
+              {selectedProjeto.codigo && selectedProjeto.origem === "sigaa" && (
                 <div className={modalStyles.infoLine}><strong>Código SIGAA:</strong> {selectedProjeto.codigo}</div>
+              )}
+              {selectedProjeto.palavras_chave && selectedProjeto.palavras_chave.length > 0 && (
+                <div className={modalStyles.infoLine}>
+                  <strong>Palavras-chave:</strong> {selectedProjeto.palavras_chave.join(", ")}
+                </div>
               )}
               {selectedProjeto.local && (
                 <div className={modalStyles.infoLine}><strong>Localização:</strong> {selectedProjeto.local}</div>
@@ -459,7 +560,7 @@ export default function ProjetosPage() {
               {selectedProjeto.link_detalhe && (
                 <div className={modalStyles.infoLine}>
                   <a href={selectedProjeto.link_detalhe} target="_blank" rel="noopener noreferrer" className={modalStyles.externalLink}>
-                    Ver no SIGAA ↗
+                    Ver no {FONTE_NOME[selectedProjeto.origem || ""] || "site de origem"} ↗
                   </a>
                 </div>
               )}
