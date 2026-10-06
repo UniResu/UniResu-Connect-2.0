@@ -228,8 +228,10 @@ class TestHtmlRealPesquisa:
         assert len(res.itens) == 8 and res.completa is True and res.erros == []
         assert res.paginas == 2  # GET do formulário + POST (uma página só)
 
+        # o corte usa o ano de referência da LISTAGEM (antes de abrir os detalhes)
         res = scraper.coletar_pesquisa(ClienteRoteado(UnirioConfig(pesquisa_ano_minimo=2014), rotas))
-        assert all(int(i["ano"]) >= 2014 for i in res.itens) and 0 < len(res.itens) < 8
+        ids = [i["unirio_id"] for i in res.itens]
+        assert len(ids) == 4 and "1536" in ids and "2797" in ids and "1370" not in ids
 
 
 class TestParser:
