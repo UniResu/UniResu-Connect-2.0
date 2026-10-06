@@ -187,10 +187,6 @@
   text-align: center;
 }
 
-/*
- * Avatar simbólico (sem foto): círculo com gradiente por função e um ícone
- * de traço branco. As variantes abaixo seguem o nome do símbolo no page.tsx.
- */
 .avatar {
   background: linear-gradient(135deg, #b224ef, #00d084);
   width: 80px;
@@ -206,19 +202,6 @@
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
   margin: 0 auto 1.2rem auto;
 }
-
-.avatarIcon {
-  width: 40px;
-  height: 40px;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
-}
-
-.avatar_ciencia { background: linear-gradient(135deg, #00d084, #0ea5e9); }
-.avatar_tecnologia { background: linear-gradient(135deg, #6366f1, #b224ef); }
-.avatar_marketing { background: linear-gradient(135deg, #f43f5e, #f59e0b); }
-.avatar_lideranca { background: linear-gradient(135deg, #b224ef, #ff6a3d); }
-.avatar_engenharia { background: linear-gradient(135deg, #0ea5e9, #6366f1); }
-.avatar_orientacao { background: linear-gradient(135deg, #a242b5, #4c0568); }
 
 .memberInfo {
   display: flex;
