@@ -3,10 +3,16 @@
 import { useState, FormEvent } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import type { PapelUsuario } from "@/types/user";
 import { useAuth } from "@/contexts/AuthContext";
+import { PERFIS, NIVEIS, type TipoPerfil, emailInstitucionalValido } from "@/lib/perfis";
 import styles from "./registrar.module.css";
 
+/**
+ * Registro, seguindo o mockup "Modal de Registro" do Figma: um painel com
+ * rótulo à esquerda e campo à direita (e-mail institucional, instituição,
+ * nome completo, vínculo institucional), os campos específicos do vínculo
+ * escolhido, senha, os dois aceites e o botão "Registrar-se".
+ */
 export default function RegistrarPage() {
   const { loginWithOrcid } = useAuth();
 
@@ -14,58 +20,59 @@ export default function RegistrarPage() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [senhaConfirm, setSenhaConfirm] = useState("");
-  const [papel, setPapel] = useState<PapelUsuario>("aluno");
+  const [papel, setPapel] = useState<TipoPerfil | "">("");
   const [instituicao, setInstituicao] = useState("");
   const [curso, setCurso] = useState("");
+  const [departamento, setDepartamento] = useState("");
+
+  // Campos por vínculo
+  const [nivel, setNivel] = useState("graduacao");
+  const [semestre, setSemestre] = useState("1");
+  const [titulo, setTitulo] = useState("");
+  const [cargo, setCargo] = useState("");
+  const [vinculoPesq, setVinculoPesq] = useState("");
+  const [setor, setSetor] = useState("");
+  const [anoConclusao, setAnoConclusao] = useState("");
+  const [atuacao, setAtuacao] = useState("");
+
+  const [aceiteRegras, setAceiteRegras] = useState(false);
+  const [aceiteDados, setAceiteDados] = useState(false);
+
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [step, setStep] = useState(1); // 1 = role, 2 = form, 3 = email enviado
   const [emailEnviado, setEmailEnviado] = useState("");
+
+  const perfilEscolhido = PERFIS.find((p) => p.value === papel);
+
+  function dadosDoVinculo(): Record<string, unknown> {
+    switch (papel) {
+      case "aluno":
+        return { dados_aluno: { nivel, semestre: parseInt(semestre, 10) || 1 } };
+      case "professor":
+        return { dados_professor: { titulo: titulo || null, cargo: cargo || null, linhas_pesquisa: [] } };
+      case "pesquisador":
+        return { dados_pesquisador: { titulo: titulo || null, vinculo: vinculoPesq || null, linhas_pesquisa: [] } };
+      case "tecnico":
+        return { dados_tecnico: { setor: setor || null, cargo: cargo || null } };
+      case "egresso":
+        return { dados_egresso: { ano_conclusao: anoConclusao ? parseInt(anoConclusao, 10) : null, atuacao: atuacao || null } };
+      default:
+        return {};
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
 
-    // Validação por whitelist de domínios acadêmicos (aceita subdomínios).
-    // Regra:
-    //  - Aceita qualquer domínio terminado em .edu.br ou .edu.
-    //  - Aceita qualquer subdomínio das instituições listadas
-    //    (ex.: sga.pucminas.br, diretoria.uerj.br, aluno.unb.br).
-    const dominio = email.split("@")[1]?.toLowerCase().trim();
-    if (!dominio) {
-      setError("Por favor, informe um e-mail válido.");
+    if (!papel) {
+      setError("Escolha o seu vínculo institucional.");
       return;
     }
-
-    const dominiosPermitidos = [
-      // Federais
-      "ufrj.br", "ufmg.br", "unb.br", "ufrgs.br", "ufsc.br",
-      "ufpr.br", "ufpe.br", "ufba.br", "ufg.br", "ufrn.br",
-      "ufv.br", "ufscar.br", "unifesp.br", "ufc.br", "ufu.br",
-      // Estaduais
-      "usp.br", "unicamp.br", "unesp.br", "uerj.br", "udesc.br",
-      "uems.br", "unemat.br", "uenp.br",
-      // PUCs
-      "pucminas.br", "puc-rio.br", "pucsp.br", "pucpr.br",
-      "pucrs.br", "puccampinas.edu.br",
-      // Privadas e institutos
-      "fgv.br", "insper.edu.br", "mackenzie.br", "einstein.br",
-      "fia.com.br", "senai.br", "itajuba.edu.br", "ita.br",
-      "ime.eb.mil.br",
-    ];
-
-    const ehEduGenerico =
-      dominio.endsWith(".edu.br") || dominio === "edu.br" ||
-      dominio.endsWith(".edu") || dominio === "edu";
-    const ehDominioPermitido = dominiosPermitidos.some(
-      (alvo) => dominio === alvo || dominio.endsWith("." + alvo)
-    );
-
-    if (!ehEduGenerico && !ehDominioPermitido) {
+    if (!emailInstitucionalValido(email)) {
       setError("Por favor, utilize o seu e-mail institucional acadêmico.");
       return;
     }
-
     if (senha !== senhaConfirm) {
       setError("As senhas não coincidem.");
       return;
@@ -74,10 +81,14 @@ export default function RegistrarPage() {
       setError("A senha deve ter pelo menos 6 caracteres.");
       return;
     }
+    if (!aceiteRegras || !aceiteDados) {
+      setError("É preciso marcar os dois aceites para concluir o registro.");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
-      // Registrar (conta criada como pendente — e-mail de verificação enviado)
+      // Conta criada como pendente: um e-mail de verificação é enviado.
       await api.post("/api/usuarios/registrar", {
         nome,
         email,
@@ -85,211 +96,35 @@ export default function RegistrarPage() {
         papel,
         instituicao: instituicao || null,
         curso: curso || null,
+        departamento: departamento || null,
+        aceite_regras: aceiteRegras,
+        aceite_dados: aceiteDados,
+        ...dadosDoVinculo(),
       });
-
-      // Mostrar tela de confirmação (não faz login automático)
       setEmailEnviado(email);
-      setStep(3);
     } catch (err: unknown) {
-      const apiErr = err as { detail?: string };
-      setError(apiErr.detail || "Erro ao criar conta. Tente novamente.");
+      const apiErr = err as { detail?: unknown };
+      const detail = apiErr.detail;
+      setError(
+        typeof detail === "string"
+          ? detail
+          : Array.isArray(detail)
+            ? detail.map((d: { msg?: string }) => (d.msg || "").replace(/^Value error, /, "")).join(" ")
+            : "Erro ao criar conta. Tente novamente."
+      );
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  return (
-    <div className={styles.page}>
-      <div className={styles.card}>
-        <div className={styles.header}>
-          <h1 className={styles.title}>Criar Conta</h1>
-          <p className={styles.subtitle}>
-            Junte-se à comunidade UniResu Connect
-          </p>
-        </div>
-
-        {/* Step 1: escolha de papel */}
-        {step === 1 && (
-          <div className={styles.roleSelection}>
-            <p className={styles.roleLabel}>Eu sou:</p>
-            <div className={styles.roleGrid}>
-              <button
-                className={`${styles.roleCard} ${papel === "aluno" ? styles.roleActive : ""}`}
-                onClick={() => setPapel("aluno")}
-                type="button"
-              >
-                <span className={styles.roleIcon}>🎓</span>
-                <span className={styles.roleName}>Aluno</span>
-                <span className={styles.roleDesc}>Graduação ou Pós-Graduação</span>
-              </button>
-              <button
-                className={`${styles.roleCard} ${papel === "professor" ? styles.roleActive : ""}`}
-                onClick={() => setPapel("professor")}
-                type="button"
-              >
-                <span className={styles.roleIcon}>👨‍🏫</span>
-                <span className={styles.roleName}>Professor</span>
-                <span className={styles.roleDesc}>Docente e orientador</span>
-              </button>
-              <button
-                className={`${styles.roleCard} ${papel === "pesquisador" ? styles.roleActive : ""}`}
-                onClick={() => setPapel("pesquisador")}
-                type="button"
-              >
-                <span className={styles.roleIcon}>🔬</span>
-                <span className={styles.roleName}>Pesquisador</span>
-                <span className={styles.roleDesc}>Pós-Doc ou colaborador</span>
-              </button>
-            </div>
-
-            {(papel === "professor" || papel === "pesquisador") && (
-              <button
-                onClick={() => loginWithOrcid()}
-                className={styles.orcidButton}
-                type="button"
-              >
-                <img
-                  src="https://info.orcid.org/wp-content/uploads/2019/11/orcid_16x16.png"
-                  alt="ORCID"
-                  width={20}
-                  height={20}
-                />
-                Registrar com ORCID (recomendado)
-              </button>
-            )}
-
-            <div className={styles.divider}>
-              <span>ou preencha manualmente</span>
-            </div>
-
-            <button
-              onClick={() => setStep(2)}
-              className={styles.continueButton}
-              type="button"
-            >
-              Continuar com email
-            </button>
-          </div>
-        )}
-
-        {/* Step 2: formulário */}
-        {step === 2 && (
-          <>
-            <button
-              onClick={() => setStep(1)}
-              className={styles.backButton}
-              type="button"
-            >
-              ← Voltar
-            </button>
-
-            <div className={styles.roleBadge}>
-              {papel === "aluno" ? "🎓" : papel === "professor" ? "👨‍🏫" : "🔬"}{" "}
-              {papel.charAt(0).toUpperCase() + papel.slice(1)}
-            </div>
-
-            <form onSubmit={handleSubmit} className={styles.form}>
-              {error && <div className={styles.errorMessage}>{error}</div>}
-
-              <div className={styles.fieldGroup}>
-                <label htmlFor="nome" className={styles.label}>Nome completo</label>
-                <input
-                  id="nome"
-                  type="text"
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  placeholder="Seu nome completo"
-                  required
-                  className={styles.input}
-                />
-              </div>
-
-              <div className={styles.fieldGroup}>
-                <label htmlFor="reg-email" className={styles.label}>E-mail institucional</label>
-                <input
-                  id="reg-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="seu@universidade.edu.br"
-                  required
-                  className={styles.input}
-                />
-              </div>
-
-              <div className={styles.fieldRow}>
-                <div className={styles.fieldGroup}>
-                  <label htmlFor="instituicao" className={styles.label}>Instituição</label>
-                  <input
-                    id="instituicao"
-                    type="text"
-                    value={instituicao}
-                    onChange={(e) => setInstituicao(e.target.value)}
-                    placeholder="Ex: UERJ, USP, UFMG"
-                    className={styles.input}
-                  />
-                </div>
-                <div className={styles.fieldGroup}>
-                  <label htmlFor="curso" className={styles.label}>Curso / Departamento</label>
-                  <input
-                    id="curso"
-                    type="text"
-                    value={curso}
-                    onChange={(e) => setCurso(e.target.value)}
-                    placeholder="Ex: Bioinformática"
-                    className={styles.input}
-                  />
-                </div>
-              </div>
-
-              <div className={styles.fieldGroup}>
-                <label htmlFor="reg-senha" className={styles.label}>Senha</label>
-                <input
-                  id="reg-senha"
-                  type="password"
-                  value={senha}
-                  onChange={(e) => setSenha(e.target.value)}
-                  placeholder="Mínimo 6 caracteres"
-                  required
-                  minLength={6}
-                  className={styles.input}
-                />
-              </div>
-
-              <div className={styles.fieldGroup}>
-                <label htmlFor="reg-senha-confirm" className={styles.label}>Confirmar senha</label>
-                <input
-                  id="reg-senha-confirm"
-                  type="password"
-                  value={senhaConfirm}
-                  onChange={(e) => setSenhaConfirm(e.target.value)}
-                  placeholder="Repita a senha"
-                  required
-                  className={styles.input}
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className={styles.submitButton}
-              >
-                {isSubmitting ? "Criando conta..." : "Criar conta"}
-              </button>
-
-              <p className="text-sm text-gray-500 mt-4">Problemas com o e-mail institucional? <a href="https://docs.google.com/forms/d/e/1FAIpQLSeW8URrJsHN4S-d7k-bOvmibn99fMgMLpB-ynxs9QKKCSvkug/viewform?usp=header" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline">Solicite acesso manual enviando o seu comprovante de vínculo.</a></p>
-            </form>
-          </>
-        )}
-
-        {/* Step 3: confirmação de e-mail enviado */}
-        {step === 3 && (
+  if (emailEnviado) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.card}>
           <div className={styles.emailConfirmation}>
-            <div className={styles.emailIcon}>✉️</div>
             <h2 className={styles.emailTitle}>Verifique seu e-mail</h2>
             <p className={styles.emailText}>
-              Enviamos um link de confirmação para{" "}
-              <strong>{emailEnviado}</strong>.
+              Enviamos um link de confirmação para <strong>{emailEnviado}</strong>.
             </p>
             <p className={styles.emailText}>
               Clique no link recebido para ativar sua conta. O link é válido por 24 horas.
@@ -301,10 +136,7 @@ export default function RegistrarPage() {
                 className={styles.resendLink}
                 onClick={async () => {
                   try {
-                    await api.post("/api/auth/reenviar-verificacao", {
-                      email: emailEnviado,
-                    });
-                    setError("");
+                    await api.post("/api/auth/reenviar-verificacao", { email: emailEnviado });
                     alert("E-mail reenviado com sucesso!");
                   } catch {
                     alert("Erro ao reenviar. Tente novamente em alguns minutos.");
@@ -314,15 +146,256 @@ export default function RegistrarPage() {
                 reenvie o e-mail
               </button>.
             </p>
-            <Link href="/login" className={styles.loginButton}>
-              Ir para o Login
-            </Link>
+            <Link href="/login" className={styles.loginButton}>Ir para o Login</Link>
           </div>
-        )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.page}>
+      <div className={`${styles.card} ${styles.cardWide}`}>
+        <div className={styles.topBar}>
+          <h1 className={styles.title}>Registre-se</h1>
+          <Link href="/login" className={styles.topLogin}>Login</Link>
+        </div>
+
+        <form onSubmit={handleSubmit} className={styles.form} noValidate>
+          {error && <div className={styles.errorMessage}>{error}</div>}
+
+          <div className={styles.panel}>
+            <div className={styles.row}>
+              <label htmlFor="reg-email" className={styles.rowLabel}>E-mail institucional</label>
+              <input
+                id="reg-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="voce@universidade.edu.br"
+                required
+                className={styles.rowInput}
+                autoComplete="email"
+              />
+            </div>
+
+            <div className={styles.row}>
+              <label htmlFor="reg-inst" className={styles.rowLabel}>Instituição</label>
+              <input
+                id="reg-inst"
+                type="text"
+                value={instituicao}
+                onChange={(e) => setInstituicao(e.target.value)}
+                placeholder="Ex.: UNIR, UNIRIO, UFMG"
+                className={styles.rowInput}
+                autoComplete="organization"
+              />
+            </div>
+
+            <div className={styles.row}>
+              <label htmlFor="reg-nome" className={styles.rowLabel}>Nome completo</label>
+              <input
+                id="reg-nome"
+                type="text"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                placeholder="Como aparece nos documentos"
+                required
+                minLength={2}
+                className={styles.rowInput}
+                autoComplete="name"
+              />
+            </div>
+
+            <div className={styles.row}>
+              <label htmlFor="reg-papel" className={styles.rowLabel}>Vínculo institucional</label>
+              <select
+                id="reg-papel"
+                value={papel}
+                onChange={(e) => setPapel(e.target.value as TipoPerfil)}
+                required
+                className={styles.rowInput}
+              >
+                <option value="">Escolha o seu vínculo</option>
+                {PERFIS.map((p) => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
+              </select>
+            </div>
+            {perfilEscolhido && <p className={styles.rowHint}>{perfilEscolhido.descricao}</p>}
+
+            {/* Campos específicos do vínculo: a pessoa só vê o que faz sentido para ela */}
+            {papel === "aluno" && (
+              <>
+                <div className={styles.row}>
+                  <label htmlFor="reg-curso" className={styles.rowLabel}>Curso</label>
+                  <input id="reg-curso" type="text" value={curso} onChange={(e) => setCurso(e.target.value)}
+                    placeholder="Ex.: Medicina" className={styles.rowInput} />
+                </div>
+                <div className={styles.row}>
+                  <label htmlFor="reg-nivel" className={styles.rowLabel}>Grau de instrução</label>
+                  <div className={styles.rowSplit}>
+                    <select id="reg-nivel" value={nivel} onChange={(e) => setNivel(e.target.value)} className={styles.rowInput}>
+                      {NIVEIS.map((n) => <option key={n.value} value={n.value}>{n.label}</option>)}
+                    </select>
+                    <input
+                      type="number"
+                      value={semestre}
+                      onChange={(e) => setSemestre(e.target.value)}
+                      min={1}
+                      max={100}
+                      className={styles.rowInput}
+                      aria-label="Período"
+                      placeholder="Período"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {papel === "professor" && (
+              <>
+                <div className={styles.row}>
+                  <label htmlFor="reg-dep" className={styles.rowLabel}>Departamento</label>
+                  <input id="reg-dep" type="text" value={departamento} onChange={(e) => setDepartamento(e.target.value)}
+                    placeholder="Ex.: Departamento de Medicina" className={styles.rowInput} />
+                </div>
+                <div className={styles.row}>
+                  <label htmlFor="reg-titulo" className={styles.rowLabel}>Titulação e cargo</label>
+                  <div className={styles.rowSplit}>
+                    <input id="reg-titulo" type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)}
+                      placeholder="Dr., Me., PhD" className={styles.rowInput} />
+                    <input type="text" value={cargo} onChange={(e) => setCargo(e.target.value)}
+                      placeholder="Ex.: Professor Adjunto" className={styles.rowInput} aria-label="Cargo" />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {papel === "pesquisador" && (
+              <>
+                <div className={styles.row}>
+                  <label htmlFor="reg-dep-p" className={styles.rowLabel}>Departamento ou grupo</label>
+                  <input id="reg-dep-p" type="text" value={departamento} onChange={(e) => setDepartamento(e.target.value)}
+                    placeholder="Ex.: Laboratório de Bioinformática" className={styles.rowInput} />
+                </div>
+                <div className={styles.row}>
+                  <label htmlFor="reg-titulo-p" className={styles.rowLabel}>Titulação e vínculo</label>
+                  <div className={styles.rowSplit}>
+                    <input id="reg-titulo-p" type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)}
+                      placeholder="Dr., PhD" className={styles.rowInput} />
+                    <input type="text" value={vinculoPesq} onChange={(e) => setVinculoPesq(e.target.value)}
+                      placeholder="Pós-doc, colaborador(a), visitante" className={styles.rowInput} aria-label="Vínculo" />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {papel === "tecnico" && (
+              <div className={styles.row}>
+                <label htmlFor="reg-setor" className={styles.rowLabel}>Setor e cargo</label>
+                <div className={styles.rowSplit}>
+                  <input id="reg-setor" type="text" value={setor} onChange={(e) => setSetor(e.target.value)}
+                    placeholder="Ex.: Pró-Reitoria de Pesquisa" className={styles.rowInput} />
+                  <input type="text" value={cargo} onChange={(e) => setCargo(e.target.value)}
+                    placeholder="Ex.: Técnico(a) de laboratório" className={styles.rowInput} aria-label="Cargo" />
+                </div>
+              </div>
+            )}
+
+            {papel === "egresso" && (
+              <>
+                <div className={styles.row}>
+                  <label htmlFor="reg-curso-e" className={styles.rowLabel}>Curso concluído</label>
+                  <div className={styles.rowSplit}>
+                    <input id="reg-curso-e" type="text" value={curso} onChange={(e) => setCurso(e.target.value)}
+                      placeholder="Ex.: Enfermagem" className={styles.rowInput} />
+                    <input type="number" value={anoConclusao} onChange={(e) => setAnoConclusao(e.target.value)}
+                      min={1950} max={2100} placeholder="Ano" className={styles.rowInput} aria-label="Ano de conclusão" />
+                  </div>
+                </div>
+                <div className={styles.row}>
+                  <label htmlFor="reg-atuacao" className={styles.rowLabel}>Atuação atual</label>
+                  <input id="reg-atuacao" type="text" value={atuacao} onChange={(e) => setAtuacao(e.target.value)}
+                    placeholder="Ex.: Residência em Clínica Médica" className={styles.rowInput} />
+                </div>
+              </>
+            )}
+
+            <div className={styles.row}>
+              <label htmlFor="reg-senha" className={styles.rowLabel}>Senha</label>
+              <div className={styles.rowSplit}>
+                <input
+                  id="reg-senha"
+                  type="password"
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                  placeholder="Mínimo 6 caracteres"
+                  required
+                  minLength={6}
+                  className={styles.rowInput}
+                  autoComplete="new-password"
+                />
+                <input
+                  type="password"
+                  value={senhaConfirm}
+                  onChange={(e) => setSenhaConfirm(e.target.value)}
+                  placeholder="Repita a senha"
+                  required
+                  className={styles.rowInput}
+                  aria-label="Confirmar senha"
+                  autoComplete="new-password"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className={styles.consents}>
+            <label className={styles.consent}>
+              <input type="checkbox" checked={aceiteRegras} onChange={(e) => setAceiteRegras(e.target.checked)} />
+              <span>Declaro, ao fazer o registro, que estou ciente das regras de utilização e convivência da plataforma.</span>
+            </label>
+            <label className={styles.consent}>
+              <input type="checkbox" checked={aceiteDados} onChange={(e) => setAceiteDados(e.target.checked)} />
+              <span>Declaro, ao fazer o registro, que estou ciente do compartilhamento desses dados com as coordenações dos projetos a que eu me candidatar.</span>
+            </label>
+          </div>
+
+          <button type="submit" disabled={isSubmitting} className={styles.submitButton}>
+            {isSubmitting ? "Criando conta..." : "Registrar-se"}
+          </button>
+
+          <div className={styles.divider}><span>ou</span></div>
+
+          <button onClick={() => loginWithOrcid()} className={styles.orcidButton} type="button">
+            <img
+              src="https://info.orcid.org/wp-content/uploads/2019/11/orcid_16x16.png"
+              alt="ORCID"
+              width={20}
+              height={20}
+            />
+            Registrar com ORCID
+          </button>
+          <p className={styles.orcidHint}>
+            Com o ORCID você entra sem senha e importa publicações e formação. Depois, escolhe o seu vínculo e
+            informa o e-mail institucional.
+          </p>
+
+          <p className={styles.helpText}>
+            Problemas com o e-mail institucional?{" "}
+            <a
+              href="https://docs.google.com/forms/d/e/1FAIpQLSeW8URrJsHN4S-d7k-bOvmibn99fMgMLpB-ynxs9QKKCSvkug/viewform?usp=header"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.link}
+            >
+              Solicite acesso manual enviando o seu comprovante de vínculo.
+            </a>
+          </p>
+        </form>
 
         <p className={styles.footer}>
-          Já tem uma conta?{" "}
-          <Link href="/login" className={styles.link}>Entrar</Link>
+          Já tem uma conta? <Link href="/login" className={styles.link}>Entrar</Link>
         </p>
       </div>
     </div>

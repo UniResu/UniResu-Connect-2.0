@@ -147,11 +147,27 @@ export default function ProjetosPage() {
   const [buscaAplicada, setBuscaAplicada] = useState("");
   const [tipoFiltro, setTipoFiltro] = useState<"" | "pesquisa" | "extensao">("");
   const [instituicaoFiltro, setInstituicaoFiltro] = useState("");
-  const [unidadeFiltro, setUnidadeFiltro] = useState("");
+  const [unidadeEscolhida, setUnidadeFiltro] = useState("");
   const [areaFiltro, setAreaFiltro] = useState("");
   const [remotoFiltro, setRemotoFiltro] = useState(false);
   const [filtros, setFiltros] = useState<InstituicaoFiltro[]>([]);
   const [fontes, setFontes] = useState<FonteStatus[]>([]);
+
+  // Categorias: instituição > unidade/departamento. As unidades oferecidas
+  // dependem da instituição e do módulo escolhidos; a lista toda vem de uma
+  // única chamada a /api/projetos/filtros.
+  const instituicoesComUnidades = filtros.filter((i) => unidadesVisiveis(i, tipoFiltro).length > 0);
+  const gruposDeUnidades = (instituicaoFiltro
+    ? instituicoesComUnidades.filter((i) => i.sigla === instituicaoFiltro)
+    : instituicoesComUnidades
+  ).map((i) => ({ sigla: i.sigla, unidades: unidadesVisiveis(i, tipoFiltro) }));
+  const unidadesOferecidas = gruposDeUnidades.flatMap((g) => g.unidades.map((u) => u.nome));
+  // Uma unidade escolhida que saiu das opções (mudou a instituição ou o módulo)
+  // deixa de valer, sem precisar de efeito.
+  const unidadeFiltro =
+    unidadeEscolhida && (filtros.length === 0 || unidadesOferecidas.includes(unidadeEscolhida))
+      ? unidadeEscolhida
+      : "";
 
   // Ignora respostas de buscas antigas (filtros mudaram no meio do caminho).
   const buscaAtual = useRef(0);
@@ -218,24 +234,6 @@ export default function ProjetosPage() {
       .then((s) => setFontes(Object.values(s.fontes || {}).filter((f) => f.ultima_atualizacao)))
       .catch(() => setFontes([]));
   }, []);
-
-  // Categorias: instituição > unidade/departamento. As unidades oferecidas
-  // dependem da instituição e do módulo escolhidos; a lista toda vem de uma
-  // única chamada a /api/projetos/filtros.
-  const instituicoesComUnidades = filtros.filter((i) => unidadesVisiveis(i, tipoFiltro).length > 0);
-  const gruposDeUnidades = (instituicaoFiltro
-    ? instituicoesComUnidades.filter((i) => i.sigla === instituicaoFiltro)
-    : instituicoesComUnidades
-  ).map((i) => ({ sigla: i.sigla, unidades: unidadesVisiveis(i, tipoFiltro) }));
-  const unidadesOferecidas = gruposDeUnidades.flatMap((g) => g.unidades.map((u) => u.nome));
-
-  // Uma unidade escolhida que saiu das opções (mudou a instituição ou o módulo)
-  // volta para "todas".
-  useEffect(() => {
-    if (unidadeFiltro && filtros.length > 0 && !unidadesOferecidas.includes(unidadeFiltro)) {
-      setUnidadeFiltro("");
-    }
-  }, [unidadeFiltro, unidadesOferecidas, filtros.length]);
 
   async function carregarMais() {
     const ultimo = projetos[projetos.length - 1];

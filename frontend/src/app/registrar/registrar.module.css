@@ -34,6 +34,154 @@
   font-size: var(--font-size-sm);
 }
 
+/* ── Layout do mockup (Figma: "Modal de Registro") ── */
+
+.cardWide {
+  max-width: 720px;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--space-md);
+  margin-bottom: var(--space-lg);
+  border-bottom: 1px solid var(--border);
+}
+
+.topBar .title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+}
+
+.topLogin {
+  padding: var(--space-xs) var(--space-lg);
+  background: var(--accent);
+  color: white;
+  font-weight: 500;
+  font-size: var(--font-size-sm);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: background var(--transition-fast);
+}
+
+.topLogin:hover {
+  background: var(--primary);
+}
+
+/* Painel cinza com rótulo à esquerda e campo à direita */
+.panel {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) 2fr;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.rowLabel {
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+.rowInput {
+  width: 100%;
+  padding: 0.7rem var(--space-md);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: white;
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.rowInput::placeholder {
+  color: var(--text-muted);
+}
+
+.rowInput:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-100);
+}
+
+.rowSplit {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+}
+
+.rowHint {
+  grid-column: 2;
+  margin: calc(-1 * var(--space-sm)) 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.consents {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: 0 var(--space-sm);
+}
+
+.consent {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  font-size: var(--font-size-xs);
+  color: var(--text-primary);
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.consent input {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+  flex-shrink: 0;
+}
+
+.orcidHint {
+  margin: calc(-1 * var(--space-xs)) 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.5;
+}
+
+.helpText {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  text-align: center;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .row {
+    grid-template-columns: 1fr;
+    gap: var(--space-xs);
+  }
+
+  .rowHint {
+    grid-column: 1;
+  }
+
+  .rowSplit {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ── Role Selection ── */
 
 .roleLabel {

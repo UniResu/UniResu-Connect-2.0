@@ -16,7 +16,11 @@ const LINKS = [
 export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
   const pathname = usePathname();
-  const [menuOpen, setMenuOpen] = useState(false);
+  // O menu mobile guarda a rota em que foi aberto: ao navegar, fecha sozinho
+  // (derivado no render, sem efeito).
+  const [menuAbertoEm, setMenuAbertoEm] = useState<string | null>(null);
+  const menuOpen = menuAbertoEm === pathname;
+  const setMenuOpen = (aberto: boolean) => setMenuAbertoEm(aberto ? pathname : null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -36,15 +40,11 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Menu mobile: fecha ao trocar de rota e com Esc; trava a rolagem enquanto aberto.
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [pathname]);
-
+  // Menu mobile: fecha com Esc e trava a rolagem enquanto aberto.
   useEffect(() => {
     if (!menuOpen) return;
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setMenuOpen(false);
+      if (e.key === "Escape") setMenuAbertoEm(null);
     }
     document.addEventListener("keydown", handleKey);
     const overflowAnterior = document.body.style.overflow;
