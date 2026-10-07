@@ -100,6 +100,44 @@ async def test_conta_orcid_nasce_incompleta_na_resposta(api_orcid):
     assert r.json()["perfil_completo"] is False
 
 
+async def test_perfil_completo_nao_e_aceito_sem_vinculo_aceites_e_email(api_orcid, db):
+    # só a flag: nada muda
+    r = await api_orcid.patch("/api/perfil", json={"perfil_completo": True})
+    assert r.status_code == 400 and "aceitar" in r.text and "e-mail" in r.text
+    assert (await db.usuarios.find_one({"_id": api_orcid.oid}))["perfil_completo"] is False
+    # aceites sem e-mail: ainda falta
+    r = await api_orcid.patch("/api/perfil", json={"perfil_completo": True, "papel": "aluno",
+                                                   "aceite_regras": True, "aceite_dados": True})
+    assert r.status_code == 400 and "e-mail institucional" in r.text
+    # com tudo (e-mail pendente conta): conclui
+    r = await api_orcid.patch("/api/perfil", json={"perfil_completo": True, "papel": "aluno", "email": "c@unirio.br",
+                                                   "aceite_regras": True, "aceite_dados": True})
+    assert r.status_code == 200, r.text
+    assert r.json()["perfil_completo"] is True
+
+
+async def test_unicidade_de_email_ignora_maiusculas(api, api_orcid, db):
+    await db.usuarios.insert_one({"email": "Carlos.Lima@unirio.br", "nome": "Outro", "papel": "aluno",
+                                  "email_verificado": True})
+    r = await api_orcid.patch("/api/perfil", json={"email": "carlos.lima@unirio.br"})
+    assert r.status_code == 400 and "já está cadastrado" in r.text
+    r = await api.post("/api/usuarios/registrar", json=payload(email="CARLOS.LIMA@unirio.br"))
+    assert r.status_code == 400 and "já está cadastrado" in r.text
+    # registro grava em minúsculas e o login aceita qualquer caixa
+    r = await api.post("/api/usuarios/registrar", json=payload(email="Nova.Conta@unirio.br"))
+    assert r.status_code == 201 and r.json()["email"] == "nova.conta@unirio.br"
+    await db.usuarios.update_one({"email": "nova.conta@unirio.br"}, {"$set": {"email_verificado": True}})
+    r = await api.post("/api/auth/login", json={"email": "NOVA.conta@unirio.br", "senha": "segredo1"})
+    assert r.status_code == 200, r.text
+
+
+async def test_usuarios_lista_contas_legadas_sem_papel(api, db):
+    await db.usuarios.insert_one({"email": "legado@unir.br", "nome": "Legado", "vinculo": "professor"})
+    r = await api.get("/api/usuarios")
+    assert r.status_code == 200, r.text
+    assert [u["papel"] for u in r.json()] == ["professor"]
+
+
 async def test_completar_perfil_escolhe_vinculo_email_e_aceites(api_orcid, db):
     r = await api_orcid.patch("/api/perfil", json={
         "papel": "professor", "instituicao": "UNIRIO", "departamento": "Escola de Medicina e Cirurgia",

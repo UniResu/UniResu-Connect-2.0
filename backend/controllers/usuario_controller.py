@@ -18,6 +18,7 @@ from passlib.context import CryptContext
 from pymongo.errors import DuplicateKeyError
 from database.connection import Database
 from models.usuario_model import DADOS_POR_PAPEL, PapelUsuario, UsuarioCreate
+from services.emails_institucionais import filtro_email
 from services.usernames import gerar_username_unico
 
 logger = logging.getLogger(__name__)
@@ -86,8 +87,8 @@ async def registrar_usuario_controller(user: UsuarioCreate) -> Dict[str, Any]:
     """
     db = Database.get_db()
 
-    # Verificar unicidade do email
-    usuario_existente = await db.usuarios.find_one({"email": user.email})
+    # Verificar unicidade do email (sem distinção de maiúsculas)
+    usuario_existente = await db.usuarios.find_one(filtro_email(user.email))
     if usuario_existente:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -106,7 +107,7 @@ async def registrar_usuario_controller(user: UsuarioCreate) -> Dict[str, Any]:
     # Construir documento do usuário
     agora = datetime.now(timezone.utc)
     novo_usuario_doc: Dict[str, Any] = {
-        "email": user.email,
+        "email": user.email.strip().lower(),
         "username": username,
         "nome": user.nome,
         "papel": user.papel.value,
@@ -187,7 +188,7 @@ async def login_usuario_controller(email: str, senha: str) -> Dict[str, Any]:
     """
     db = Database.get_db()
 
-    usuario = await db.usuarios.find_one({"email": email})
+    usuario = await db.usuarios.find_one(filtro_email(email))
     # Contas sem senha (login só pelo ORCID, usuário de sistema do fórum)
     # recebem o mesmo 401 genérico: `verify_password` com hash vazio levanta
     # UnknownHashError, o que virava 500 e denunciava que a conta existe.
@@ -219,7 +220,7 @@ async def login_usuario_controller(email: str, senha: str) -> Dict[str, Any]:
 
 async def solicitar_recuperacao_senha_controller(email: str) -> None:
     db = Database.get_db()
-    usuario = await db.usuarios.find_one({"email": email})
+    usuario = await db.usuarios.find_one(filtro_email(email))
 
     # Retorno silencioso p/ não vazar informações (enumeração de bad actors)
     if not usuario or "senha_hash" not in usuario:
@@ -379,7 +380,7 @@ async def verificar_email_controller(token: str) -> bool:
     # registrado o mesmo e-mail nesse meio-tempo, por isso a checagem aqui.
     pendente = usuario.get("email_pendente")
     if pendente:
-        if await db.usuarios.find_one({"email": pendente, "_id": {"$ne": usuario["_id"]}}):
+        if await db.usuarios.find_one({**filtro_email(pendente), "_id": {"$ne": usuario["_id"]}}):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Este e-mail já está cadastrado em outra conta.",
@@ -410,12 +411,12 @@ async def reenviar_verificacao_controller(email: str) -> None:
     db = Database.get_db()
     # `email_pendente`: e-mail institucional informado por uma conta do ORCID
     # e ainda não confirmado.
-    usuario = await db.usuarios.find_one({"$or": [{"email": email}, {"email_pendente": email}]})
+    usuario = await db.usuarios.find_one({"$or": [filtro_email(email), filtro_email(email, "email_pendente")]})
 
     if not usuario:
         return  # Retorno silencioso (segurança)
 
-    pendente = usuario.get("email_pendente") == email
+    pendente = (usuario.get("email_pendente") or "").lower() == email.strip().lower()
     if usuario.get("email_verificado", True) and not pendente:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -13,7 +13,7 @@ from fastapi import HTTPException, status
 from database.connection import Database
 from controllers.usuario_controller import _enviar_email_verificacao
 from models.usuario_model import DADOS_POR_PAPEL, PerfilUpdate
-from services.emails_institucionais import email_provisorio, validar_email_institucional
+from services.emails_institucionais import email_provisorio, filtro_email, validar_email_institucional
 
 
 def formatar_perfil(doc: Dict[str, Any]) -> Dict[str, Any]:
@@ -44,7 +44,8 @@ def formatar_perfil_publico(doc: Dict[str, Any]) -> Dict[str, Any]:
         "nome_social": doc.get("nome_social"),
         "avatar_url": doc.get("avatar_url"),
         "bio": doc.get("bio"),
-        "papel": doc.get("papel"),
+        # contas anteriores ao campo `papel` guardavam `vinculo`
+        "papel": doc.get("papel") or doc.get("vinculo") or "aluno",
         "instituicao": doc.get("instituicao"),
         "curso": doc.get("curso"),
         "interesses": doc.get("interesses", []),
@@ -164,7 +165,7 @@ async def atualizar_perfil_controller(
         except ValueError as e:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
         em_uso = await db.usuarios.find_one(
-            {"$or": [{"email": novo_email}, {"email_pendente": novo_email}], "_id": {"$ne": oid}})
+            {"$or": [filtro_email(novo_email), filtro_email(novo_email, "email_pendente")], "_id": {"$ne": oid}})
         if em_uso:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Este email já está cadastrado.")
         token = secrets.token_urlsafe(48)
@@ -181,7 +182,22 @@ async def atualizar_perfil_controller(
             update_fields["aceite_dados"] = True
         update_fields["aceites_em"] = agora
 
+    # Conclusão do perfil (contas do ORCID): decidida aqui, não pelo cliente.
+    # Exige vínculo escolhido, os dois aceites e o e-mail institucional
+    # informado (ou já definido). Sem isso o frontend voltaria a pedir, e a
+    # flag é o que libera o uso da plataforma sem aceite registrado.
     if dados_dict.get("perfil_completo"):
+        depois = {**atual, **update_fields}
+        faltas = []
+        if not depois.get("papel"):
+            faltas.append("escolher o vínculo institucional")
+        if not (depois.get("aceite_regras") and depois.get("aceite_dados")):
+            faltas.append("aceitar as regras e o compartilhamento de dados")
+        if email_provisorio(depois.get("email")) and not depois.get("email_pendente"):
+            faltas.append("informar o e-mail institucional")
+        if faltas:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="Para concluir o perfil falta " + "; ".join(faltas) + ".")
         update_fields["perfil_completo"] = True
 
     # Campos complexos (dados por tipo de perfil) — merge com existente

@@ -8,6 +8,8 @@ Regra:
     subdomínios (ex.: 'sga.pucminas.br' termina em '.pucminas.br').
 """
 
+import re
+
 DOMINIOS_PERMITIDOS = {
     # Federais
     "ufrj.br", "ufmg.br", "unb.br", "ufrgs.br", "ufsc.br",
@@ -27,6 +29,16 @@ DOMINIOS_PERMITIDOS = {
 }
 
 SUFIXO_PROVISORIO = "@orcid.placeholder"
+
+
+def filtro_email(email: str, campo: str = "email") -> dict:
+    """Filtro de igualdade sem distinção de maiúsculas.
+
+    Caixas postais não distinguem maiúsculas na prática, e contas antigas
+    foram gravadas com o e-mail como a pessoa digitou. Toda busca por e-mail
+    digitado (login, registro, recuperação, troca de e-mail) usa isto.
+    """
+    return {campo: {"$regex": f"^{re.escape(email.strip())}$", "$options": "i"}}
 
 
 def email_provisorio(email: str | None) -> bool:
