@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import type { User } from "@/types/user";
+import MultiSelect from "@/components/ui/MultiSelect";
 import styles from "./projetos.module.css";
 import modalStyles from "./modal.module.css";
 
@@ -31,6 +32,8 @@ interface Projeto {
   tipo_sigaa?: "pesquisa" | "extensao";
   codigo?: string;
   unidade?: string;
+  /** Campus deduzido da unidade (ver backend/services/campi.py). */
+  campus?: string;
   situacao?: string;
   ano?: string;
   categoria?: string;
@@ -57,6 +60,7 @@ interface InstituicaoFiltro {
   total: number;
   modulos: Record<string, number>;
   unidades: UnidadeFiltro[];
+  campi: UnidadeFiltro[];
 }
 
 /** Grande área do CNPq com projetos no recorte atual (já vem na ordem fixa da tabela). */
@@ -185,7 +189,8 @@ export default function ProjetosPage() {
   const [buscaAplicada, setBuscaAplicada] = useState("");
   const [tipoFiltro, setTipoFiltro] = useState<"" | "pesquisa" | "extensao">("");
   const [instituicaoFiltro, setInstituicaoFiltro] = useState("");
-  const [unidadeEscolhida, setUnidadeFiltro] = useState("");
+  const [unidadesEscolhidas, setUnidadesEscolhidas] = useState<string[]>([]);
+  const [campiEscolhidos, setCampiEscolhidos] = useState<string[]>([]);
   const [areaEscolhida, setAreaFiltro] = useState("");
   const [remotoFiltro, setRemotoFiltro] = useState(false);
   const [filtros, setFiltros] = useState<InstituicaoFiltro[]>([]);
@@ -200,12 +205,16 @@ export default function ProjetosPage() {
     .map((i) => ({ sigla: i.sigla, unidades: unidadesVisiveis(i, tipoFiltro) }))
     .filter((g) => g.unidades.length > 0);
   const unidadesOferecidas = gruposDeUnidades.flatMap((g) => g.unidades.map((u) => u.nome));
-  // Uma unidade escolhida que saiu das opções (mudou a instituição ou o módulo)
-  // deixa de valer, sem precisar de efeito.
-  const unidadeFiltro =
-    unidadeEscolhida && (filtros.length === 0 || unidadesOferecidas.includes(unidadeEscolhida))
-      ? unidadeEscolhida
-      : "";
+  // Campi da instituição escolhida, no módulo escolhido.
+  const campiOferecidos = filtros
+    .filter((i) => instituicaoFiltro && i.sigla === instituicaoFiltro)
+    .flatMap((i) => (i.campi || []).filter((c) => !tipoFiltro || (c.modulos[tipoFiltro] || 0) > 0));
+  // Escolhas que saíram das opções (mudou a instituição ou o módulo) deixam
+  // de valer, sem precisar de efeito.
+  const unidadesFiltro =
+    filtros.length === 0 ? unidadesEscolhidas : unidadesEscolhidas.filter((u) => unidadesOferecidas.includes(u));
+  const campiFiltro =
+    filtros.length === 0 ? campiEscolhidos : campiEscolhidos.filter((c) => campiOferecidos.some((o) => o.nome === c));
   // Áreas do conhecimento com projetos no recorte atual (texto, tipo,
   // instituição, unidade e remoto). Uma área escolhida que saiu das opções
   // deixa de valer, pela mesma regra da unidade.
@@ -233,10 +242,13 @@ export default function ProjetosPage() {
     if (buscaAplicada) params.set("q", buscaAplicada);
     if (tipoFiltro) params.set("modulo", tipoFiltro);
     if (instituicaoFiltro) params.set("instituicao", instituicaoFiltro);
-    if (unidadeFiltro) params.set("unidade", unidadeFiltro);
+    unidadesFiltro.forEach((u) => params.append("unidade", u));
+    campiFiltro.forEach((c) => params.append("campus", c));
     if (remotoFiltro) params.set("remoto", "true");
     return params;
-  }, [buscaAplicada, tipoFiltro, instituicaoFiltro, unidadeFiltro, remotoFiltro]);
+    // Os arrays derivados mudam de identidade a cada render; o conteúdo é o que importa.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buscaAplicada, tipoFiltro, instituicaoFiltro, unidadesFiltro.join("|"), campiFiltro.join("|"), remotoFiltro]);
 
   const montarParams = useCallback(() => {
     const params = montarParamsRecorte();
@@ -417,7 +429,8 @@ export default function ProjetosPage() {
             value={tipoFiltro}
             onChange={(e) => {
               setTipoFiltro(e.target.value as "" | "pesquisa" | "extensao");
-              setUnidadeFiltro("");
+              setUnidadesEscolhidas([]);
+              setCampiEscolhidos([]);
             }}
             className={styles.filterInput}
             aria-label="Tipo de projeto"
@@ -431,7 +444,8 @@ export default function ProjetosPage() {
               value={instituicaoFiltro}
               onChange={(e) => {
                 setInstituicaoFiltro(e.target.value);
-                setUnidadeFiltro("");
+                setUnidadesEscolhidas([]);
+                setCampiEscolhidos([]);
               }}
               className={styles.filterInput}
               aria-label="Instituição ou universidade"
@@ -457,30 +471,37 @@ export default function ProjetosPage() {
               )}
             </select>
           )}
-          <select
-            value={unidadeFiltro}
-            onChange={(e) => setUnidadeFiltro(e.target.value)}
-            className={styles.filterInput}
-            aria-label="Unidade, departamento ou curso"
-            disabled={unidadesOferecidas.length === 0}
-          >
-            <option value="">
-              {!instituicaoFiltro
+          {/* Campi e unidades da instituição escolhida, com seleção múltipla. */}
+          <MultiSelect
+            rotulo="Campi"
+            placeholder={
+              !instituicaoFiltro
+                ? "Campi (escolha a instituição)"
+                : campiOferecidos.length > 0
+                  ? `Campi da ${instituicaoFiltro}`
+                  : `Sem campi identificados para ${instituicaoFiltro}`
+            }
+            opcoes={campiOferecidos.map((c) => ({ valor: c.nome, rotulo: c.nome, total: c.total }))}
+            selecionados={campiFiltro}
+            onChange={setCampiEscolhidos}
+            disabled={campiOferecidos.length === 0}
+            className={styles.filterMulti}
+          />
+          <MultiSelect
+            rotulo="Unidades"
+            placeholder={
+              !instituicaoFiltro
                 ? "Unidades / Departamentos (escolha a instituição)"
                 : unidadesOferecidas.length > 0
                   ? `Unidades da ${instituicaoFiltro}`
-                  : `Sem unidades cadastradas para ${instituicaoFiltro}`}
-            </option>
-            {gruposDeUnidades.map((g) => (
-              <optgroup key={g.sigla} label={g.sigla}>
-                {g.unidades.map((u) => (
-                  <option key={`${g.sigla}|${u.nome}`} value={u.nome}>
-                    {u.nome} ({u.total})
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
+                  : `Sem unidades cadastradas para ${instituicaoFiltro}`
+            }
+            opcoes={gruposDeUnidades.flatMap((g) => g.unidades.map((u) => ({ valor: u.nome, rotulo: u.nome, total: u.total })))}
+            selecionados={unidadesFiltro}
+            onChange={setUnidadesEscolhidas}
+            disabled={unidadesOferecidas.length === 0}
+            className={styles.filterMulti}
+          />
           {/* Grandes áreas do CNPq, na ordem fixa da tabela, só as que têm projeto no recorte atual. */}
           <select
             value={areaFiltro}
@@ -546,7 +567,7 @@ export default function ProjetosPage() {
                 </div>
                 {/*
                   Tags em ordem fixa, do mais geral ao mais específico:
-                  tipo (Pesquisa/Extensão) → área do conhecimento → instituição → unidade → ano → remoto.
+                  tipo (Pesquisa/Extensão) → área do conhecimento → instituição → campus → unidade → ano → remoto.
                   A situação fica fora do grupo, à direita, como indicador de estado,
                   para não virar um item solto quando as tags quebram de linha.
                 */}
@@ -657,6 +678,9 @@ export default function ProjetosPage() {
                 )}
               {selectedProjeto.instituicao && (
                 <div className={modalStyles.infoLine}><strong>Instituição:</strong> {selectedProjeto.instituicao}</div>
+              )}
+              {selectedProjeto.campus && (
+                <div className={modalStyles.infoLine}><strong>Campus:</strong> {selectedProjeto.campus}</div>
               )}
               {selectedProjeto.unidade && (
                 <div className={modalStyles.infoLine}><strong>Unidade/Departamento:</strong> {selectedProjeto.unidade}</div>

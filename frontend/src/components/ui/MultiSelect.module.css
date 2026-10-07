@@ -1,0 +1,124 @@
+.raiz {
+  position: relative;
+  min-width: 0;
+}
+
+.botao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--surface-border, var(--border));
+  border-radius: var(--radius-md);
+  background: var(--surface, var(--bg-primary));
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.botao:hover:not(:disabled),
+.botao:focus-visible {
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 3px rgba(162, 66, 181, 0.15);
+  outline: none;
+}
+
+.botao:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.botaoAtivo {
+  border-color: var(--primary-light);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.resumo {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.seta {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.lista {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 4px);
+  left: 0;
+  width: max(100%, 280px);
+  max-width: min(90vw, 520px);
+  max-height: 320px;
+  overflow-y: auto;
+  padding: var(--space-xs);
+  border: 1px solid var(--surface-border, var(--border));
+  border-radius: var(--radius-md);
+  background: var(--surface, var(--bg-primary));
+  box-shadow: var(--surface-shadow, var(--shadow-lg));
+}
+
+.limpar {
+  display: block;
+  width: 100%;
+  margin-bottom: var(--space-xs);
+  padding: 0.4rem 0.6rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--primary-50);
+  color: var(--primary);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.opcao {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.opcao:hover {
+  background: var(--primary-50);
+}
+
+.opcao input {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+}
+
+.opcaoRotulo {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.total {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.vazio {
+  padding: var(--space-sm);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}

@@ -67,6 +67,12 @@
 }
 .filterInput:focus { border-color: var(--primary); }
 
+/* Seleção múltipla (campi e unidades) alinhada aos demais filtros. */
+.filterMulti {
+  width: 240px;
+  max-width: 100%;
+}
+
 .checkboxLabel {
   display: flex;
   align-items: center;
