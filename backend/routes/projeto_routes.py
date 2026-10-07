@@ -54,7 +54,8 @@ async def buscar_projetos_route(
     tipos: Optional[str] = Query(None),
     modulo: Optional[Modulo] = Query(None, description="Pesquisa ou extensão"),
     tipo_sigaa: Optional[Modulo] = Query(None, deprecated=True, description="Nome antigo de `modulo`"),
-    unidade: Optional[str] = Query(None, max_length=300, description="Unidade/departamento"),
+    unidade: Optional[List[str]] = Query(None, description="Unidade/departamento (repita o parâmetro para várias)"),
+    campus: Optional[List[str]] = Query(None, description="Campus (repita o parâmetro para vários)"),
     instituicao: Optional[str] = Query(None, max_length=200, description="Instituição (sigla ou nome; ex.: UNIR, UNIRIO)"),
     incluir_inativos: bool = Query(False, description="Inclui projetos inativos/finalizados"),
     last_id: Optional[str] = Query(None, description="ID do último item (paginação por cursor)"),
@@ -69,6 +70,7 @@ async def buscar_projetos_route(
         tipos=tipos,
         modulo=modulo or tipo_sigaa,
         unidade=unidade,
+        campus=campus,
         instituicao=instituicao,
         incluir_inativos=incluir_inativos,
         last_id=last_id,
@@ -97,14 +99,15 @@ async def listar_filtros_route(
     q: Optional[str] = Query(None, max_length=200),
     modulo: Optional[Modulo] = Query(None, description="Pesquisa ou extensão"),
     instituicao: Optional[str] = Query(None, max_length=200),
-    unidade: Optional[str] = Query(None, max_length=300),
+    unidade: Optional[List[str]] = Query(None),
+    campus: Optional[List[str]] = Query(None),
     remoto: bool = False,
 ):
-    """Opções de filtro: instituições > unidades/departamentos, com contagens, e
+    """Opções de filtro: instituições > unidades/departamentos e campi, com contagens, e
     as grandes áreas do CNPq com projetos no recorte dado por `q`, `modulo`,
     `instituicao`, `unidade` e `remoto` (os mesmos parâmetros da busca)."""
     return await listar_filtros_controller(q=q, modulo=modulo, instituicao=instituicao, unidade=unidade,
-                                           remoto=remoto)
+                                           remoto=remoto, campus=campus)
 
 
 @router.get("/projetos/fontes/status", response_model=FontesStatusResponse)

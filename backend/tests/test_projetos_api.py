@@ -194,7 +194,7 @@ async def test_filtros_incluem_instituicao_livre_dos_projetos_manuais(api, base)
     insts = (await api.get("/api/projetos/filtros")).json()["instituicoes"]
     assert [i["sigla"] for i in insts] == ["UNIR", "UNIRIO", "Universidade Federal de Minas Gerais"]
     assert insts[2] == {"sigla": "Universidade Federal de Minas Gerais", "rotulo": "Universidade Federal de Minas Gerais",
-                        "externa": False, "total": 1, "modulos": {}, "unidades": []}
+                        "externa": False, "total": 1, "modulos": {}, "unidades": [], "campi": []}
     # e o valor é aceito pelo filtro da busca (sem 422)
     r = await api.get("/api/projetos/buscar", params={"instituicao": "Universidade Federal de Minas Gerais"})
     assert titulos(r) == ["Manual com instituição"]

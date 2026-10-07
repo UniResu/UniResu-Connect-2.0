@@ -125,6 +125,7 @@ async def migrar_dados(db) -> None:
     """Migrações leves de dados, independentes dos índices (uma falha em
     create_index não pode impedir que rodem). Idempotentes."""
     from services.areas import garantir_area_conhecimento
+    from services.campi import garantir_campus
     from services.sigaa.repositorio import garantir_modulo
     from services.usernames import preencher_usernames
     from jobs.seed_forum import seed_forum
@@ -156,6 +157,13 @@ async def migrar_dados(db) -> None:
             logger.info("Username gerado para %d usuário(s) sem o campo.", preenchidos)
     except Exception as e:
         logger.error("Falha no backfill de usernames: %s", e)
+
+    try:
+        campi = await garantir_campus(db)
+        if campi:
+            logger.info("Campo `campus` preenchido em %d projetos.", campi)
+    except Exception as e:
+        logger.error("Falha ao preencher o campus dos projetos: %s", e)
 
     try:
         niveis = await migrar_niveis_academicos(db)

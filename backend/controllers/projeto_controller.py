@@ -7,7 +7,7 @@ com grandes volumes de dados.
 
 import re
 from datetime import timezone
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional, Union
 from bson import ObjectId
 from database.connection import Database
 from services.areas import AREAS_CONHECIMENTO, classificar_area
@@ -69,6 +69,14 @@ def formatar_projeto_publico(doc: Dict[str, Any]) -> Dict[str, Any]:
     return doc
 
 
+def _um_ou_varios(valor: Union[str, List[str]]):
+    """Valor exato ou `$in` quando o filtro recebe vários valores."""
+    if isinstance(valor, str):
+        return valor
+    lista = [v for v in valor if v]
+    return lista[0] if len(lista) == 1 else {"$in": lista}
+
+
 def montar_filtro_busca(
     q: Optional[str] = None,
     local: Optional[str] = None,
@@ -76,9 +84,10 @@ def montar_filtro_busca(
     remoto: bool = False,
     tipos: Optional[str] = None,
     modulo: Optional[str] = None,
-    unidade: Optional[str] = None,
+    unidade: Union[str, List[str], None] = None,
     instituicao: Optional[str] = None,
     incluir_inativos: bool = False,
+    campus: Union[str, List[str], None] = None,
 ) -> Dict[str, Any]:
     """Filtro do MongoDB para a busca pública. Também é usado pelas opções de
     filtro (`/projetos/filtros`), para que a contagem por área reflita o mesmo
@@ -91,8 +100,10 @@ def montar_filtro_busca(
         remoto: Filtro para projetos remotos.
         tipos: Lista de tipos separados por vírgula.
         modulo: "pesquisa" ou "extensao" (projetos importados do SIGAA/UNIR ou da UNIRIO).
-        unidade: Unidade/departamento (valor exato, vindo de /projetos/unidades).
+        unidade: Unidade/departamento (valor exato, vindo de /projetos/filtros);
+            uma lista seleciona vários de uma vez.
         instituicao: Sigla da instituição (ex.: "UNIR", "UNIRIO").
+        campus: Campus (valor exato de /projetos/filtros); uma lista seleciona vários.
         incluir_inativos: Se False (padrão), mostra só projetos ativos e em
             execução; projetos manuais, sem situação, contam como ativos.
     """
@@ -113,7 +124,9 @@ def montar_filtro_busca(
     if modulo:
         query_filter["modulo"] = modulo
     if unidade:
-        query_filter["unidade"] = unidade
+        query_filter["unidade"] = _um_ou_varios(unidade)
+    if campus:
+        query_filter["campus"] = _um_ou_varios(campus)
     if instituicao:
         query_filter["instituicao"] = instituicao
     if local:
@@ -144,7 +157,8 @@ async def buscar_projetos_controller(
     remoto: bool = False,
     tipos: Optional[str] = None,
     modulo: Optional[str] = None,
-    unidade: Optional[str] = None,
+    unidade: Union[str, List[str], None] = None,
+    campus: Union[str, List[str], None] = None,
     instituicao: Optional[str] = None,
     incluir_inativos: bool = False,
     last_id: Optional[str] = None,
@@ -166,7 +180,7 @@ async def buscar_projetos_controller(
     page_size = min(page_size, 50)
 
     query_filter = montar_filtro_busca(q=q, local=local, area=area, remoto=remoto, tipos=tipos, modulo=modulo,
-                                       unidade=unidade, instituicao=instituicao, incluir_inativos=incluir_inativos)
+                                       unidade=unidade, campus=campus, instituicao=instituicao, incluir_inativos=incluir_inativos)
 
     # Paginação por cursor (mais eficiente que skip/limit para grandes volumes)
     if last_id:
@@ -226,8 +240,9 @@ async def listar_filtros_controller(
     q: Optional[str] = None,
     modulo: Optional[str] = None,
     instituicao: Optional[str] = None,
-    unidade: Optional[str] = None,
+    unidade: Union[str, List[str], None] = None,
     remoto: bool = False,
+    campus: Union[str, List[str], None] = None,
 ) -> Dict[str, Any]:
     """Opções de filtro da busca.
 
@@ -246,13 +261,14 @@ async def listar_filtros_controller(
     """
     db = Database.get_db()
     areas = await contar_por_area(db, montar_filtro_busca(q=q, modulo=modulo, instituicao=instituicao,
-                                                          unidade=unidade, remoto=remoto))
+                                                          unidade=unidade, remoto=remoto, campus=campus))
     siglas = list(INSTITUICOES)
     rotulos = {sigla: f.rotulo for sigla, f in INSTITUICOES.items()}
 
     pipeline = [
         {"$match": {**filtro_visiveis(), "instituicao": {"$in": siglas}}},
-        {"$group": {"_id": {"instituicao": "$instituicao", "unidade": "$unidade", "modulo": "$modulo"},
+        {"$group": {"_id": {"instituicao": "$instituicao", "unidade": "$unidade", "campus": "$campus",
+                            "modulo": "$modulo"},
                     "total": {"$sum": 1}}},
     ]
     grupos: Dict[str, Dict[str, Any]] = {}
@@ -261,7 +277,7 @@ async def listar_filtros_controller(
         inst = grupos.setdefault(chave["instituicao"], {"sigla": chave["instituicao"],
                                                         "rotulo": rotulos.get(chave["instituicao"]),
                                                         "externa": True, "total": 0,
-                                                        "modulos": {}, "unidades": {}})
+                                                        "modulos": {}, "unidades": {}, "campi": {}})
         inst["total"] += g["total"]
         modulo = chave.get("modulo")
         if modulo:
@@ -271,6 +287,11 @@ async def listar_filtros_controller(
             unidade["total"] += g["total"]
             if modulo:
                 unidade["modulos"][modulo] = unidade["modulos"].get(modulo, 0) + g["total"]
+        if chave.get("campus"):
+            campus_g = inst["campi"].setdefault(chave["campus"], {"total": 0, "modulos": {}})
+            campus_g["total"] += g["total"]
+            if modulo:
+                campus_g["modulos"][modulo] = campus_g["modulos"].get(modulo, 0) + g["total"]
 
     manuais = await db.projetos.distinct(
         "instituicao", {**filtro_visiveis(), "origem": {"$exists": False}, "instituicao": {"$nin": [None, ""]}})
@@ -280,7 +301,7 @@ async def listar_filtros_controller(
         total = await db.projetos.count_documents({**filtro_visiveis(), "origem": {"$exists": False},
                                                    "instituicao": nome})
         grupos[nome] = {"sigla": nome, "rotulo": nome, "externa": False, "total": total, "modulos": {},
-                        "unidades": {}}
+                        "unidades": {}, "campi": {}}
 
     instituicoes = []
     for sigla in sorted(grupos, key=lambda s: (not grupos[s]["externa"], normalizar(s))):
@@ -293,6 +314,8 @@ async def listar_filtros_controller(
             "modulos": g["modulos"],
             "unidades": [{"nome": u, **dados} for u, dados in sorted(g["unidades"].items(),
                                                                       key=lambda kv: normalizar(kv[0]))],
+            "campi": [{"nome": c, **dados} for c, dados in sorted(g["campi"].items(),
+                                                                   key=lambda kv: normalizar(kv[0]))],
         })
     return {"instituicoes": instituicoes, "areas": areas}
 

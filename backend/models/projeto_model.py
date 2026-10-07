@@ -52,6 +52,10 @@ class ProjetoPublicoResponse(BaseModel):
     area_estudo: Optional[str] = None
     # Grande área do CNPq em que o projeto foi classificado (filtro "Área do conhecimento").
     area_conhecimento: Optional[str] = None
+    # Campus deduzido da unidade (filtro "Campus").
+    campus: Optional[str] = None
+    # Extensão no SIGAA: quem assina como responsável pela ação (pode ser discente).
+    responsavel_acao: Optional[str] = None
     e_remoto: Optional[bool] = None
     nome_professor: Optional[str] = None
     autor_id: Optional[str] = None
@@ -99,6 +103,7 @@ class InstituicaoFiltro(BaseModel):
     total: int = 0
     modulos: Dict[str, int] = {}    # {"pesquisa": n, "extensao": n}
     unidades: List[UnidadeFiltro] = []
+    campi: List[UnidadeFiltro] = []  # campus deduzido da unidade (ver services/campi.py)
 
 
 class AreaFiltro(BaseModel):
