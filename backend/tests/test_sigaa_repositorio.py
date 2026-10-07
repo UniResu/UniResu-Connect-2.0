@@ -241,3 +241,19 @@ def test_config_por_ambiente_escolhe_a_instituicao(monkeypatch):
     monkeypatch.setenv("SIGAA_INSTITUICAO", "XPTO")
     with _pytest.raises(ValueError):
         SigaaConfig.from_env()
+
+
+async def test_troca_de_coordenacao_mantem_o_mesmo_documento(db):
+    from services.fontes import SIGAA
+    from services.sigaa.repositorio import upsert_projetos
+
+    reg = {"modulo": "extensao", "sigaa_id": "4191", "titulo": "Busca ativa de tuberculose",
+           "coordenador": "MATHEUS", "ano": "2026", "situacao": "EM EXECUÇÃO"}
+    a = await upsert_projetos(db, [reg], fonte=SIGAA)
+    antes = await db.projetos.find_one({"sigaa_id": "4191"})
+
+    b = await upsert_projetos(db, [{**reg, "coordenador": "JANDRA"}], fonte=SIGAA)
+    assert a.novos == 1 and b.novos == 0 and b.atualizados == 1
+    docs = await db.projetos.find({"sigaa_id": "4191"}).to_list(10)
+    assert len(docs) == 1 and docs[0]["_id"] == antes["_id"]
+    assert docs[0]["nome_professor"] == "JANDRA" and docs[0]["chave_sigaa"] == b.chaves[0]

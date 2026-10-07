@@ -99,22 +99,20 @@ async def _confirmar_presenca(db, registro: dict, fonte: Fonte, agora: datetime)
     return doc[fonte.campo_chave]
 
 
-async def _promover_chave_incompleta(db, registro: dict, chave: str, fonte: Fonte) -> None:
-    """Item salvo antes sem coordenador (detalhe falhou) e que agora veio
-    completo: atualiza a chave do doc existente em vez de criar outro, para
-    preservar o _id (candidaturas apontam para ele)."""
+async def _realinhar_chave(db, registro: dict, chave: str, fonte: Fonte) -> None:
+    """A chave natural inclui título e coordenação, então ela muda quando o
+    detalhe antes falhou (sem coordenador), quando a fonte corrige o título
+    ou quando a coordenação de fato muda. Se já existe um doc com o mesmo id
+    na fonte e nenhum com a chave nova, a chave desse doc é atualizada em vez
+    de criar outro: o _id é preservado (candidaturas apontam para ele) e o
+    antigo não vira um duplicado inativo."""
     id_fonte = _id_fonte(registro, fonte)
-    if not id_fonte or not registro.get("coordenador"):
+    if not id_fonte:
         return
     if await db.projetos.find_one({**_escopo(fonte), fonte.campo_chave: chave}, {"_id": 1}):
         return
     await db.projetos.update_one(
-        {
-            **_escopo(fonte),
-            "modulo": registro["modulo"],
-            fonte.campo_id: id_fonte,
-            "nome_professor": None,
-        },
+        {**_escopo(fonte), "modulo": registro["modulo"], fonte.campo_id: id_fonte},
         {"$set": {fonte.campo_chave: chave}},
     )
 
@@ -185,7 +183,7 @@ async def upsert_projetos(
             }
         else:
             chave = chave_natural(reg, fonte)
-            await _promover_chave_incompleta(db, reg, chave, fonte)
+            await _realinhar_chave(db, reg, chave, fonte)
             campos = _campos_completos(reg, fonte, agora)
 
         resultado = await db.projetos.update_one(
