@@ -1,0 +1,42 @@
+# Diagnóstico de fontes de dados públicas que o ambiente de desenvolvimento
+# não alcança (portais de universidades, APIs de dados abertos). Baixa cada
+# URL informada e imprime no log o status, os cabeçalhos e o início do corpo.
+# Só leitura: não usa segredos nem grava nada.
+
+name: Diagnóstico de URL
+
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: "URLs separadas por espaço"
+        required: true
+      bytes:
+        description: "Quantos bytes do início de cada resposta imprimir"
+        required: false
+        default: "6000"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostico:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Baixar e mostrar
+        env:
+          URLS: ${{ inputs.urls }}
+          BYTES: ${{ inputs.bytes }}
+        run: |
+          for url in $URLS; do
+            echo "=================================================================="
+            echo "URL: $url"
+            curl -sS -L -m 60 -A "UniResuConnect/2.1 (+https://uniresu.org; diagnostico)" \
+              -D /tmp/h.txt -o /tmp/b.bin "$url" || echo "curl falhou ($?)"
+            echo "--- cabeçalhos"; cat /tmp/h.txt 2>/dev/null | tr -d '\r'
+            echo "--- tamanho: $(stat -c %s /tmp/b.bin 2>/dev/null || echo 0) bytes"
+            echo "--- início do corpo"
+            head -c "$BYTES" /tmp/b.bin 2>/dev/null | iconv -f utf-8 -t utf-8 -c; echo
+            rm -f /tmp/h.txt /tmp/b.bin
+          done
