@@ -70,12 +70,12 @@ function IconeFuncao({ funcao }: { funcao: FuncaoMembro }) {
           <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
         </svg>
       );
-    case "cso": // frasco de laboratório
+    case "cso": // átomo: ciência como método, não bancada de laboratório
       return (
-        <svg {...comum}>
-          <path d="M10 2v7.5a2 2 0 0 1-.2.9l-5.1 10.1A1 1 0 0 0 5.6 22h12.8a1 1 0 0 0 .9-1.5L14.2 10.4a2 2 0 0 1-.2-.9V2" />
-          <path d="M8.5 2h7" />
-          <path d="M7 16h10" />
+        <svg {...comum} strokeWidth={2}>
+          <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
+          <path d="M20.2 20.2c2.04-2.03.02-7.36-4.5-11.9-4.54-4.52-9.87-6.54-11.9-4.5-2.04 2.03-.02 7.36 4.5 11.9 4.54 4.52 9.87 6.54 11.9 4.5Z" />
+          <path d="M15.7 15.7c4.52-4.54 6.54-9.87 4.5-11.9-2.03-2.04-7.36-.02-11.9 4.5-4.52 4.54-6.54 9.87-4.5 11.9 2.03 2.04 7.36.02 11.9-4.5Z" />
         </svg>
       );
     case "orientador": // livro aberto
