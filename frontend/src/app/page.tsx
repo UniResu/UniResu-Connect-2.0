@@ -1,5 +1,6 @@
 "use client";
 import styles from "./page.module.css";
+import AvatarMembro from "@/components/home/AvatarMembro";
 import Link from "next/link";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Autoplay } from "swiper/modules";
@@ -59,37 +60,37 @@ export default function HomePage() {
               <h3>Equipe de Alunos</h3>
               <div className={styles.avatarGrid}>
                 <div className={styles.teamMember}>
-                  <div className={styles.avatar}>DP</div>
+                  <AvatarMembro nome="Daniel Pereira Santos da Silva" funcao="aluno" />
                   <div className={styles.memberInfo}>
                     <p className={styles.memberName}>Daniel Pereira Santos da Silva</p>
                   </div>
                 </div>
                 <div className={styles.teamMember}>
-                  <div className={styles.avatar}>JG</div>
+                  <AvatarMembro nome="Juliana Gimenes Müller" funcao="aluno" />
                   <div className={styles.memberInfo}>
                     <p className={styles.memberName}>Juliana Gimenes Müller</p>
                   </div>
                 </div>
                 <div className={styles.teamMember}>
-                  <div className={styles.avatar}>LC</div>
+                  <AvatarMembro nome="Lucas Eduardo Sanches Cordeiro" funcao="aluno" />
                   <div className={styles.memberInfo}>
                     <p className={styles.memberName}>Lucas Eduardo Sanches Cordeiro</p>
                   </div>
                 </div>
                 <div className={styles.teamMember}>
-                  <div className={styles.avatar}>ME</div>
+                  <AvatarMembro nome="Maria Eduarda Siqueira de Medeiros" funcao="aluno" />
                   <div className={styles.memberInfo}>
                     <p className={styles.memberName}>Maria Eduarda Siqueira de Medeiros</p>
                   </div>
                 </div>
                 <div className={styles.teamMember}>
-                  <div className={styles.avatar}>MG</div>
+                  <AvatarMembro nome="Matheus Gabriel Ramos de Melo" funcao="aluno" />
                   <div className={styles.memberInfo}>
                     <p className={styles.memberName}>Matheus Gabriel Ramos de Melo</p>
                   </div>
                 </div>
                 <div className={styles.teamMember}>
-                  <div className={styles.avatar}>PM</div>
+                  <AvatarMembro nome="Pedro de Magalhães Leitão" funcao="aluno" />
                   <div className={styles.memberInfo}>
                     <p className={styles.memberName}>Pedro de Magalhães Leitão</p>
                   </div>
@@ -104,21 +105,21 @@ export default function HomePage() {
               <h3>Equipe de Desenvolvimento</h3>
               <div className={styles.avatarGrid}>
                 <div className={styles.teamMember}>
-                  <div className={styles.avatar}>DP</div>
+                  <AvatarMembro nome="Daniel Pereira Santos da Silva" funcao="dev" />
                   <div className={styles.memberInfo}>
                     <p className={styles.memberName}>Daniel Pereira Santos da Silva</p>
                     <p className={styles.memberRole}>Engenheiro de Software</p>
                   </div>
                 </div>
                 <div className={styles.teamMember}>
-                  <div className={styles.avatar}>JG</div>
+                  <AvatarMembro nome="Juliana Gimenes Müller" funcao="cto" />
                   <div className={styles.memberInfo}>
                     <p className={styles.memberName}>Juliana Gimenes Müller</p>
                     <p className={styles.memberRole}>Co-fundadora & CTO</p>
                   </div>
                 </div>
                 <div className={styles.teamMember}>
-                  <div className={styles.avatar}>PM</div>
+                  <AvatarMembro nome="Pedro de Magalhães Leitão" funcao="dev" />
                   <div className={styles.memberInfo}>
                     <p className={styles.memberName}>Pedro de Magalhães Leitão</p>
                     <p className={styles.memberRole}>Engenheiro de Software</p>
@@ -134,21 +135,21 @@ export default function HomePage() {
               <h3>Equipe de Gerenciamento</h3>
               <div className={styles.avatarGrid}>
                 <div className={styles.teamMember}>
-                  <div className={styles.avatar}>LC</div>
+                  <AvatarMembro nome="Lucas Eduardo Sanches Cordeiro" funcao="ceo" />
                   <div className={styles.memberInfo}>
                     <p className={styles.memberName}>Lucas Eduardo Sanches Cordeiro</p>
                     <p className={styles.memberRole}>Co-fundador & CEO</p>
                   </div>
                 </div>
                 <div className={styles.teamMember}>
-                  <div className={styles.avatar}>ME</div>
+                  <AvatarMembro nome="Maria Eduarda Siqueira de Medeiros" funcao="cmo" />
                   <div className={styles.memberInfo}>
                     <p className={styles.memberName}>Maria Eduarda Siqueira de Medeiros</p>
                     <p className={styles.memberRole}>Co-fundadora & CMO</p>
                   </div>
                 </div>
                 <div className={styles.teamMember}>
-                  <div className={styles.avatar}>MG</div>
+                  <AvatarMembro nome="Matheus Gabriel Ramos de Melo" funcao="cso" />
                   <div className={styles.memberInfo}>
                     <p className={styles.memberName}>Matheus Gabriel Ramos de Melo</p>
                     <p className={styles.memberRole}>Co-fundador & CSO</p>
@@ -164,13 +165,13 @@ export default function HomePage() {
               <h3>Orientadores</h3>
               <div className={styles.avatarGrid}>
                 <div className={styles.teamMember}>
-                  <div className={styles.avatar}>CR</div>
+                  <AvatarMembro nome="Prof. Dr. Carlos Eduardo Raymundo" funcao="orientador" />
                   <div className={styles.memberInfo}>
                     <p className={styles.memberName}>Prof. Dr. Carlos Eduardo Raymundo</p>
                   </div>
                 </div>
                 <div className={styles.teamMember}>
-                  <div className={styles.avatar}>TM</div>
+                  <AvatarMembro nome="Prof. Dr. Thayse Moraes de Moraes" funcao="orientador" />
                   <div className={styles.memberInfo}>
                     <p className={styles.memberName}>Prof. Dr. Thayse Moraes de Moraes</p>
                   </div>
