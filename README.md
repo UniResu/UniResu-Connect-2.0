@@ -94,15 +94,17 @@ A aba **Projetos Acadêmicos** lista, além dos projetos cadastrados pelos profe
 
 **Sync com a UFV**
 
-* Fonte: portal de dados abertos da Universidade Federal de Viçosa ([dados.ufv.br](https://dados.ufv.br/dataset/projetos-e-programas-de-extensao)), conjunto "Projetos e programas de extensão". `backend/jobs/sync_ufv.py` consulta a API DataStore do CKAN com SQL e pede só os projetos e programas em execução hoje (início no passado e término no futuro), em páginas de 200. São duas ou três requisições e a execução termina em segundos, sem raspar páginas.
-* O conjunto de projetos de pesquisa da UFV também está no portal, mas os dados param em 2010, então só a extensão é coletada.
-* Grava com `origem: "ufv"`, `instituicao: "UFV"`, `modulo: "extensao"` e chave natural em `chave_ufv`. O coordenador vem da lista de envolvidos (quem coordena no período atual). O conjunto não traz e-mail nem departamento: para receber candidaturas, cadastre o contato manualmente (abaixo). A área CNPq fica em `area_cnpq`.
-* Projetos da UFV que saem da consulta (terminaram) ficam `ativo: false`. Uma consulta vazia ou com erro é falha e não desativa nada.
-* Agendamento: toda segunda às 10:30 UTC (`.github/workflows/sync-ufv.yml`), com modos `sync` e `dry-run` na execução manual.
+* Fonte: portal de dados abertos da Universidade Federal de Viçosa ([dados.ufv.br](https://dados.ufv.br/dataset/projetos-e-programas-de-extensao)). `backend/jobs/sync_ufv.py` coleta dois módulos:
+  * **Extensão**: conjunto "Projetos e programas de extensão", pela API DataStore do CKAN com SQL, pedindo só o que está em execução hoje (início no passado e término no futuro), em páginas de 200. São duas ou três requisições.
+  * **Pesquisa**: conjunto "Projetos de pesquisa". O DataStore desse recurso só tem as linhas até 2010, então o job baixa o CSV completo do recurso (uns 225 MB, uma linha por participante, atualizado todo mês) em uma única requisição e filtra localmente os projetos vigentes: situação `Registrado` (configurável em `UFV_PESQUISA_SITUACOES`), registrados nos últimos quatro anos (`UFV_PESQUISA_ANO_MINIMO`), já iniciados e sem data de término no passado. A coordenação é a pessoa com papel `Líder` (depois `Co-Líder`, depois `Executor`); a equipe inteira fica em `extras.equipe`. O link de detalhe aponta para a página pública do sistema de pesquisa da UFV, quando o projeto tem número de registro.
+* Grava com `origem: "ufv"`, `instituicao: "UFV"`, `modulo` `extensao` ou `pesquisa` e chave natural em `chave_ufv`. Os conjuntos não trazem e-mail: para receber candidaturas, cadastre o contato manualmente (abaixo). A área CNPq fica em `area_cnpq` (na pesquisa é a área específica, por exemplo "Ciência do Solo"); na pesquisa, `unidade` é a sigla do departamento.
+* Projetos da UFV que saem da coleta (terminaram) ficam `ativo: false`, módulo a módulo. Uma coleta vazia ou com erro em um módulo é falha daquele módulo e não desativa nada dele.
+* Agendamento: toda segunda às 10:30 UTC (`.github/workflows/sync-ufv.yml`), com modos `sync` e `dry-run` e a escolha dos módulos na execução manual.
 
   ```bash
   cd backend
   python -m jobs.sync_ufv --dry-run
+  UFV_MODULOS=pesquisa python -m jobs.sync_ufv --dry-run   # imprime também as contagens por situação e ano
   python -m jobs.sync_ufv
   ```
 

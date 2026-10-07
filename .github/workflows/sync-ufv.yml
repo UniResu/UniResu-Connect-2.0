@@ -1,6 +1,7 @@
-# Sync semanal dos projetos e programas de extensão da UFV, a partir do
-# portal de dados abertos da universidade (dados.ufv.br). Duas ou três
-# consultas à API do CKAN; termina em poucos segundos.
+# Sync semanal dos projetos da UFV, a partir do portal de dados abertos da
+# universidade (dados.ufv.br): extensão pela API do CKAN (duas ou três
+# consultas) e pesquisa pelo CSV completo do recurso (uns 225 MB, uma
+# requisição). Termina em poucos minutos.
 #
 # Mesmos pré-requisitos dos outros syncs: secret MONGO_URI do usuário dos
 # jobs e Network Access do Atlas liberado (ver README).
@@ -18,6 +19,18 @@ on:
         type: choice
         options: [sync, dry-run]
         default: sync
+      modulos:
+        description: "Módulos: extensao,pesquisa (vazio = ambos)"
+        required: false
+        default: ""
+      pesquisa_ano_minimo:
+        description: "Pesquisa: ignorar projetos registrados antes deste ano (vazio = quatro anos atrás)"
+        required: false
+        default: ""
+      pesquisa_situacoes:
+        description: "Pesquisa: situações do CSV consideradas vigentes (vazio = Registrado)"
+        required: false
+        default: ""
 
 concurrency:
   group: sync-ufv
@@ -55,3 +68,6 @@ jobs:
         env:
           MONGO_URI: ${{ secrets.MONGO_URI }}
           MONGO_DB_NAME: ${{ vars.MONGO_DB_NAME || 'UniResuDB' }}
+          UFV_MODULOS: ${{ inputs.modulos }}
+          UFV_PESQUISA_ANO_MINIMO: ${{ inputs.pesquisa_ano_minimo }}
+          UFV_PESQUISA_SITUACOES: ${{ inputs.pesquisa_situacoes }}

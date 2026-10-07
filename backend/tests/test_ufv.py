@@ -7,7 +7,7 @@ import pytest
 
 from jobs.sync_ufv import executar_sync
 from services.ufv import coleta
-from services.ufv.coleta import UfvConfig, coordenador_atual, registro_extensao
+from services.ufv.coleta import UfvConfig, coordenador_atual, registro_extensao, registro_pesquisa
 
 # Linha real do conjunto "Projetos e programas de extensão" (envolvidos encurtados).
 LINHA = {
@@ -25,6 +25,7 @@ LINHA = {
 }
 
 HOJE = date(2026, 10, 7)
+SO_EXTENSAO = {"extensao": (coleta.listar_extensao, registro_extensao)}
 
 
 def test_coordenador_vigente_e_o_do_periodo_atual():
@@ -88,7 +89,7 @@ def test_listar_extensao_pagina_ate_acabar():
 async def test_sync_grava_com_origem_ufv_e_desativa_encerrados(db):
     cfg = UfvConfig()
     run = await executar_sync(db, cfg, client=_ClienteCkan([[_linha(1), _linha(2)]]),
-                              listar=coleta.listar_extensao)
+                              coletores=SO_EXTENSAO)
     assert run["status"] == "sucesso" and run["modulos"]["extensao"]["novos"] == 2
     doc = await db.projetos.find_one({"ufv_id": "1"})
     assert doc["origem"] == "ufv" and doc["instituicao"] == "UFV" and doc["modulo"] == "extensao"
@@ -98,7 +99,7 @@ async def test_sync_grava_com_origem_ufv_e_desativa_encerrados(db):
     # o projeto 2 terminou: some da consulta e fica inativo; projetos de outras fontes não mudam
     await db.projetos.insert_one({"origem": "unirio", "modulo": "extensao", "titulo": "X", "ativo": True,
                                   "chave_unirio": "x"})
-    run = await executar_sync(db, cfg, client=_ClienteCkan([[_linha(1)]]), listar=coleta.listar_extensao)
+    run = await executar_sync(db, cfg, client=_ClienteCkan([[_linha(1)]]), coletores=SO_EXTENSAO)
     assert run["modulos"]["extensao"]["desativados"] == 1
     assert (await db.projetos.find_one({"ufv_id": "2"}))["ativo"] is False
     assert (await db.projetos.find_one({"origem": "unirio"}))["ativo"] is True
@@ -107,17 +108,17 @@ async def test_sync_grava_com_origem_ufv_e_desativa_encerrados(db):
 
 
 async def test_consulta_vazia_ou_com_erro_e_falha_e_nao_desativa(db):
-    await executar_sync(db, UfvConfig(), client=_ClienteCkan([[_linha(1)]]), listar=coleta.listar_extensao)
-    run = await executar_sync(db, UfvConfig(), client=_ClienteCkan([[]]), listar=coleta.listar_extensao)
+    await executar_sync(db, UfvConfig(), client=_ClienteCkan([[_linha(1)]]), coletores=SO_EXTENSAO)
+    run = await executar_sync(db, UfvConfig(), client=_ClienteCkan([[]]), coletores=SO_EXTENSAO)
     assert run["status"] == "falha" and "0 projetos" in run["erros"][0]["erro"]
-    run = await executar_sync(db, UfvConfig(), client=_ClienteCkan([], sucesso=False), listar=coleta.listar_extensao)
+    run = await executar_sync(db, UfvConfig(), client=_ClienteCkan([], sucesso=False), coletores=SO_EXTENSAO)
     assert run["status"] == "falha" and "consulta falhou" in run["erros"][0]["erro"]
     assert (await db.projetos.find_one({"ufv_id": "1"}))["ativo"] is True
 
 
 async def test_dry_run_nao_grava(capsys):
     run = await executar_sync(None, UfvConfig(), client=_ClienteCkan([[_linha(1)]]), dry_run=True,
-                              listar=coleta.listar_extensao)
+                              coletores=SO_EXTENSAO)
     assert run["status"] == "sucesso" and run["_id"] is None
     assert "Projeto 1" in capsys.readouterr().out
 
@@ -125,3 +126,121 @@ async def test_dry_run_nao_grava(capsys):
 @pytest.mark.parametrize("fin, esperado", [("Sim", "Com financiamento"), ("", None)])
 def test_financiamento(fin, esperado):
     assert registro_extensao({**LINHA, "Financiado": fin}, HOJE)["extras"].get("financiamento") == esperado
+
+
+# ── Pesquisa (CSV completo) ──────────────────────────────────────────────────
+
+CABECALHO = ("codigo_projeto;numero_registro;titulo;palavra_chave;ano;data_inicio;data_fim;situacao;natureza;"
+             "modalidade_projeto;modalidade_treinamento;grupo_pesquisa;linha_pesquisa;area_conhecimento_cnpq;"
+             "sigla_depto;nome_linha_pesquisa;local_execucao;num_convenio;tipo_financiamento;valor_financiamento;"
+             "outra_instituicao;nome_pessoa;tipo_participacao_projeto;resumo_dos_objetivos")
+
+
+def _csv(*linhas):
+    return ("﻿" + CABECALHO + "\n" + "\n".join(linhas) + "\n").encode("utf-8")
+
+
+def _linha_pesquisa(codigo, pessoa, funcao, situacao="Registrado", ano="2025.0", inicio="2025-03-01", fim="",
+                    registro="00000504460"):
+    return (f'{codigo};{registro};"Projeto {codigo}";"solo; água";{ano};{inicio};{fim};{situacao};Interno;'
+            f'Projeto Autônomo;Iniciação Científica;Grupo X;Linha Y;Ciência do Solo;DPS;Linha Y nome;Lab;;'
+            f'Financiamento;36000.0;;{pessoa};{funcao};Objetivo do projeto {codigo}')
+
+
+CSV_PESQUISA = _csv(
+    _linha_pesquisa(10, "ANA LIMA", "Membro"),
+    _linha_pesquisa(10, "JOSE SOUZA", "Líder"),
+    _linha_pesquisa(10, "RITA DIAS", "Executor"),
+    _linha_pesquisa(11, "PAULO REIS", "Executor", registro=""),                 # sem líder: executor coordena
+    _linha_pesquisa(12, "MARIA ALVES", "Líder", situacao="Concluído"),          # fora: concluído
+    _linha_pesquisa(13, "CARLOS NUNES", "Líder", ano="2015.0", inicio="2015-03-01"),  # fora: registrado há muito tempo
+    _linha_pesquisa(14, "LUCIA PRADO", "Líder", situacao="Seleção de IC - Projeto inscrito", ano="2027.0",
+                    inicio="2027-03-01"),                                      # fora: ainda não começou
+    _linha_pesquisa(15, "PEDRO MOTA", "Líder", fim="2026-01-31"),               # fora: terminou
+)
+
+
+class _RespostaCsv:
+    def __init__(self, conteudo):
+        self.content = conteudo
+
+
+class _ClienteCsv:
+    def __init__(self, conteudo=CSV_PESQUISA, ano_minimo=2022):
+        self.cfg = UfvConfig(pesquisa_ano_minimo=ano_minimo)
+        self.conteudo = conteudo
+        self.total_requisicoes = 0
+
+    def request_raw(self, method, url, **kw):
+        self.total_requisicoes += 1
+        assert url == self.cfg.url_csv_pesquisa
+        return _RespostaCsv(self.conteudo)
+
+
+def test_agrupa_so_os_projetos_vigentes():
+    estat = {}
+    grupos = coleta.listar_pesquisa(_ClienteCsv(), HOJE, estat)
+    assert sorted(g["codigo_projeto"] for g in grupos) == ["10", "11"]
+    assert estat["linhas"] == 8 and estat["projetos_vigentes"] == 2
+    assert estat["por_situacao_ano"][("Registrado", 2025)] == 5
+    g10 = next(g for g in grupos if g["codigo_projeto"] == "10")
+    assert [p["nome"] for p in g10["equipe"]] == ["ANA LIMA", "JOSE SOUZA", "RITA DIAS"]
+
+
+def test_registro_de_pesquisa():
+    grupos = {g["codigo_projeto"]: g for g in coleta.listar_pesquisa(_ClienteCsv(), HOJE)}
+    r = registro_pesquisa(grupos["10"])
+    assert r["modulo"] == "pesquisa" and r["ufv_id"] == "p10" and r["codigo"] == "00000504460"
+    assert r["titulo"] == "Projeto 10" and r["coordenador"] == "JOSE SOUZA" and r["email"] is None
+    assert r["unidade"] == "DPS" and r["ano"] == "2025" and r["situacao"] == "EM EXECUÇÃO"
+    assert r["categoria"] == "Iniciação Científica" and r["periodo_inicio"] == "2025-03-01" and r["periodo_fim"] is None
+    assert r["link_detalhe"] == "https://www2.dti.ufv.br/sisppg/scripts/projetos/verProjeto.php?registro=00000504460"
+    assert r["descricao"] == "Objetivo do projeto 10"
+    assert r["extras"]["area_cnpq"] == "Ciência do Solo" and r["extras"]["palavras_chave"] == ["solo", "água"]
+    assert r["extras"]["financiamento"] == "Com financiamento" and r["extras"]["linha_pesquisa"] == "Linha Y nome"
+    assert len(r["extras"]["equipe"]) == 3
+    r11 = registro_pesquisa(grupos["11"])
+    assert r11["coordenador"] == "PAULO REIS" and r11["link_detalhe"] is None and r11["codigo"] is None
+
+
+async def test_sync_dos_dois_modulos_desativa_por_modulo(db):
+    cfg = UfvConfig(pesquisa_ano_minimo=2022)
+    ckan = _ClienteCkan([[_linha(1)]])
+    csv_client = _ClienteCsv()
+
+    class _Cliente:
+        cfg = csv_client.cfg
+        total_requisicoes = 0
+
+        def get(self, *a, **kw):
+            return ckan.get(*a, **kw)
+
+        def request_raw(self, *a, **kw):
+            return csv_client.request_raw(*a, **kw)
+
+    coletores = {"extensao": (coleta.listar_extensao, registro_extensao),
+                 "pesquisa": (lambda c, hoje, estat: coleta.listar_pesquisa(c, HOJE, estat), registro_pesquisa)}
+    run = await executar_sync(db, cfg, client=_Cliente(), coletores=coletores)
+    assert run["status"] == "sucesso"
+    assert run["modulos"]["extensao"]["novos"] == 1 and run["modulos"]["pesquisa"]["novos"] == 2
+    doc = await db.projetos.find_one({"ufv_id": "p10"})
+    assert doc["origem"] == "ufv" and doc["modulo"] == "pesquisa" and doc["nome_professor"] == "JOSE SOUZA"
+    assert doc["link_detalhe"].endswith("registro=00000504460")
+
+    # pesquisa com falha (CSV vazio) não desativa a pesquisa nem encosta na extensão
+    csv_client.conteudo = _csv()
+    ckan.paginas = [[_linha(1)]]
+    run = await executar_sync(db, cfg, client=_Cliente(), coletores=coletores)
+    assert run["status"] == "falha" and run["modulos"]["pesquisa"]["status"] == "falha"
+    assert run["modulos"]["extensao"]["status"] == "sucesso"
+    assert (await db.projetos.find_one({"ufv_id": "p10"}))["ativo"] is True
+    assert (await db.projetos.find_one({"ufv_id": "1"}))["ativo"] is True
+
+
+def test_config_de_pesquisa_pelo_ambiente(monkeypatch):
+    monkeypatch.setenv("UFV_MODULOS", "pesquisa")
+    monkeypatch.setenv("UFV_PESQUISA_SITUACOES", "Registrado, Revisado")
+    monkeypatch.setenv("UFV_PESQUISA_ANO_MINIMO", "2020")
+    cfg = UfvConfig.from_env()
+    assert cfg.modulos == ["pesquisa"] and cfg.pesquisa_situacoes == ("Registrado", "Revisado")
+    assert cfg.pesquisa_ano_minimo == 2020
