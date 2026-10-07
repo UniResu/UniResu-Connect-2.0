@@ -16,10 +16,10 @@ on:
   workflow_dispatch:
     inputs:
       tarefa:
-        description: "Tarefa"
+        description: "Tarefa (status = só lê e imprime um resumo do banco)"
         type: choice
-        options: [remover-projetos-teste]
-        default: remover-projetos-teste
+        options: [status, remover-projetos-teste]
+        default: status
       confirmar:
         description: "Apagar de fato (desmarcado = só listar)"
         type: boolean
@@ -58,6 +58,13 @@ jobs:
 
       - name: Instalar dependências
         run: pip install -r requirements.txt
+
+      - name: Resumo do banco
+        if: inputs.tarefa == 'status'
+        run: python -m jobs.status_banco
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI_ADMIN || secrets.MONGO_URI }}
+          MONGO_DB_NAME: ${{ vars.MONGO_DB_NAME || 'UniResuDB' }}
 
       - name: Remover projetos de teste
         if: inputs.tarefa == 'remover-projetos-teste'
