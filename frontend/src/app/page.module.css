@@ -128,6 +128,19 @@
   }
 }
 
+/* Celulares estreitos: duas colunas de avatares, senão a lista de membros
+   vira uma coluna única e a seção fica longa demais. */
+@media (max-width: 480px) {
+  .avatarGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px 12px;
+  }
+
+  .memberName {
+    font-size: 1rem;
+  }
+}
+
 /* Carrossel (só no desktop): os slides trocam por fade, sobrepostos na mesma
    posição, e o container ganha respiro para os bullets. */
 .swiperContainer {
@@ -136,23 +149,29 @@
   padding-bottom: 4rem !important;
 }
 
-.swiperSlideCustom {
+/* O CSS do Swiper entra depois deste módulo e define height: 100% e
+   display: block no slide, por isso os seletores abaixo levam o container
+   junto, para vencer na especificidade. Com height: auto o slide estica até
+   a altura do slide mais alto, e os cards dentro dele acompanham, de modo
+   que a troca por fade não muda a altura da seção. */
+.swiperContainer :global(.swiper-wrapper) {
+  align-items: stretch;
+}
+
+.swiperContainer .swiperSlideCustom {
   display: flex;
   height: auto;
   justify-content: center;
-}
-
-/* No carrossel o card estica até a altura do slide mais alto, para a troca
-   por fade não mudar a altura da seção. */
-.swiperSlideCustom .card {
-  height: 100%;
+  align-items: stretch;
 }
 
 /* Cards das equipes: mais largos que os institucionais, por causa da grade
-   de avatares. */
+   de avatares, e com o conteúdo centralizado na vertical, já que os cards
+   com menos membros ficam com a mesma altura dos demais. */
 .cardEquipe {
   width: 100%;
   max-width: 800px;
+  justify-content: center;
 }
 
 .swiperContainer :global(.swiper-pagination-bullet) {
