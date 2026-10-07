@@ -18,8 +18,12 @@ on:
       tarefa:
         description: "Tarefa (status = só lê e imprime um resumo do banco)"
         type: choice
-        options: [status, remover-projetos-teste]
+        options: [status, consultar, remover-projetos-teste]
         default: status
+      termo:
+        description: "Tarefa consultar: trecho do título do projeto a procurar"
+        required: false
+        default: ""
       confirmar:
         description: "Apagar de fato (desmarcado = só listar)"
         type: boolean
@@ -63,6 +67,14 @@ jobs:
         if: inputs.tarefa == 'status'
         run: python -m jobs.status_banco
         env:
+          MONGO_URI: ${{ secrets.MONGO_URI_ADMIN || secrets.MONGO_URI }}
+          MONGO_DB_NAME: ${{ vars.MONGO_DB_NAME || 'UniResuDB' }}
+
+      - name: Consultar projetos pelo título
+        if: inputs.tarefa == 'consultar'
+        run: python -m jobs.consultar_projeto "$TERMO"
+        env:
+          TERMO: ${{ inputs.termo }}
           MONGO_URI: ${{ secrets.MONGO_URI_ADMIN || secrets.MONGO_URI }}
           MONGO_DB_NAME: ${{ vars.MONGO_DB_NAME || 'UniResuDB' }}
 
