@@ -15,6 +15,10 @@ on:
         description: "Quantos bytes do início de cada resposta imprimir"
         required: false
         default: "6000"
+      cauda:
+        description: "Quantos bytes do FIM de cada resposta imprimir (0 = nenhum; útil em CSV grande)"
+        required: false
+        default: "0"
 
 permissions:
   contents: read
@@ -28,15 +32,20 @@ jobs:
         env:
           URLS: ${{ inputs.urls }}
           BYTES: ${{ inputs.bytes }}
+          CAUDA: ${{ inputs.cauda }}
         run: |
           for url in $URLS; do
             echo "=================================================================="
             echo "URL: $url"
-            curl -sS -L -m 60 -A "UniResuConnect/2.1 (+https://uniresu.org; diagnostico)" \
+            curl -sS -L -m 300 -A "UniResuConnect/2.1 (+https://uniresu.org; diagnostico)" \
               -D /tmp/h.txt -o /tmp/b.bin "$url" || echo "curl falhou ($?)"
             echo "--- cabeçalhos"; cat /tmp/h.txt 2>/dev/null | tr -d '\r'
-            echo "--- tamanho: $(stat -c %s /tmp/b.bin 2>/dev/null || echo 0) bytes"
+            echo "--- tamanho: $(stat -c %s /tmp/b.bin 2>/dev/null || echo 0) bytes, $(wc -l < /tmp/b.bin 2>/dev/null || echo 0) linhas"
             echo "--- início do corpo"
             head -c "$BYTES" /tmp/b.bin 2>/dev/null | iconv -f utf-8 -t utf-8 -c; echo
+            if [ "${CAUDA:-0}" != "0" ]; then
+              echo "--- fim do corpo"
+              tail -c "$CAUDA" /tmp/b.bin 2>/dev/null | iconv -f utf-8 -t utf-8 -c; echo
+            fi
             rm -f /tmp/h.txt /tmp/b.bin
           done
