@@ -141,14 +141,14 @@ export default function ProjetosPage() {
   const [remotoFiltro, setRemotoFiltro] = useState(false);
   const [filtros, setFiltros] = useState<InstituicaoFiltro[]>([]);
 
-  // Categorias: instituição > unidade/departamento. As unidades oferecidas
-  // dependem da instituição e do módulo escolhidos; a lista toda vem de uma
-  // única chamada a /api/projetos/filtros.
-  const instituicoesComUnidades = filtros.filter((i) => unidadesVisiveis(i, tipoFiltro).length > 0);
-  const gruposDeUnidades = (instituicaoFiltro
-    ? instituicoesComUnidades.filter((i) => i.sigla === instituicaoFiltro)
-    : instituicoesComUnidades
-  ).map((i) => ({ sigla: i.sigla, unidades: unidadesVisiveis(i, tipoFiltro) }));
+  // Categorias: instituição > unidade/departamento. As unidades só aparecem
+  // depois de escolher a instituição (sem ela o seletor fica vazio e
+  // desabilitado, em vez de listar as unidades de todas as universidades);
+  // a lista toda vem de uma única chamada a /api/projetos/filtros.
+  const gruposDeUnidades = filtros
+    .filter((i) => instituicaoFiltro && i.sigla === instituicaoFiltro)
+    .map((i) => ({ sigla: i.sigla, unidades: unidadesVisiveis(i, tipoFiltro) }))
+    .filter((g) => g.unidades.length > 0);
   const unidadesOferecidas = gruposDeUnidades.flatMap((g) => g.unidades.map((u) => u.nome));
   // Uma unidade escolhida que saiu das opções (mudou a instituição ou o módulo)
   // deixa de valer, sem precisar de efeito.
@@ -390,7 +390,11 @@ export default function ProjetosPage() {
             disabled={unidadesOferecidas.length === 0}
           >
             <option value="">
-              {instituicaoFiltro ? `Unidades da ${instituicaoFiltro}` : "Unidades / Departamentos"}
+              {!instituicaoFiltro
+                ? "Unidades / Departamentos (escolha a instituição)"
+                : unidadesOferecidas.length > 0
+                  ? `Unidades da ${instituicaoFiltro}`
+                  : `Sem unidades cadastradas para ${instituicaoFiltro}`}
             </option>
             {gruposDeUnidades.map((g) => (
               <optgroup key={g.sigla} label={g.sigla}>

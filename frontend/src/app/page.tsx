@@ -114,7 +114,7 @@ export default function HomePage() {
                   <div className={styles.avatar}>JG</div>
                   <div className={styles.memberInfo}>
                     <p className={styles.memberName}>Juliana Gimenes Müller</p>
-                    <p className={styles.memberRole}>Co-fundadora & CTO (Technology)</p>
+                    <p className={styles.memberRole}>Co-fundadora & CTO</p>
                   </div>
                 </div>
                 <div className={styles.teamMember}>
@@ -144,14 +144,14 @@ export default function HomePage() {
                   <div className={styles.avatar}>ME</div>
                   <div className={styles.memberInfo}>
                     <p className={styles.memberName}>Maria Eduarda Siqueira de Medeiros</p>
-                    <p className={styles.memberRole}>Co-fundadora & CMO (Marketing)</p>
+                    <p className={styles.memberRole}>Co-fundadora & CMO</p>
                   </div>
                 </div>
                 <div className={styles.teamMember}>
                   <div className={styles.avatar}>MG</div>
                   <div className={styles.memberInfo}>
                     <p className={styles.memberName}>Matheus Gabriel Ramos de Melo</p>
-                    <p className={styles.memberRole}>Co-fundador & CSO (Science)</p>
+                    <p className={styles.memberRole}>Co-fundador & CSO</p>
                   </div>
                 </div>
               </div>
