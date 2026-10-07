@@ -45,11 +45,19 @@ def email_contato(projeto: Dict[str, Any]) -> Optional[str]:
 
 def filtro_visiveis() -> Dict[str, Any]:
     """Predicado padrão da listagem pública: ativo e em execução. Projetos
-    manuais, sem `situacao`, contam como ativos. Usado pela busca e pelos
+    manuais (sem `origem`), que não têm `situacao`, contam como ativos; um
+    projeto coletado sem situação conhecida (detalhe que falhou na pesquisa
+    da UNIRIO) fica de fora até a situação ser lida. Usado pela busca e pelos
     endpoints de opções de filtro, para que um filtro nunca ofereça um valor
     que a busca padrão não devolve."""
-    # $in com None também casa documentos sem o campo (projetos manuais).
-    return {"ativo": {"$ne": False}, "situacao": {"$in": [SITUACAO_EM_EXECUCAO, None]}}
+    return {
+        "ativo": {"$ne": False},
+        "$or": [
+            {"situacao": SITUACAO_EM_EXECUCAO},
+            # `situacao: None` também casa documentos sem o campo.
+            {"origem": {"$exists": False}, "situacao": None},
+        ],
+    }
 
 
 def formatar_projeto_publico(doc: Dict[str, Any]) -> Dict[str, Any]:

@@ -35,7 +35,7 @@ URL_EXTENSAO = (
 )
 
 
-DETALHES_MODOS = ("incremental", "completo")
+DETALHES_MODOS = ("incremental", "novos", "completo")
 
 
 @dataclass
@@ -61,9 +61,14 @@ class UnirioConfig:
     #   incremental → só projetos novos e, na pesquisa, os ainda em execução
     #                 (para perceber quando encerram). Os já conhecidos e
     #                 encerrados ficam como estão. Execução semanal em minutos.
+    #   novos       → só os que ainda não têm detalhe gravado (retomar uma
+    #                 primeira carga interrompida, sem reabrir nada).
     #   completo    → todos (primeira carga, ou para reler tudo).
     # A listagem é sempre percorrida inteira: é ela que diz o que sumiu.
     detalhes: str = "incremental"
+    # Por quanto tempo esperar o portal voltar quando ele está fora do ar
+    # (HTTP 500, conexão recusada) antes de desistir do módulo. 0 = não espera.
+    espera_portal_minutos: float = 0
     # Pausa mínima entre requisições (nunca menos que 1s).
     pausa_segundos: float = 1.5
     timeout_segundos: float = 60.0
@@ -105,8 +110,9 @@ class UnirioConfig:
         cfg.max_detalhes = max(0, int(_env("UNIRIO_MAX_DETALHES", cfg.max_detalhes)))
         detalhes = str(_env("UNIRIO_DETALHES", cfg.detalhes)).strip().lower()
         if detalhes not in DETALHES_MODOS:
-            raise ValueError(f"UNIRIO_DETALHES inválido: {detalhes!r} (use {' ou '.join(DETALHES_MODOS)})")
+            raise ValueError(f"UNIRIO_DETALHES inválido: {detalhes!r} (use {', '.join(DETALHES_MODOS)})")
         cfg.detalhes = detalhes
+        cfg.espera_portal_minutos = max(0.0, float(_env("UNIRIO_ESPERA_PORTAL_MINUTOS", cfg.espera_portal_minutos)))
         cfg.pausa_segundos = max(1.0, float(_env("UNIRIO_PAUSA_SEGUNDOS", cfg.pausa_segundos)))
         cfg.timeout_segundos = float(_env("UNIRIO_TIMEOUT_SEGUNDOS", cfg.timeout_segundos))
         cfg.max_tentativas = max(1, int(_env("UNIRIO_MAX_TENTATIVAS", cfg.max_tentativas)))

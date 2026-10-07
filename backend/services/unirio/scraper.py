@@ -17,6 +17,7 @@ caso, porque "sumiu da fonte" e "não chegamos a ler" seriam indistinguíveis.
 
 import functools
 import logging
+import time
 from dataclasses import dataclass, field
 from typing import Collection, Iterator, Optional
 
@@ -205,6 +206,39 @@ def listar(client: UnirioClient, modulo: str) -> tuple[list[dict], int, bool]:
     return itens, paginas, completa
 
 
+def _ano_int(ano) -> int:
+    texto = str(ano or "").strip()
+    return int(texto) if texto.isdigit() else 0
+
+
+def aguardar_portal(client: UnirioClient, modulo: str, minutos: float, intervalo_segundos: float = 300,
+                    sleep=time.sleep, relogio=time.monotonic) -> bool:
+    """Espera o portal do módulo responder, por até `minutos`.
+
+    Os portais da UNIRIO passam horas devolvendo HTTP 500 ou recusando
+    conexões. Em vez de falhar na hora, a execução verifica a página inicial
+    a cada `intervalo_segundos` (cada verificação já tem as tentativas do
+    cliente) e segue assim que ela responder. Devolve False se o prazo acabar.
+    """
+    if minutos <= 0:
+        return True
+    url = client.cfg.url_pesquisa_formulario if modulo == "pesquisa" else client.cfg.url_extensao
+    prazo = relogio() + minutos * 60
+    while True:
+        try:
+            client.get(url)
+            return True
+        except ErroColeta as e:
+            restante = prazo - relogio()
+            if restante <= 0:
+                logger.error("UNIRIO %s: portal continua indisponível após %.0f min: %s", modulo, minutos, e)
+                return False
+            espera = min(intervalo_segundos, restante)
+            logger.warning("UNIRIO %s: portal indisponível (%s); nova verificação em %.0f min",
+                           modulo, e, espera / 60)
+            sleep(espera)
+
+
 @dataclass
 class EstadoColeta:
     """Andamento de uma coleta em lotes (ver `coletar_em_lotes`)."""
@@ -239,6 +273,11 @@ def coletar_em_lotes(
     estado = EstadoColeta(modulo)
     itens, estado.paginas, estado.completa = listar(client, modulo)
     estado.listados = len(itens)
+    if modulo == "pesquisa":
+        # O portal da pesquisa é lento (dezenas de segundos por página de
+        # detalhe): os projetos mais recentes, que são os que podem estar em
+        # execução, vêm primeiro. Ordenação estável dentro do mesmo ano.
+        itens = sorted(itens, key=lambda i: -_ano_int(i.get("ano")))
     yield estado, []
     limite = client.cfg.max_detalhes or len(itens)
     abertos = 0

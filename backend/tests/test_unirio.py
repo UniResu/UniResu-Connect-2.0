@@ -870,3 +870,84 @@ def test_captura_salva_arquivos_e_isola_falha_por_modulo(tmp_path, capsys, monke
     assert "pesquisa: listagem FALHOU" in saida
     assert "extensao: 2 link(s) de detalhe, 2 item(ns) reconhecidos" in saida
     assert "CAPTURA-B64 extensao_listagem.html 1/" in saida
+
+
+# ── portal fora do ar, modo "novos", ordem por ano ───────────────────────────
+
+class _Relogio:
+    def __init__(self):
+        self.t = 0.0
+
+    def __call__(self):
+        return self.t
+
+    def dormir(self, s):
+        self.t += s
+
+
+class _ClienteInstavel:
+    """Falha nas primeiras `falhas` chamadas e depois responde."""
+
+    def __init__(self, falhas):
+        self.cfg = UnirioConfig()
+        self.falhas = falhas
+        self.chamadas = 0
+
+    def get(self, url, **kw):
+        self.chamadas += 1
+        if self.chamadas <= self.falhas:
+            raise UnirioErro("HTTP 500")
+        return "<html></html>"
+
+
+def test_aguardar_portal_verifica_ate_responder_ou_esgotar_o_prazo():
+    relogio = _Relogio()
+    cliente = _ClienteInstavel(falhas=3)
+    assert scraper.aguardar_portal(cliente, "pesquisa", 60, sleep=relogio.dormir, relogio=relogio) is True
+    assert cliente.chamadas == 4 and relogio.t == 3 * 300
+
+    relogio = _Relogio()
+    cliente = _ClienteInstavel(falhas=99)
+    assert scraper.aguardar_portal(cliente, "pesquisa", 12, sleep=relogio.dormir, relogio=relogio) is False
+    assert relogio.t == 12 * 60  # a última espera é cortada no prazo
+
+    # 0 minutos: nem verifica
+    cliente = _ClienteInstavel(falhas=99)
+    assert scraper.aguardar_portal(cliente, "pesquisa", 0) is True and cliente.chamadas == 0
+
+
+async def test_portal_fora_do_ar_alem_do_prazo_vira_falha_do_modulo(db, monkeypatch):
+    monkeypatch.setattr("jobs.sync_unirio.aguardar_portal", lambda *a, **k: False)
+    cfg = UnirioConfig(modulos=["pesquisa"], espera_portal_minutos=5)
+    run = await executar_sync(db, cfg, coletores([item("pesquisa", "1")]), ClienteNulo())
+    assert run["status"] == "falha" and run["modulos"]["pesquisa"]["status"] == "falha"
+    assert "fora do ar" in run["erros"][0]["erro"]
+    assert await db.projetos.count_documents({}) == 0
+
+
+async def test_modo_novos_pula_todo_detalhe_ja_gravado(db):
+    from jobs.sync_unirio import ids_sem_detalhe
+    await executar_sync(db, CFG, coletores(
+        [item("pesquisa", "1"), item("pesquisa", "2", situacao="FINALIZADO"),
+         item("pesquisa", "3", detalhe_ok=False, coordenador=None, email=None)]), ClienteNulo())
+    assert await ids_sem_detalhe(db, "pesquisa", UnirioConfig(detalhes="novos")) == {"1", "2"}
+    assert await ids_sem_detalhe(db, "pesquisa", UnirioConfig(detalhes="incremental")) == {"2"}
+
+
+def test_pesquisa_abre_os_detalhes_dos_anos_mais_recentes_primeiro(monkeypatch):
+    itens = [{"unirio_id": "a", "ano": "2019", "link_detalhe": "u/a", "titulo": "A"},
+             {"unirio_id": "b", "ano": "2025", "link_detalhe": "u/b", "titulo": "B"},
+             {"unirio_id": "c", "ano": None, "link_detalhe": "u/c", "titulo": "C"},
+             {"unirio_id": "d", "ano": "2025", "link_detalhe": "u/d", "titulo": "D"}]
+    monkeypatch.setattr(scraper, "listar", lambda client, modulo: (list(itens), 1, True))
+    abertos = []
+
+    class Cliente:
+        cfg = UnirioConfig()
+
+        def get(self, url, **kw):
+            abertos.append(url)
+            raise UnirioErro("sem rede")
+
+    list(scraper.coletar_em_lotes(Cliente(), "pesquisa"))
+    assert abertos == ["u/b", "u/d", "u/a", "u/c"]

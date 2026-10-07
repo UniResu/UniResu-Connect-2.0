@@ -36,10 +36,14 @@ on:
         required: false
         default: ""
       detalhes:
-        description: "Detalhes a reabrir: incremental (só novos e, na pesquisa, os em execução) ou completo (todos)"
+        description: "Detalhes a abrir: incremental (novos e, na pesquisa, os em execução), novos (só os sem detalhe; retomar carga) ou completo (todos)"
         type: choice
-        options: [incremental, completo]
+        options: [incremental, novos, completo]
         default: incremental
+      espera_portal_minutos:
+        description: "Se o portal estiver fora do ar, esperar até N minutos verificando a cada 5 (0 = não espera)"
+        required: false
+        default: "0"
       pesquisa_ano_minimo:
         description: "Pesquisa: ignorar projetos com ano de referência anterior a este (vazio = todos)"
         required: false
@@ -96,6 +100,8 @@ jobs:
           UNIRIO_MAX_DETALHES: ${{ inputs.max_detalhes || vars.UNIRIO_MAX_DETALHES }}
           # Execução agendada: incremental (minutos). "completo" relê todos os detalhes (~2 h).
           UNIRIO_DETALHES: ${{ inputs.detalhes || vars.UNIRIO_DETALHES || 'incremental' }}
+          # Agendamento: espera até 1 h o portal voltar (a UNIRIO tem quedas longas).
+          UNIRIO_ESPERA_PORTAL_MINUTOS: ${{ inputs.espera_portal_minutos || vars.UNIRIO_ESPERA_PORTAL_MINUTOS || '60' }}
           UNIRIO_EXTENSAO_STATUS: ${{ vars.UNIRIO_EXTENSAO_STATUS }}
           UNIRIO_PESQUISA_DETALHE_PREFIXO: ${{ vars.UNIRIO_PESQUISA_DETALHE_PREFIXO }}
           UNIRIO_PESQUISA_ANOS: ${{ vars.UNIRIO_PESQUISA_ANOS }}

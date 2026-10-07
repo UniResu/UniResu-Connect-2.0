@@ -189,3 +189,12 @@ async def test_status_por_fonte_ignora_falhas_e_dry_runs(api_professor, db):
     assert r["fontes"]["unirio"]["ultima_atualizacao"].startswith("2026-09-21T07:00:00")
     # rota antiga continua respondendo
     assert (await api.get("/api/projetos/sigaa/status")).json() == r
+
+
+async def test_projeto_coletado_sem_situacao_nao_aparece(api, base):
+    # detalhe da pesquisa da UNIRIO falhou: situação desconhecida, fica de fora
+    await base.projetos.insert_one({"origem": "unirio", "chave_unirio": "pesquisa|x", "modulo": "pesquisa",
+                                    "titulo": "Situação desconhecida", "instituicao": "UNIRIO", "ativo": True})
+    r = await api.get("/api/projetos/buscar")
+    assert "Situação desconhecida" not in titulos(r)
+    assert "Projeto manual do professor" in titulos(r)  # manual sem situação continua

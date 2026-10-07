@@ -43,6 +43,8 @@ from services.unirio.config import UnirioConfig
 from services.unirio.scraper import (
     COLETORES,
     UnirioClient,
+    UnirioErro,
+    aguardar_portal,
     anos_disponiveis_pesquisa,
     prefixo_detalhe,
     url_inicial,
@@ -74,7 +76,7 @@ async def executar_sync(
         "status": "executando",
         "dry_run": dry_run,
         "config": {"modulos": cfg.modulos, "extensao_status": cfg.extensao_status, "max_paginas": cfg.max_paginas,
-                   "detalhes": cfg.detalhes},
+                   "detalhes": cfg.detalhes, "pesquisa_ano_minimo": cfg.pesquisa_ano_minimo},
     }
     run_id = None
     if not dry_run:
@@ -100,13 +102,14 @@ async def ids_sem_detalhe(db, modulo: str, cfg: UnirioConfig) -> set[str]:
     ainda constam como em execução ficam de fora do conjunto (são reabertos
     para perceber o encerramento); na extensão a própria listagem já vem
     filtrada por "em andamento", então sumir dela é o sinal de encerramento.
+    Modo `novos`: todos os que já têm detalhe (retomar uma carga interrompida).
     Modo `completo`: conjunto vazio (reabre tudo).
     """
-    if cfg.detalhes != "incremental":
+    if cfg.detalhes == "completo":
         return set()
     filtro: dict = {"origem": UNIRIO.origem, "modulo": modulo, "detalhe_ok": True,
                     UNIRIO.campo_id: {"$ne": None}}
-    if modulo == "pesquisa":
+    if modulo == "pesquisa" and cfg.detalhes == "incremental":
         filtro["situacao"] = {"$ne": SITUACAO_EM_EXECUCAO}
     cursor = db.projetos.find(filtro, {UNIRIO.campo_id: 1})
     return {str(doc[UNIRIO.campo_id]) for doc in await cursor.to_list(length=None)}
@@ -182,6 +185,8 @@ async def _executar(db, cfg, coletores, client, alertar, dry_run, run, run_id, i
         stats = {"coletados": 0, "novos": 0, "atualizados": 0, "desativados": 0,
                  "erros_detalhe": 0, "detalhes_pulados": 0, "paginas": 0, "completa": True, "status": "sucesso"}
         try:
+            if not await asyncio.to_thread(aguardar_portal, client, modulo, cfg.espera_portal_minutos):
+                raise UnirioErro(f"portal fora do ar por mais de {cfg.espera_portal_minutos:.0f} min")
             pular = set() if dry_run or db is None else await ids_sem_detalhe(db, modulo, cfg)
             em_lotes = getattr(coletores[modulo], "em_lotes", None)
             if em_lotes is not None and not dry_run and db is not None:
