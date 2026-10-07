@@ -73,6 +73,39 @@ function unidadesVisiveis(inst: InstituicaoFiltro, modulo: string) {
   return inst.unidades.filter((u) => !modulo || (u.modulos[modulo] || 0) > 0);
 }
 
+/** Fontes que não publicam o e-mail de cada coordenação, mas têm um contato geral. */
+const CONTATO_GERAL: Record<string, { rotulo: string; email: string }> = {
+  "ufv:extensao": { rotulo: "Registro de Atividades de Extensão da UFV (RAEX)", email: "raex@ufv.br" },
+};
+
+/** Aviso mostrado no lugar do formulário quando o projeto não tem e-mail de contato. */
+function avisoSemContato(p: Projeto) {
+  const geral = CONTATO_GERAL[`${p.origem}:${p.modulo}`];
+  if (geral) {
+    return (
+      <>
+        A UFV não divulga o e-mail de cada coordenação nos dados abertos, então a candidatura por aqui
+        fica indisponível. O contato geral é o {geral.rotulo}:{" "}
+        <a href={`mailto:${geral.email}`}>{geral.email}</a>. Cite o título do projeto na mensagem.
+      </>
+    );
+  }
+  if (p.origem === "ufv") {
+    return (
+      <>
+        A UFV não divulga o e-mail de cada coordenação nos dados abertos. Use a página do projeto no
+        sistema de pesquisa da UFV (link acima) ou procure o departamento indicado.
+      </>
+    );
+  }
+  return (
+    <>
+      Projeto ainda sem contato cadastrado. Assim que o e-mail da coordenação for cadastrado, você
+      poderá enviar sua carta de intenção por aqui.
+    </>
+  );
+}
+
 /** Nome da fonte externa, para rótulos como "Ver no SIGAA". */
 const FONTE_NOME: Record<string, string> = {
   sigaa: "SIGAA",
@@ -687,10 +720,7 @@ export default function ProjetosPage() {
 
               {!selectedProjeto.tem_contato ? (
                 <>
-                  <div className={modalStyles.noticeMessage}>
-                    Projeto ainda sem contato cadastrado. Assim que o e-mail da coordenação
-                    for cadastrado, você poderá enviar sua carta de intenção por aqui.
-                  </div>
+                  <div className={modalStyles.noticeMessage}>{avisoSemContato(selectedProjeto)}</div>
                   <button type="button" className={modalStyles.submitBtn} disabled>
                     Candidatar-se
                   </button>

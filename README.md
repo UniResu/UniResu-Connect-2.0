@@ -110,7 +110,7 @@ A aba **Projetos Acadêmicos** lista, além dos projetos cadastrados pelos profe
 
 **Projeto sem e-mail de contato**
 
-O e-mail vem da página de detalhe da fonte (SIGAA ou portal da UNIRIO). Quando não vier (ou não for o endereço certo), cadastre o contato manualmente — ele tem prioridade e nunca é sobrescrito pelo sync:
+O e-mail vem da página de detalhe da fonte (SIGAA ou portal da UNIRIO). Os dados abertos da UFV não trazem e-mail: nos projetos de extensão da UFV a plataforma mostra, no lugar do formulário, o contato geral do Registro de Atividades de Extensão (raex@ufv.br), e nos de pesquisa aponta para a página do projeto no sistema da UFV. Quando o e-mail não vier (ou não for o endereço certo), cadastre o contato manualmente: ele tem prioridade e nunca é sobrescrito pelo sync:
 
 ```bash
 cd backend
