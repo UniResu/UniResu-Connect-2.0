@@ -28,6 +28,7 @@ async def resumo(db) -> dict:
             "sem_email": {"$sum": {"$cond": [{"$and": [
                 {"$in": [{"$ifNull": ["$email_professor", ""]}, ["", None]]},
                 {"$in": [{"$ifNull": ["$email_contato_manual", ""]}, ["", None]]}]}, 1, 0]}},
+            "bytes": {"$sum": {"$bsonSize": "$$ROOT"}},
         }},
         {"$sort": {"_id.origem": 1, "_id.instituicao": 1, "_id.modulo": 1}},
     ]).to_list(length=None)
@@ -35,16 +36,48 @@ async def resumo(db) -> dict:
         {}, {"fonte": 1, "instituicao": 1, "status": 1, "iniciada_em": 1, "finalizada_em": 1,
              "duracao_segundos": 1, "modulos": 1, "dry_run": 1, "total_erros": 1},
     ).sort("iniciada_em", -1).to_list(length=8)
-    return {"projetos": por_fonte, "runs": runs}
+    return {"projetos": por_fonte, "runs": runs, "tamanho": await tamanho(db)}
+
+
+async def tamanho(db) -> dict:
+    """Ocupação da coleção de projetos e, quando o usuário pode ler, do banco
+    inteiro. O Atlas gratuito (M0) limita dados + índices a 512 MB, por isso
+    vale acompanhar antes de coletar instituições novas."""
+    try:
+        stats = await db.command("collStats", "projetos")
+    except Exception as e:  # usuário sem collStats ou servidor sem o comando
+        return {"erro": str(e)}
+    dados = {
+        "documentos": stats.get("count", 0),
+        "dados_mb": stats.get("size", 0) / 1e6,
+        "indices_mb": stats.get("totalIndexSize", 0) / 1e6,
+        "disco_mb": stats.get("storageSize", 0) / 1e6,
+        "media_kb": (stats.get("avgObjSize") or 0) / 1e3,
+    }
+    try:
+        geral = await db.command("dbStats")
+        dados["banco_mb"] = (geral.get("dataSize", 0) + geral.get("indexSize", 0)) / 1e6
+    except Exception:
+        pass
+    return dados
 
 
 def imprimir(dados: dict) -> None:
-    print("Projetos por fonte, instituição e módulo (total / ativos / em execução / com detalhe / sem link / sem e-mail):")
+    print("Projetos por fonte, instituição e módulo "
+          "(total / ativos / em execução / com detalhe / sem link / sem e-mail / MB):")
     for linha in dados["projetos"]:
         chave = linha["_id"]
         print(f"  {chave.get('origem') or 'manual':8s} {chave.get('instituicao') or '-':10s} {chave.get('modulo') or '-':10s} "
               f"{linha['total']:5d} / {linha['ativos']:5d} / {linha['em_execucao']:5d} / {linha['com_detalhe']:5d}"
-              f" / {linha.get('sem_link', 0):5d} / {linha.get('sem_email', 0):5d}")
+              f" / {linha.get('sem_link', 0):5d} / {linha.get('sem_email', 0):5d}"
+              f" / {linha.get('bytes', 0) / 1e6:6.1f}")
+    t = dados.get("tamanho") or {}
+    if "erro" in t:
+        print(f"\nOcupação: não foi possível ler (collStats): {t['erro']}")
+    elif t:
+        print(f"\nOcupação da coleção projetos: {t['documentos']} documentos, {t['dados_mb']:.1f} MB de dados, "
+              f"{t['indices_mb']:.1f} MB de índices, {t['disco_mb']:.1f} MB em disco, {t['media_kb']:.1f} KB por documento"
+              + (f"; banco inteiro (dados + índices): {t['banco_mb']:.1f} MB de 512 MB no M0" if "banco_mb" in t else ""))
     print("\nÚltimas execuções dos syncs:")
     for r in dados["runs"]:
         inicio = r.get("iniciada_em")
