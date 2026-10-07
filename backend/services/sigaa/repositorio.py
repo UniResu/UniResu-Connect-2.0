@@ -8,7 +8,9 @@ outro valor) nunca são tocados — nem sobrescritos, nem desativados — e uma
 fonte nunca encosta nos documentos de outra.
 
 Chave natural: módulo + ano + título + coordenador (normalizados), gravada
-no campo exclusivo da fonte (`chave_sigaa`, `chave_unirio`).
+no campo exclusivo da fonte (`chave_sigaa`, `chave_unirio`, `chave_ufv`).
+Instituições que dividem a mesma plataforma (vários SIGAAs) têm a sigla como
+prefixo da chave e toda consulta filtra também por `instituicao`.
 Campos editados por um administrador (`email_contato_manual`) nunca são
 sobrescritos pelo sync.
 """
@@ -26,14 +28,31 @@ ORIGEM = SIGAA.origem
 TIPO_LABEL = MODULO_LABEL
 
 
-def chave_natural(registro: dict) -> str:
+def chave_natural(registro: dict, fonte: Optional[Fonte] = None) -> str:
     partes = (
         registro.get("modulo"),
         registro.get("ano"),
         registro.get("titulo"),
         registro.get("coordenador"),
     )
-    return "|".join(normalizar(p) for p in partes)
+    prefixo = fonte.prefixo_chave if fonte is not None else ""
+    return prefixo + "|".join(normalizar(p) for p in partes)
+
+
+def _escopo(fonte: Fonte) -> dict:
+    """Filtro que isola os documentos desta fonte (plataforma + instituição).
+
+    As fontes originais (UNIR, UNIRIO, UFV) têm docs gravados antes de o campo
+    `instituicao` existir, então para elas o filtro aceita também docs sem o
+    campo; as instituições novas da mesma plataforma exigem a sigla exata."""
+    if fonte.prefixo_chave:
+        return {"origem": fonte.origem, "instituicao": fonte.instituicao}
+    return {"origem": fonte.origem, "instituicao": {"$in": [fonte.instituicao, None]}}
+
+
+def _identidade(fonte: Fonte) -> dict:
+    """Campos de origem gravados em um documento novo."""
+    return {"origem": fonte.origem, "instituicao": fonte.instituicao}
 
 
 @dataclass
@@ -55,7 +74,7 @@ async def _registro_anterior_sem_coordenador(db, registro: dict, fonte: Fonte) -
     if registro.get("coordenador") or not id_fonte:
         return None
     return await db.projetos.find_one({
-        "origem": fonte.origem,
+        **_escopo(fonte),
         "modulo": registro["modulo"],
         fonte.campo_id: id_fonte,
     })
@@ -68,7 +87,7 @@ async def _confirmar_presenca(db, registro: dict, fonte: Fonte, agora: datetime)
     if not id_fonte:
         return None
     doc = await db.projetos.find_one(
-        {"origem": fonte.origem, "modulo": registro["modulo"], fonte.campo_id: id_fonte},
+        {**_escopo(fonte), "modulo": registro["modulo"], fonte.campo_id: id_fonte},
         {fonte.campo_chave: 1},
     )
     if not doc or not doc.get(fonte.campo_chave):
@@ -87,11 +106,11 @@ async def _promover_chave_incompleta(db, registro: dict, chave: str, fonte: Font
     id_fonte = _id_fonte(registro, fonte)
     if not id_fonte or not registro.get("coordenador"):
         return
-    if await db.projetos.find_one({"origem": fonte.origem, fonte.campo_chave: chave}, {"_id": 1}):
+    if await db.projetos.find_one({**_escopo(fonte), fonte.campo_chave: chave}, {"_id": 1}):
         return
     await db.projetos.update_one(
         {
-            "origem": fonte.origem,
+            **_escopo(fonte),
             "modulo": registro["modulo"],
             fonte.campo_id: id_fonte,
             "nome_professor": None,
@@ -123,7 +142,7 @@ def _campos_completos(reg: dict, fonte: Fonte, agora: datetime) -> dict:
         "ultima_coleta": agora,
         "detalhe_ok": reg.get("detalhe_ok", False),
     }
-    if fonte is SIGAA:
+    if fonte.origem == SIGAA.origem:
         # Nome histórico do módulo nos docs do SIGAA (índices e dados antigos).
         campos["tipo_sigaa"] = modulo
     # Campos extras que a fonte queira guardar (ex.: área temática, palavras-chave).
@@ -165,15 +184,15 @@ async def upsert_projetos(
                 "detalhe_ok": False,
             }
         else:
-            chave = chave_natural(reg)
+            chave = chave_natural(reg, fonte)
             await _promover_chave_incompleta(db, reg, chave, fonte)
             campos = _campos_completos(reg, fonte, agora)
 
         resultado = await db.projetos.update_one(
-            {"origem": fonte.origem, fonte.campo_chave: chave},
+            {**_escopo(fonte), fonte.campo_chave: chave},
             {
                 "$set": campos,
-                "$setOnInsert": {"origem": fonte.origem, fonte.campo_chave: chave, "primeira_coleta": agora},
+                "$setOnInsert": {**_identidade(fonte), fonte.campo_chave: chave, "primeira_coleta": agora},
             },
             upsert=True,
         )
@@ -204,7 +223,7 @@ async def desativar_ausentes(
     """
     agora = agora or datetime.now(timezone.utc)
     filtro = {
-        "origem": fonte.origem,
+        **_escopo(fonte),
         "modulo": modulo,
         "ativo": True,
         fonte.campo_chave: {"$nin": chaves_vistas},

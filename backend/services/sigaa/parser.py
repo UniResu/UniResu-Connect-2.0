@@ -23,7 +23,13 @@ from typing import Optional
 from bs4 import BeautifulSoup
 
 BASE_URL = "https://sigaa.unir.br"
-URL_DETALHE_EXTENSAO = BASE_URL + "/sigaa/link/public/extensao/visualizacaoAcaoExtensao/{id}"
+CAMINHO_DETALHE_EXTENSAO = "/sigaa/link/public/extensao/visualizacaoAcaoExtensao/{id}"
+URL_DETALHE_EXTENSAO = BASE_URL + CAMINHO_DETALHE_EXTENSAO
+
+
+def url_detalhe_extensao(sigaa_id, base_url: str = BASE_URL) -> str:
+    """Link público (GET) da página de uma ação de extensão no SIGAA da instituição."""
+    return base_url.rstrip("/") + CAMINHO_DETALHE_EXTENSAO.format(id=sigaa_id)
 
 SITUACAO_EM_EXECUCAO = "EM EXECUÇÃO"
 
@@ -205,8 +211,9 @@ def parse_listagem_pesquisa(html: str) -> list[dict]:
     return itens
 
 
-def parse_listagem_extensao(html: str) -> list[dict]:
-    """Ações de extensão da tabela de resultados."""
+def parse_listagem_extensao(html: str, base_url: str = BASE_URL) -> list[dict]:
+    """Ações de extensão da tabela de resultados. `base_url` é o SIGAA da
+    instituição, usado para montar o link de detalhe de cada ação."""
     tabela = _tabela_resultados(_soup(html))
     if tabela is None:
         return []
@@ -228,7 +235,7 @@ def parse_listagem_extensao(html: str) -> list[dict]:
             "ano": ano,
             "categoria": limpar(tds[1].get_text()) or None,
             "unidade": limpar(tds[2].get_text()) or None,
-            "link_detalhe": URL_DETALHE_EXTENSAO.format(id=sigaa_id) if sigaa_id else None,
+            "link_detalhe": url_detalhe_extensao(sigaa_id, base_url) if sigaa_id else None,
         })
     return itens
 

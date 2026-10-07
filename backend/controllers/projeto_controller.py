@@ -11,7 +11,7 @@ from typing import List, Optional, Dict, Any
 from bson import ObjectId
 from database.connection import Database
 from services.areas import AREAS_CONHECIMENTO, classificar_area
-from services.fontes import FONTES, SIGAA
+from services.fontes import FONTES, INSTITUICOES, SIGAA
 from services.sigaa.parser import SITUACAO_EM_EXECUCAO, normalizar
 
 
@@ -206,7 +206,7 @@ async def listar_instituicoes_controller() -> List[str]:
     é texto livre do professor e não serve como opção de filtro.
     """
     db = Database.get_db()
-    siglas = [f.instituicao for f in FONTES.values()]
+    siglas = list(INSTITUICOES)
     filtro = {**filtro_visiveis(), "instituicao": {"$in": siglas}}
     return sorted(await db.projetos.distinct("instituicao", filtro), key=normalizar)
 
@@ -247,8 +247,8 @@ async def listar_filtros_controller(
     db = Database.get_db()
     areas = await contar_por_area(db, montar_filtro_busca(q=q, modulo=modulo, instituicao=instituicao,
                                                           unidade=unidade, remoto=remoto))
-    siglas = [f.instituicao for f in FONTES.values()]
-    rotulos = {f.instituicao: f.rotulo for f in FONTES.values()}
+    siglas = list(INSTITUICOES)
+    rotulos = {sigla: f.rotulo for sigla, f in INSTITUICOES.items()}
 
     pipeline = [
         {"$match": {**filtro_visiveis(), "instituicao": {"$in": siglas}}},

@@ -1,7 +1,9 @@
-# Sincronização semanal dos projetos de pesquisa e extensão do SIGAA/UNIR.
+# Sincronização semanal dos projetos de pesquisa e extensão das instituições
+# que usam o SIGAA (UNIR e as demais de backend/services/sigaa/instituicoes.py).
 #
-# Roda o job backend/jobs/sync_sigaa.py contra o MongoDB de produção.
-# Pré-requisitos (ver README → "Sync com o SIGAA"):
+# Roda o job backend/jobs/sync_sigaa.py uma vez por instituição, em paralelo
+# limitado, contra o MongoDB de produção. Pré-requisitos (ver README → "Sync
+# com o SIGAA"):
 #   - secret MONGO_URI com um usuário EXCLUSIVO do job (acesso só a
 #     `projetos` e `sigaa_sync_runs`);
 #   - Network Access do Atlas liberado para 0.0.0.0/0 (IPs do Actions mudam).
@@ -17,6 +19,15 @@ on:
     - cron: "0 9 * * 1"
   workflow_dispatch:
     inputs:
+      modo:
+        description: "Modo de execução"
+        type: choice
+        options: [sync, dry-run]
+        default: sync
+      instituicoes:
+        description: "Siglas separadas por vírgula (vazio = as ativas em instituicoes.py; 'todas' = todas as conhecidas)"
+        required: false
+        default: ""
       anos:
         description: "Anos a coletar, separados por vírgula (vazio = ano corrente)"
         required: false
@@ -26,18 +37,54 @@ on:
         required: false
         default: ""
 
-# Nunca duas runs ao mesmo tempo; uma nova run espera a anterior terminar.
-concurrency:
-  group: sync-sigaa
-  cancel-in-progress: false
-
 permissions:
   contents: read
 
 jobs:
-  sync:
+  # Monta a lista de instituições a partir do input (ou das ativas no código).
+  lista:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    outputs:
+      instituicoes: ${{ steps.lista.outputs.instituicoes }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - id: lista
+        working-directory: backend
+        env:
+          ESCOLHA: ${{ inputs.instituicoes || vars.SIGAA_INSTITUICOES }}
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          from services.sigaa.instituicoes import ATIVAS, INSTITUICOES_SIGAA, instituicao_sigaa
+          escolha = (os.environ.get("ESCOLHA") or "").strip()
+          if not escolha:
+              siglas = list(ATIVAS)
+          elif escolha.lower() == "todas":
+              siglas = sorted(INSTITUICOES_SIGAA)
+          else:
+              siglas = [instituicao_sigaa(s).sigla for s in escolha.split(",") if s.strip()]
+          print("instituicoes=" + json.dumps(siglas))
+          PY
+          cat "$GITHUB_OUTPUT"
+
+  sync:
+    needs: lista
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    strategy:
+      fail-fast: false
+      # Cada job fala com um servidor diferente; o limite protege o Actions,
+      # não as universidades (a pausa entre requisições é por servidor).
+      max-parallel: 4
+      matrix:
+        instituicao: ${{ fromJson(needs.lista.outputs.instituicoes) }}
+    # Nunca duas runs da mesma instituição ao mesmo tempo.
+    concurrency:
+      group: sync-sigaa-${{ matrix.instituicao }}
+      cancel-in-progress: false
     defaults:
       run:
         working-directory: backend
@@ -53,11 +100,17 @@ jobs:
       - name: Instalar dependências
         run: pip install -r requirements.txt
 
-      - name: Rodar sync
-        run: python -m jobs.sync_sigaa
+      - name: Rodar sync (${{ matrix.instituicao }})
+        run: |
+          if [ "${{ inputs.modo }}" = "dry-run" ]; then
+            python -m jobs.sync_sigaa --dry-run
+          else
+            python -m jobs.sync_sigaa
+          fi
         env:
           MONGO_URI: ${{ secrets.MONGO_URI }}
           MONGO_DB_NAME: ${{ vars.MONGO_DB_NAME || 'UniResuDB' }}
+          SIGAA_INSTITUICAO: ${{ matrix.instituicao }}
           # Opcional: alerta por e-mail quando o sync falha.
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_REMETENTE: ${{ vars.EMAIL_REMETENTE || 'UniResu <contato@uniresu.org>' }}

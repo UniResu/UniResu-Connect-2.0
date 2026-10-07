@@ -184,3 +184,60 @@ async def test_script_de_contato_manual(db):
 
     assert await definir_contato(db, filtro, None) == 1
     assert "email_contato_manual" not in await db.projetos.find_one(filtro)
+
+
+# ── Várias instituições na mesma plataforma (SIGAA) ─────────────────────────
+
+async def test_instituicoes_sigaa_nao_se_misturam(db):
+    from services.fontes import fonte_sigaa
+    from services.sigaa.repositorio import desativar_ausentes, upsert_projetos
+
+    unir, ufrn = fonte_sigaa("UNIR"), fonte_sigaa("UFRN")
+    assert unir.prefixo_chave == "" and ufrn.prefixo_chave == "ufrn|"
+    reg = {"modulo": "extensao", "sigaa_id": "77", "titulo": "Horta comunitária", "coordenador": "ANA",
+           "ano": "2026", "situacao": "EM EXECUÇÃO"}
+
+    a = await upsert_projetos(db, [reg], fonte=unir)
+    b = await upsert_projetos(db, [reg], fonte=ufrn)
+    assert a.novos == 1 and b.novos == 1
+    docs = await db.projetos.find({"origem": "sigaa"}).to_list(10)
+    assert sorted(d["instituicao"] for d in docs) == ["UFRN", "UNIR"]
+    assert {d["chave_sigaa"] for d in docs} == {a.chaves[0], "ufrn|" + a.chaves[0]}
+
+    # a UFRN sumiu com o projeto: só o doc da UFRN é desativado
+    assert await desativar_ausentes(db, "extensao", ["2026"], [], fonte=ufrn) == 1
+    assert (await db.projetos.find_one({"instituicao": "UNIR"}))["ativo"] is True
+    assert (await db.projetos.find_one({"instituicao": "UFRN"}))["ativo"] is False
+
+    # id igual em instituições diferentes não confunde a confirmação de presença
+    c = await upsert_projetos(db, [{**reg, "so_listagem": True}], fonte=ufrn)
+    assert c.atualizados == 1
+    assert (await db.projetos.find_one({"instituicao": "UFRN"}))["ativo"] is True
+
+
+def test_urls_e_links_seguem_o_endereco_da_instituicao():
+    from services.sigaa import parser, scraper
+    from services.sigaa.config import SigaaConfig
+
+    cfg = SigaaConfig.para("ufrn")
+    assert cfg.instituicao == "UFRN" and cfg.base_url == "https://sigaa.ufrn.br"
+    urls = scraper.urls_consulta(cfg.base_url)
+    assert urls["extensao"].startswith("https://sigaa.ufrn.br/sigaa/public/extensao/")
+    assert scraper.URLS["pesquisa"].startswith("https://sigaa.unir.br/")
+    assert parser.url_detalhe_extensao("12", "https://sig.ufca.edu.br/") == (
+        "https://sig.ufca.edu.br/sigaa/link/public/extensao/visualizacaoAcaoExtensao/12")
+    html = open("tests/fixtures/sigaa_extensao_listagem.html", encoding="iso-8859-1").read()
+    itens = parser.parse_listagem_extensao(html, "https://sigaa.ufpb.br")
+    assert itens and all(i["link_detalhe"].startswith("https://sigaa.ufpb.br/") for i in itens if i["link_detalhe"])
+
+
+def test_config_por_ambiente_escolhe_a_instituicao(monkeypatch):
+    import pytest as _pytest
+    from services.sigaa.config import SigaaConfig
+
+    monkeypatch.setenv("SIGAA_INSTITUICAO", "ufpi")
+    cfg = SigaaConfig.from_env()
+    assert cfg.instituicao == "UFPI" and cfg.base_url == "https://sigaa.ufpi.br"
+    monkeypatch.setenv("SIGAA_INSTITUICAO", "XPTO")
+    with _pytest.raises(ValueError):
+        SigaaConfig.from_env()

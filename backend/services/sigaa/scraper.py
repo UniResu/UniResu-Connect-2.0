@@ -1,5 +1,6 @@
 """
-Coleta de projetos das consultas públicas do SIGAA/UNIR.
+Coleta de projetos das consultas públicas do SIGAA (UNIR e as demais
+instituições de `services.sigaa.instituicoes`; muda só o endereço base).
 
 Fluxo JSF (baseado no script de referência scraper_sigaa_unir.py):
   1. GET na página de consulta → captura o form e o javax.faces.ViewState;
@@ -25,10 +26,30 @@ from services.sigaa.config import SigaaConfig
 
 logger = logging.getLogger(__name__)
 
-URLS = {
-    "pesquisa": parser.BASE_URL + "/sigaa/public/pesquisa/consulta_projetos.jsf?aba=p-pesquisa",
-    "extensao": parser.BASE_URL + "/sigaa/public/extensao/consulta_extensao.jsf?acao=2&aba=p-extensao",
+CAMINHOS_CONSULTA = {
+    "pesquisa": "/sigaa/public/pesquisa/consulta_projetos.jsf?aba=p-pesquisa",
+    "extensao": "/sigaa/public/extensao/consulta_extensao.jsf?acao=2&aba=p-extensao",
 }
+
+
+def urls_consulta(base_url: str) -> dict[str, str]:
+    """Páginas públicas de consulta de um SIGAA, por módulo."""
+    base = base_url.rstrip("/")
+    return {modulo: base + caminho for modulo, caminho in CAMINHOS_CONSULTA.items()}
+
+
+# Endereços da UNIR (padrão histórico; os demais vêm de SigaaClient.urls).
+URLS = urls_consulta(parser.BASE_URL)
+
+
+def _base_url(client) -> str:
+    """Endereço base do SIGAA do cliente (clientes de teste podem não ter cfg)."""
+    cfg = getattr(client, "cfg", None)
+    return (getattr(cfg, "base_url", None) or parser.BASE_URL).rstrip("/")
+
+
+def _urls(client) -> dict[str, str]:
+    return urls_consulta(_base_url(client))
 
 
 class SigaaErro(ErroColeta):
@@ -52,6 +73,15 @@ class SigaaClient(ClienteHttp):
 
     def __init__(self, cfg: SigaaConfig, **kwargs):
         super().__init__(cfg, **kwargs)
+        self.nome = f"SIGAA/{getattr(cfg, 'instituicao', 'UNIR')}"
+
+    @property
+    def base_url(self) -> str:
+        return _base_url(self)
+
+    @property
+    def urls(self) -> dict[str, str]:
+        return _urls(self)
 
 
 # ─────────────────────────────────────────────
@@ -72,7 +102,7 @@ def montar_payload_busca(html_form: str, modulo: str, ano: str, situacao: Option
 
 
 def _buscar(client: SigaaClient, modulo: str, ano: str) -> str:
-    url = URLS[modulo]
+    url = _urls(client)[modulo]
     html_form = client.get(url)
     dados = montar_payload_busca(html_form, modulo, ano, client.cfg.pesquisa_situacao)
     return client.post(url, dados)
@@ -99,7 +129,7 @@ def coletar_pesquisa(client: SigaaClient, ano: str) -> ResultadoColeta:
                 form = parser.achar_form(BeautifulSoup(html, "html.parser"), "formConsulta")
                 dados = parser.payload_base(form)
                 dados.update(item.get("detalhe_params") or {})
-                detalhe = parser.parse_detalhe_pesquisa(client.post(URLS["pesquisa"], dados))
+                detalhe = parser.parse_detalhe_pesquisa(client.post(_urls(client)["pesquisa"], dados))
                 break
             except (ErroColeta, ValueError) as e:
                 if tentativa == 1:
@@ -115,7 +145,7 @@ def coletar_pesquisa(client: SigaaClient, ano: str) -> ResultadoColeta:
 def coletar_extensao(client: SigaaClient, ano: str) -> ResultadoColeta:
     res = ResultadoColeta("extensao")
     html = _buscar(client, "extensao", ano)
-    todos = parser.parse_listagem_extensao(html)
+    todos = parser.parse_listagem_extensao(html, _base_url(client))
     tipos = {parser.normalizar(t) for t in client.cfg.extensao_tipos}
     itens = [i for i in todos if parser.normalizar(i.get("categoria")) in tipos]
     logger.info("SIGAA extensão %s: %d ações na listagem, %d nos tipos %s",

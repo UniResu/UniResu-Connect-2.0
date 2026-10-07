@@ -26,10 +26,12 @@ def montar_filtro(args) -> dict:
     if args.projeto_id:
         return {"_id": ObjectId(args.projeto_id)}
     if args.codigo:
-        return {"origem": "sigaa", "codigo": args.codigo}
+        return {"origem": "sigaa", "instituicao": args.instituicao, "codigo": args.codigo}
     if getattr(args, "unirio_id", None):
         return {"origem": "unirio", "unirio_id": args.unirio_id}
-    return {"origem": "sigaa", "sigaa_id": args.sigaa_id}
+    if getattr(args, "ufv_id", None):
+        return {"origem": "ufv", "ufv_id": args.ufv_id}
+    return {"origem": "sigaa", "instituicao": args.instituicao, "sigaa_id": args.sigaa_id}
 
 
 async def definir_contato(db, filtro: dict, email) -> int:
@@ -50,6 +52,9 @@ async def main() -> int:
     alvo.add_argument("--codigo", help="código do projeto de pesquisa no SIGAA (ex.: PVC2148-2026)")
     alvo.add_argument("--sigaa-id", help="id da ação de extensão/projeto no SIGAA")
     alvo.add_argument("--unirio-id", help="id do projeto nos portais da UNIRIO (ID_PROJETO/id do detalhe)")
+    alvo.add_argument("--ufv-id", help="id do projeto nos dados abertos da UFV (ex.: 847 na extensão, p204970 na pesquisa)")
+    ap.add_argument("--instituicao", default="UNIR",
+                    help="sigla da instituição, para --codigo e --sigaa-id (padrão UNIR; vários SIGAAs repetem ids)")
     acao = ap.add_mutually_exclusive_group(required=True)
     acao.add_argument("--email", help="e-mail que passa a receber as candidaturas")
     acao.add_argument("--remover", action="store_true", help="remove o contato manual")

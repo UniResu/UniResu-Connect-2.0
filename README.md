@@ -45,13 +45,13 @@ A presente plataforma web, **UniResu Connect**, propõe-se a ser um ecossistema 
 
 ---
 
-### **Projetos do SIGAA/UNIR e dos portais da UNIRIO, e candidatura com carta de intenção**
+### **Projetos coletados (SIGAA de dezenas de instituições, portais da UNIRIO, dados abertos da UFV) e candidatura com carta de intenção**
 
 A aba **Projetos Acadêmicos** lista, além dos projetos cadastrados pelos professores, os projetos de **pesquisa** e **extensão** coletados semanalmente de duas fontes públicas: as consultas do **SIGAA/UNIR** e os **portais da UNIRIO** (Portal da Pesquisa e Portal da Extensão). Os filtros permitem escolher módulo (pesquisa/extensão), instituição (UNIR, UNIRIO) e unidade. O aluno se candidata escrevendo uma **carta de intenção**, que chega no corpo do e-mail do(a) coordenador(a) — com *reply-to* no e-mail do aluno e o Lattes como link no final.
 
 **Como funciona o sync**
 
-* `backend/jobs/sync_sigaa.py` faz o fluxo JSF do SIGAA (GET → `javax.faces.ViewState` → POST com filtros e o botão Buscar), lê a tabela de resultados e abre a página de detalhe de cada item para obter coordenador(a), e-mail e período.
+* `backend/jobs/sync_sigaa.py` faz o fluxo JSF do SIGAA (GET → `javax.faces.ViewState` → POST com filtros e o botão Buscar), lê a tabela de resultados e abre a página de detalhe de cada item para obter coordenador(a), e-mail e período. O mesmo coletor serve a qualquer instituição que use o SIGAA: `backend/services/sigaa/instituicoes.py` lista as conhecidas (sigla, nome, endereço base e módulos com consulta pública) e `ATIVAS` as que o agendamento coleta, cerca de quarenta universidades e institutos federais cujos portais públicos foram verificados. `SIGAA_INSTITUICAO=UFRN` escolhe a instituição; o workflow roda uma por job (matriz, quatro em paralelo), e cada uma grava com `origem: "sigaa"` e `instituicao` igual à sigla. Toda escrita filtra por origem e instituição, e a chave natural das instituições novas leva a sigla como prefixo, então uma coleta nunca encosta nos projetos de outra universidade.
 * Pausa mínima de 1 s entre requisições (padrão 1,5 s), timeout e retry com backoff exponencial.
 * Grava na collection `projetos` com `origem: "sigaa"` (upsert pela chave natural tipo + ano + título + coordenador). **Projetos cadastrados manualmente nunca são alterados.** Projetos que somem da fonte ficam `ativo: false` — nada é apagado.
 * Se um módulo retornar **0 resultados** (ou a busca falhar), nada daquele módulo é desativado: a run é marcada como falha, a equipe recebe alerta por e-mail e o processo sai com código 1.
@@ -61,7 +61,7 @@ A aba **Projetos Acadêmicos** lista, além dos projetos cadastrados pelos profe
 
 **Rodar o job manualmente**
 
-* Pelo GitHub: **Actions → Sync SIGAA → Run workflow** (dá para informar anos e módulos).
+* Pelo GitHub: **Actions → Sync SIGAA → Run workflow** (dá para informar instituições, anos, módulos e o modo `dry-run`, que coleta e imprime amostras sem gravar).
 * Localmente (usa o `MONGO_URI` do `backend/.env`):
 
   ```bash

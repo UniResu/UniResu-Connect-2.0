@@ -1,5 +1,6 @@
 """
-Configuração do sync com o SIGAA/UNIR, lida de variáveis de ambiente.
+Configuração do sync com o SIGAA (UNIR por padrão; qualquer instituição de
+`services.sigaa.instituicoes` via SIGAA_INSTITUICAO), lida de variáveis de ambiente.
 
 Todas as variáveis têm default seguro, então o job roda sem nenhuma
 configuração extra além de MONGO_URI.
@@ -9,6 +10,8 @@ import os
 from dataclasses import dataclass, field
 from datetime import datetime
 
+from services.sigaa.instituicoes import instituicao_sigaa
+
 
 def _lista(valor: str) -> list[str]:
     return [v.strip() for v in valor.split(",") if v.strip()]
@@ -16,6 +19,9 @@ def _lista(valor: str) -> list[str]:
 
 @dataclass
 class SigaaConfig:
+    # Instituição coletada (sigla) e endereço base do seu SIGAA.
+    instituicao: str = "UNIR"
+    base_url: str = "https://sigaa.unir.br"
     # Anos consultados. Default: ano corrente.
     anos: list[str] = field(default_factory=lambda: [str(datetime.now().year)])
     # Filtro de situação da consulta de pesquisa (vazio = sem filtro).
@@ -31,8 +37,17 @@ class SigaaConfig:
     backoff_base_segundos: float = 2.0
 
     @classmethod
+    def para(cls, sigla: str, **kwargs) -> "SigaaConfig":
+        """Configuração apontando para o SIGAA de uma instituição conhecida."""
+        inst = instituicao_sigaa(sigla)
+        kwargs.setdefault("modulos", list(inst.modulos))
+        return cls(instituicao=inst.sigla, base_url=inst.base_url, **kwargs)
+
+    @classmethod
     def from_env(cls) -> "SigaaConfig":
-        cfg = cls()
+        cfg = cls.para(os.getenv("SIGAA_INSTITUICAO") or "UNIR")
+        if os.getenv("SIGAA_BASE_URL"):
+            cfg.base_url = os.environ["SIGAA_BASE_URL"].strip().rstrip("/")
         if os.getenv("SIGAA_ANOS"):
             cfg.anos = _lista(os.environ["SIGAA_ANOS"])
         if "SIGAA_PESQUISA_SITUACAO" in os.environ:
