@@ -15,7 +15,7 @@ import requests
 from conftest import FIXTURES
 from jobs.sync_unirio import capturar, executar_sync
 from services.fontes import UNIRIO
-from services.http_client import ClienteHttp
+from services.http_client import ClienteHttp, ErroColeta
 from services.sigaa import repositorio
 from services.unirio import parser, scraper
 from services.unirio.config import UnirioConfig
@@ -904,12 +904,12 @@ def test_aguardar_portal_verifica_ate_responder_ou_esgotar_o_prazo():
     relogio = _Relogio()
     cliente = _ClienteInstavel(falhas=3)
     assert scraper.aguardar_portal(cliente, "pesquisa", 60, sleep=relogio.dormir, relogio=relogio) is True
-    assert cliente.chamadas == 4 and relogio.t == 3 * 300
+    assert cliente.chamadas == 4 and relogio.t == 3 * 600
 
     relogio = _Relogio()
     cliente = _ClienteInstavel(falhas=99)
-    assert scraper.aguardar_portal(cliente, "pesquisa", 12, sleep=relogio.dormir, relogio=relogio) is False
-    assert relogio.t == 12 * 60  # a última espera é cortada no prazo
+    assert scraper.aguardar_portal(cliente, "pesquisa", 25, sleep=relogio.dormir, relogio=relogio) is False
+    assert relogio.t == 25 * 60  # a última espera é cortada no prazo
 
     # 0 minutos: nem verifica
     cliente = _ClienteInstavel(falhas=99)
@@ -951,3 +951,57 @@ def test_pesquisa_abre_os_detalhes_dos_anos_mais_recentes_primeiro(monkeypatch):
 
     list(scraper.coletar_em_lotes(Cliente(), "pesquisa"))
     assert abertos == ["u/b", "u/d", "u/a", "u/c"]
+
+
+class TestCargaLeve:
+    class _Resp:
+        def __init__(self, status=200, headers=None):
+            self.status_code = status
+            self.headers = headers or {"content-type": "text/html; charset=utf-8"}
+            self.text = "ok"
+            self.content = b"ok"
+
+        def raise_for_status(self):
+            pass
+
+    class _Sessao:
+        def __init__(self, respostas, relogio, duracao):
+            self.respostas = list(respostas)
+            self.relogio = relogio
+            self.duracao = duracao
+            self.headers = {}
+
+        def request(self, method, url, **kw):
+            self.relogio.t += self.duracao  # o servidor demora para responder
+            return self.respostas.pop(0)
+
+    def _cliente(self, respostas, duracao, **cfg):
+        relogio = _Relogio()
+        dormidas = []
+
+        def dormir(s):
+            dormidas.append(s)
+            relogio.dormir(s)
+
+        cliente = ClienteHttp(UnirioConfig(**cfg), session=self._Sessao(respostas, relogio, duracao),
+                              sleep=dormir, clock=relogio)
+        return cliente, dormidas
+
+    def test_pausa_acompanha_o_tempo_de_resposta_do_servidor(self):
+        cliente, dormidas = self._cliente([self._Resp(), self._Resp()], duracao=30)
+        cliente.get("u/1")
+        cliente.get("u/2")
+        assert dormidas == [30]  # esperou o mesmo que o servidor levou (fator 1.0)
+
+        cliente, dormidas = self._cliente([self._Resp(), self._Resp()], duracao=0.2)
+        cliente.get("u/1")
+        cliente.get("u/2")
+        assert dormidas == [1.5]  # servidor rápido: vale a pausa mínima de 1,5 s
+
+    def test_poucas_tentativas_espacadas_e_retry_after(self):
+        erro = self._Resp(503, {"Retry-After": "120"})
+        cliente, dormidas = self._cliente([erro, self._Resp(500), self._Resp(500)], duracao=1)
+        with pytest.raises(ErroColeta):
+            cliente.get("u/1")
+        # 3 tentativas: espera max(10, 120) após a 1ª e 20 após a 2ª (mais as pausas mínimas)
+        assert 120 in dormidas and 20 in dormidas and len([d for d in dormidas if d >= 10]) == 2

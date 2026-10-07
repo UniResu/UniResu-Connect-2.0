@@ -41,7 +41,7 @@ on:
         options: [incremental, novos, completo]
         default: incremental
       espera_portal_minutos:
-        description: "Se o portal estiver fora do ar, esperar até N minutos verificando a cada 5 (0 = não espera)"
+        description: "Se o portal estiver fora do ar, esperar até N minutos verificando a cada 10 (0 = não espera)"
         required: false
         default: "0"
       pesquisa_ano_minimo:

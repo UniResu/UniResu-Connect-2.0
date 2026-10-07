@@ -211,14 +211,14 @@ def _ano_int(ano) -> int:
     return int(texto) if texto.isdigit() else 0
 
 
-def aguardar_portal(client: UnirioClient, modulo: str, minutos: float, intervalo_segundos: float = 300,
+def aguardar_portal(client: UnirioClient, modulo: str, minutos: float, intervalo_segundos: float = 600,
                     sleep=time.sleep, relogio=time.monotonic) -> bool:
     """Espera o portal do módulo responder, por até `minutos`.
 
     Os portais da UNIRIO passam horas devolvendo HTTP 500 ou recusando
     conexões. Em vez de falhar na hora, a execução verifica a página inicial
-    a cada `intervalo_segundos` (cada verificação já tem as tentativas do
-    cliente) e segue assim que ela responder. Devolve False se o prazo acabar.
+    a cada `intervalo_segundos` (10 min; cada verificação já tem as
+    tentativas do cliente) e segue assim que ela responder. Devolve False se o prazo acabar.
     """
     if minutos <= 0:
         return True

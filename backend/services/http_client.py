@@ -21,6 +21,15 @@ class ErroColeta(Exception):
     """Falha de rede/HTTP após esgotar as tentativas, ou página inesperada."""
 
 
+def _retry_after(resp) -> float:
+    """Segundos pedidos pelo cabeçalho Retry-After (só a forma numérica)."""
+    valor = (getattr(resp, "headers", None) or {}).get("Retry-After") or ""
+    try:
+        return max(0.0, min(float(valor), 600.0))
+    except ValueError:
+        return 0.0
+
+
 class ConfigHttp(Protocol):
     pausa_segundos: float
     timeout_segundos: float
@@ -50,11 +59,19 @@ class ClienteHttp:
         self._sleep = sleep
         self._clock = clock
         self._ultima: Optional[float] = None
+        self._ultima_duracao = 0.0
         self.total_requisicoes = 0
+
+    def _pausa_atual(self) -> float:
+        """Pausa mínima antes da próxima requisição. Com `pausa_proporcional`
+        (fator > 0 na config), a pausa cresce com o tempo que o servidor levou
+        para responder a anterior: servidor lento recebe menos pedidos."""
+        fator = float(getattr(self.cfg, "pausa_proporcional", 0) or 0)
+        return max(self.cfg.pausa_segundos, fator * self._ultima_duracao)
 
     def _aguardar_vez(self) -> None:
         if self._ultima is not None:
-            falta = self.cfg.pausa_segundos - (self._clock() - self._ultima)
+            falta = self._pausa_atual() - (self._clock() - self._ultima)
             if falta > 0:
                 self._sleep(falta)
 
@@ -67,20 +84,26 @@ class ClienteHttp:
         ultimo_erro: Optional[Exception] = None
         for tentativa in range(1, self.cfg.max_tentativas + 1):
             self._aguardar_vez()
+            inicio = self._clock()
+            retry_after = 0.0
             try:
                 self.total_requisicoes += 1
                 resp = self.session.request(method, url, timeout=self.cfg.timeout_segundos, **kwargs)
                 self._ultima = self._clock()
+                self._ultima_duracao = self._ultima - inicio
                 if resp.status_code >= 500 or resp.status_code == 429:
+                    retry_after = _retry_after(resp)
                     raise self.erro(f"HTTP {resp.status_code} em {url}")
                 resp.raise_for_status()
                 self._ajustar_encoding(resp)
                 return resp
             except (requests.RequestException, ErroColeta) as e:
                 self._ultima = self._clock()
+                self._ultima_duracao = self._ultima - inicio
                 ultimo_erro = e
                 if tentativa < self.cfg.max_tentativas:
-                    espera = self.cfg.backoff_base_segundos * (2 ** (tentativa - 1))
+                    # Respeita o Retry-After do servidor quando ele pede mais.
+                    espera = max(self.cfg.backoff_base_segundos * (2 ** (tentativa - 1)), retry_after)
                     logger.warning("%s: tentativa %d falhou (%s); nova tentativa em %.0fs",
                                    self.nome, tentativa, e, espera)
                     self._sleep(espera)

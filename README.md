@@ -141,7 +141,7 @@ Pelo GitHub Actions: workflow **Manutenção do banco** (`.github/workflows/manu
 | `UNIRIO_MAX_PAGINAS` | job | `300` | Teto de páginas percorridas por listagem (ao bater, a listagem conta como incompleta) |
 | `UNIRIO_MAX_DETALHES` | job | `0` | Teto de detalhes consultados por módulo, só em `dry-run`/`captura` (o sync real ignora) |
 | `UNIRIO_DETALHES` | job | `incremental` | Quais páginas de detalhe abrir no sync real: `incremental` (só projetos novos e, na pesquisa, os ainda em execução; os já conhecidos e encerrados ficam como estão), `novos` (só os que ainda não têm detalhe gravado, para retomar uma carga interrompida) ou `completo` (todos). A listagem é sempre percorrida inteira: é ela que diz o que sumiu dos portais |
-| `UNIRIO_ESPERA_PORTAL_MINUTOS` | job | `0` (`60` no workflow) | Se o portal estiver fora do ar (HTTP 500, conexão recusada), espera até esse tempo verificando a cada 5 minutos antes de desistir do módulo |
+| `UNIRIO_ESPERA_PORTAL_MINUTOS` | job | `0` (`60` no workflow) | Se o portal estiver fora do ar (HTTP 500, conexão recusada), espera até esse tempo verificando a cada 10 minutos antes de desistir do módulo |
 | `UNIRIO_URL_PESQUISA` | job | URL do Portal da Pesquisa | Substitui a URL da listagem de pesquisa |
 | `UNIRIO_URL_EXTENSAO` | job | URL do Portal da Extensão | Substitui a URL da listagem de extensão |
 | `UNIRIO_PESQUISA_DETALHE_PREFIXO` | job | diretório da listagem (`/projetos/search/`) | Prefixo de caminho dos links de detalhe da pesquisa aceitos pelo parser |

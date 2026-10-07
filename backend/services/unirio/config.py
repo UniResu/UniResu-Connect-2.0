@@ -72,11 +72,14 @@ class UnirioConfig:
     # Pausa mínima entre requisições (nunca menos que 1s).
     pausa_segundos: float = 1.5
     timeout_segundos: float = 60.0
-    # Os portais da UNIRIO derrubam conexões e devolvem 500 em rajadas curtas:
-    # 5 tentativas com espera de 5, 10, 20 e 40 s (75 s no total) antes de
-    # desistir de uma página.
-    max_tentativas: int = 5
-    backoff_base_segundos: float = 5.0
+    # Coleta leve: além da pausa mínima, espera entre uma página e a próxima
+    # o mesmo tempo que o servidor levou para responder (fator 1.0). Num
+    # servidor lento a coleta desacelera sozinha.
+    pausa_proporcional: float = 1.0
+    # Poucas tentativas e espaçadas (10 s, depois 20 s): insistir num servidor
+    # que está devolvendo erro só aumenta a carga dele.
+    max_tentativas: int = 3
+    backoff_base_segundos: float = 10.0
 
     @property
     def url_pesquisa(self) -> str:
@@ -114,6 +117,7 @@ class UnirioConfig:
         cfg.detalhes = detalhes
         cfg.espera_portal_minutos = max(0.0, float(_env("UNIRIO_ESPERA_PORTAL_MINUTOS", cfg.espera_portal_minutos)))
         cfg.pausa_segundos = max(1.0, float(_env("UNIRIO_PAUSA_SEGUNDOS", cfg.pausa_segundos)))
+        cfg.pausa_proporcional = max(0.0, float(_env("UNIRIO_PAUSA_PROPORCIONAL", cfg.pausa_proporcional)))
         cfg.timeout_segundos = float(_env("UNIRIO_TIMEOUT_SEGUNDOS", cfg.timeout_segundos))
         cfg.max_tentativas = max(1, int(_env("UNIRIO_MAX_TENTATIVAS", cfg.max_tentativas)))
         return cfg
