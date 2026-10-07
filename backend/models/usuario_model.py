@@ -187,6 +187,7 @@ class UsuarioResponse(BaseModel):
     """Resposta completa do usuário logado (sem dados sensíveis)."""
     id: str
     email: EmailStr
+    username: Optional[str] = None           # identificador público (fórum); gerado do nome
     nome: str
     nome_social: Optional[str] = None
     avatar_url: Optional[str] = None
@@ -220,6 +221,7 @@ class UsuarioResponse(BaseModel):
 class PerfilPublicoResponse(BaseModel):
     """Perfil visível para outros usuários (sem emails, tokens, etc.)."""
     id: str
+    username: Optional[str] = None           # identificador público (fórum); gerado do nome
     nome: str
     nome_social: Optional[str] = None
     avatar_url: Optional[str] = None

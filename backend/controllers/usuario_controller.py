@@ -17,6 +17,7 @@ from fastapi import HTTPException, status
 from passlib.context import CryptContext
 from database.connection import Database
 from models.usuario_model import UsuarioCreate
+from services.usernames import gerar_username_unico
 
 logger = logging.getLogger(__name__)
 
@@ -87,9 +88,15 @@ async def registrar_usuario_controller(user: UsuarioCreate) -> Dict[str, Any]:
     token_verificacao = secrets.token_urlsafe(48)
     token_verificacao_expira = datetime.now(timezone.utc) + timedelta(hours=24)
 
+    # Username público (fórum): derivado do nome, nunca do e-mail. Único via
+    # índice `uniq_username`; uma corrida improvável entre a geração e o
+    # insert cai no `except` genérico abaixo e o usuário tenta de novo.
+    username = await gerar_username_unico(db, user.nome)
+
     # Construir documento do usuário
     novo_usuario_doc: Dict[str, Any] = {
         "email": user.email,
+        "username": username,
         "nome": user.nome,
         "papel": user.papel.value,
         "instituicao": user.instituicao,

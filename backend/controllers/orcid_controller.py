@@ -18,6 +18,7 @@ from fastapi import HTTPException, status
 from dotenv import load_dotenv
 import httpx
 from database.connection import Database
+from services.usernames import gerar_username_unico
 
 load_dotenv()
 
@@ -164,9 +165,12 @@ async def processar_callback_orcid(
         usuario = await db.usuarios.find_one({"_id": usuario_existente["_id"]})
     else:
         # Criar novo usuário
+        nome = name or "Usuário ORCID"
         novo_usuario = {
             "email": f"{orcid_id}@orcid.placeholder",  # Placeholder até o usuário informar
-            "nome": name or "Usuário ORCID",
+            # Username público (fórum): do nome do ORCID, nunca do e-mail/ORCID iD.
+            "username": await gerar_username_unico(db, nome),
+            "nome": nome,
             "papel": "pesquisador",  # Padrão para login via ORCID
             "orcid": orcid_data,
             "instituicao": perfil_orcid.get("afiliacao"),

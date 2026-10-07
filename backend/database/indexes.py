@@ -51,6 +51,14 @@ async def criar_indices(db) -> None:
         [("usuario_id", ASCENDING), ("data_candidatura", DESCENDING)],
         name="candidaturas_por_usuario",
     )
+    # Username público (fórum/perfil). Sparse: contas antigas ainda sem o campo
+    # não colidem entre si; o backfill de `migrar_dados` as preenche.
+    await db.usuarios.create_index(
+        [("username", ASCENDING)],
+        name="uniq_username",
+        unique=True,
+        sparse=True,
+    )
     logger.info("Índices do MongoDB verificados/criados.")
 
 
@@ -58,7 +66,26 @@ async def migrar_dados(db) -> None:
     """Migrações leves de dados, independentes dos índices (uma falha em
     create_index não pode impedir que rodem). Idempotentes."""
     from services.sigaa.repositorio import garantir_modulo
+    from services.usernames import preencher_usernames
+    from jobs.seed_forum import seed_forum
 
     migrados = await garantir_modulo(db)
     if migrados:
         logger.info("Campo `modulo` preenchido em %d projetos do SIGAA.", migrados)
+
+    # Cada passo abaixo é independente: a falha de um não impede o seguinte.
+    try:
+        # Precisa rodar ANTES de `criar_indices` (ordem do lifespan em main.py):
+        # o índice único em `username` só é criado com todo mundo preenchido.
+        preenchidos = await preencher_usernames(db)
+        if preenchidos:
+            logger.info("Username gerado para %d usuário(s) sem o campo.", preenchidos)
+    except Exception as e:
+        logger.error("Falha no backfill de usernames: %s", e)
+
+    try:
+        inseridos = await seed_forum(db)
+        if inseridos:
+            logger.info("Seed do fórum: %d pergunta(s) inserida(s).", inseridos)
+    except Exception as e:
+        logger.error("Falha no seed do fórum: %s", e)

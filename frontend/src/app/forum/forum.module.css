@@ -1,335 +1,349 @@
-.page { max-width: var(--max-width); margin: 0 auto; padding: var(--space-2xl) var(--space-lg); }
-.header { margin-bottom: var(--space-2xl); animation: fadeIn 0.4s ease; }
-.headerTop { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-lg); flex-wrap: wrap; }
-.title { font-size: var(--font-size-3xl); font-weight: 700; color: var(--text-primary); margin-bottom: var(--space-xs); }
-.subtitle { color: var(--text-secondary); font-size: var(--font-size-lg); }
+/* Fórum — lista de perguntas em estilo thread, ultraminimalista.
+   Sem cartões nem sombras: linhas separadas por filetes, tipografia legível,
+   cores e espaçamentos vindos das variáveis de globals.css. */
 
-.newTopicButton {
-  padding: 0.75rem var(--space-xl);
-  background: var(--primary);
-  color: white;
-  font-weight: 600;
-  border: none;
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  white-space: nowrap;
-  font-size: var(--font-size-sm);
+.page {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: var(--space-2xl) var(--space-md) var(--space-3xl);
 }
-.newTopicButton:hover { background: var(--primary-dark); transform: translateY(-1px); }
 
-/* ── Create Form ── */
+/* ── Cabeçalho ── */
 
-.createForm {
+.cabecalho {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
   gap: var(--space-md);
-  background: var(--bg-secondary);
-  padding: var(--space-xl);
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--border-light);
-  margin-bottom: var(--space-2xl);
-  animation: slideUp 0.3s ease;
+  flex-wrap: wrap;
+  margin-bottom: var(--space-lg);
 }
 
-.formInput, .formTextarea {
-  padding: 0.75rem var(--space-md);
+.titulo {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.subtitulo {
+  margin-top: var(--space-xs);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.dicaLogin {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+.dicaLogin a { font-weight: 600; }
+
+/* ── Botões ── */
+
+.btnPrimario {
+  padding: 0.55rem var(--space-md);
+  background: var(--primary);
+  color: var(--text-on-primary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition-fast);
+}
+.btnPrimario:hover:not(:disabled) { background: var(--primary-dark); }
+.btnPrimario:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Ações discretas em texto (Editar, Excluir, Cancelar) */
+.acaoTexto {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.acaoTexto:hover { color: var(--primary); text-decoration: underline; }
+.acaoPerigo:hover { color: var(--error); }
+
+/* ── Formulário (nova pergunta e edição) ── */
+
+.formPergunta {
+  display: grid;
+  gap: var(--space-sm);
+  padding: var(--space-md);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  margin-bottom: var(--space-lg);
+}
+
+.campo {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  font: inherit;
   font-size: var(--font-size-base);
-  font-family: var(--font-family);
+  line-height: 1.6;
+  color: var(--text-primary);
+  outline: none;
+  resize: vertical;
+  transition: border-color var(--transition-fast);
+}
+.campo::placeholder { color: var(--text-muted); }
+.campo:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-100); }
+
+.formAcoes {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.dicaForm {
+  margin-right: auto;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+/* ── Barra de busca e ordenação ── */
+
+.barra {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-md);
+}
+
+.busca {
+  flex: 1 1 240px;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: var(--font-size-sm);
   color: var(--text-primary);
   outline: none;
   transition: border-color var(--transition-fast);
-  resize: vertical;
 }
-.formInput:focus, .formTextarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-100); }
+.busca::placeholder { color: var(--text-muted); }
+.busca:focus { border-color: var(--primary); }
 
-.submitBtn {
-  align-self: flex-end;
-  padding: 0.625rem var(--space-xl);
-  background: var(--primary);
-  color: white;
-  font-weight: 600;
-  font-size: var(--font-size-sm);
-  border: none;
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-.submitBtn:hover:not(:disabled) { background: var(--primary-dark); }
-.submitBtn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-/* ── Topics List ── */
-
-.topicosList { display: flex; flex-direction: column; gap: var(--space-sm); }
-
-.topicoCard {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-xl);
+.ordem {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   overflow: hidden;
-  transition: all var(--transition-fast);
 }
-.topicoCard:hover { border-color: var(--primary-200); }
 
-.topicoHeader {
+.ordemBtn {
+  padding: 0.5rem 0.8rem;
+  background: var(--bg-primary);
+  border: 0;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.ordemBtn + .ordemBtn { border-left: 1px solid var(--border); }
+.ordemBtn:hover { color: var(--text-primary); }
+.ordemBtn[aria-pressed="true"] {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.contagem {
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.erro {
+  margin-bottom: var(--space-md);
+  font-size: var(--font-size-sm);
+  color: var(--error);
+}
+
+/* ── Lista de perguntas ── */
+
+.lista { list-style: none; }
+
+.linha {
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.linhaAberta { padding-bottom: var(--space-lg); }
+
+.linhaCabecalho { cursor: pointer; }
+
+.linhaTitulo {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+/* O título é um <button> para abrir/fechar pelo teclado; visualmente é um link. */
+.linhaTituloBtn {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--primary);
+  text-align: left;
+  cursor: pointer;
+}
+.linhaCabecalho:hover .linhaTituloBtn { text-decoration: underline; }
+.linhaTituloBtn:focus-visible {
+  outline: 2px solid var(--primary-light);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.linhaAberta .linhaTituloBtn { color: var(--text-primary); }
+
+.resumo {
+  margin-top: var(--space-xs);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Linha de meta: itens separados por um filete vertical fino */
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: var(--space-sm);
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+.metaItem + .metaItem {
+  margin-left: 0.6rem;
+  padding-left: 0.6rem;
+  border-left: 1px solid var(--border);
+}
+.metaAutor {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* ── Thread aberta ── */
+
+.thread { animation: aparecer 0.2s ease; }
+
+.corpo {
+  max-width: 720px;
+  margin-top: var(--space-md);
+  font-size: var(--font-size-base);
+  line-height: 1.7;
+  color: var(--text-primary);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.corpo p + p { margin-top: 1em; }
+
+.rodape {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 100%;
-  padding: var(--space-lg) var(--space-xl);
-  background: none;
-  border: none;
-  cursor: pointer;
-  text-align: left;
-  font-family: var(--font-family);
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  max-width: 720px;
+  margin-top: var(--space-lg);
 }
 
-.topicoInfo { flex: 1; }
-.topicoTitulo { font-size: var(--font-size-base); font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-xs); }
-.topicoMeta { display: flex; gap: var(--space-sm); font-size: var(--font-size-xs); color: var(--text-muted); flex-wrap: wrap; }
+.votos {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
 
-.chevron {
+.votoBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+.votoBtn:hover:not(:disabled) { border-color: var(--primary-light); color: var(--primary); }
+.votoBtn[aria-pressed="true"] {
+  border-color: var(--primary);
+  background: var(--primary-50);
+  color: var(--primary);
+}
+.votoBtn:disabled { opacity: 0.5; cursor: default; }
+
+.votosTotal {
+  min-width: 2ch;
+  text-align: center;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.votosRotulo {
+  margin-left: var(--space-xs);
   font-size: var(--font-size-xs);
   color: var(--text-muted);
-  transition: transform var(--transition-fast);
-  flex-shrink: 0;
-}
-.chevronOpen { transform: rotate(180deg); }
-
-/* ── Topic Body (expanded) ── */
-
-.topicoBody {
-  padding: 0 var(--space-xl) var(--space-xl);
-  border-top: 1px solid var(--border-light);
-  animation: fadeIn 0.3s ease;
 }
 
-.topicoConteudoOriginal {
-  padding: var(--space-xl) 0 var(--space-lg);
-  font-size: var(--font-size-base);
-  color: var(--text-primary);
-  line-height: 1.6;
+.acoesAutor {
+  display: inline-flex;
+  gap: var(--space-md);
 }
 
-.divider {
-  border: none;
-  height: 1px;
-  background: var(--border-light);
+/* ── Vazio e carregando ── */
+
+.vazio {
+  padding: var(--space-2xl) 0;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.esqueleto {
+  height: 72px;
   margin: var(--space-md) 0;
-}
-
-/* ── Empty & Loading ── */
-
-.emptyState { text-align: center; padding: var(--space-3xl); color: var(--text-muted); }
-.emptyIcon { font-size: 3rem; display: block; margin-bottom: var(--space-md); }
-.emptyState h3 { font-size: var(--font-size-xl); color: var(--text-secondary); margin-bottom: var(--space-xs); }
-
-.loadingList { display: flex; flex-direction: column; gap: var(--space-sm); }
-.skeletonRow {
-  height: 80px;
+  border-radius: var(--radius-sm);
   background: linear-gradient(90deg, var(--bg-card) 25%, var(--border-light) 50%, var(--bg-card) 75%);
   background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: var(--radius-xl);
+  animation: brilho 1.5s infinite;
 }
+
+@keyframes aparecer {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes brilho {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ── Telas estreitas ── */
 
 @media (max-width: 640px) {
-  .headerTop { flex-direction: column; }
-}
-
-/* ─────────────────────────────────────────────────────────────────────────
-   ADICIONE estes blocos ao final do seu forum.module.css existente.
-   Os seletores que já existem (como .page, .header, etc.) NÃO precisam
-   ser copiados — apenas os novos abaixo.
-──────────────────────────────────────────────────────────────────────────── */
-
-/* ── Botões de autoria (Editar / Excluir) ── */
-
-.autorActions {
-  display: flex;
-  gap: var(--space-sm);
-  justify-content: flex-end;
-  padding-top: var(--space-md);
-  padding-bottom: var(--space-sm);
-}
-
-.editBtn {
-  padding: 0.35rem 0.85rem;
-  font-size: var(--font-size-xs);
-  font-weight: 600;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-.editBtn:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-  background: var(--primary-100);
-}
-
-.deleteBtn {
-  padding: 0.35rem 0.85rem;
-  font-size: var(--font-size-xs);
-  font-weight: 600;
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  background: #fff1f0;
-  color: #cf1322;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-.deleteBtn:hover {
-  background: #ffa39e;
-  color: #820014;
-}
-
-/* ── Formulário de edição inline ── */
-
-.editForm {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-  padding: var(--space-md) 0 var(--space-lg);
-  animation: slideUp 0.25s ease;
-}
-
-.editFormActions {
-  display: flex;
-  gap: var(--space-sm);
-  justify-content: flex-end;
-}
-
-.cancelEditBtn {
-  padding: 0.5rem var(--space-lg);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-.cancelEditBtn:hover {
-  border-color: var(--text-muted);
-  color: var(--text-primary);
-}
-
-/* ── Barra de Reações (Like / Dislike) ── */
-
-.reactionBar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  padding-top: var(--space-md);
-  flex-wrap: wrap;
-}
-
-.reactionBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.9rem;
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-full);
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  line-height: 1;
-}
-.reactionBtn:hover:not(:disabled) {
-  border-color: var(--primary);
-  color: var(--primary);
-  background: var(--primary-100);
-  transform: scale(1.04);
-}
-.reactionBtn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* Estado ativo — Like */
-.reactionActive {
-  border-color: var(--primary);
-  background: var(--primary-100);
-  color: var(--primary-dark);
-}
-
-/* Estado ativo — Dislike */
-.reactionActiveNeg {
-  border-color: #cf1322;
-  background: #fff1f0;
-  color: #820014;
-}
-
-.reactionCount {
-  font-variant-numeric: tabular-nums;
-  min-width: 1.2ch;
-  text-align: center;
-}
-
-/* Reações para visitantes (read-only) */
-.reactionReadOnly {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  flex-wrap: wrap;
-}
-
-.reactionBtnDisabled {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.9rem;
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  border: 1.5px solid var(--border-light);
-  border-radius: var(--radius-full);
-  background: var(--bg-secondary);
-  color: var(--text-muted);
-  opacity: 0.75;
-  cursor: default;
-  line-height: 1;
-}
-
-/* Hint de login */
-.loginHint {
-  font-size: var(--font-size-sm);
-  color: var(--text-muted);
-}
-.loginHint a,
-.loginHintSmall a {
-  color: var(--primary);
-  font-weight: 600;
-  text-decoration: none;
-}
-.loginHint a:hover,
-.loginHintSmall a:hover {
-  text-decoration: underline;
-}
-
-.loginHintSmall {
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
-  margin-left: var(--space-xs);
-}
-
-/* ── Animações (se não existirem no seu CSS global) ── */
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  .page { padding-top: var(--space-xl); }
+  .cabecalho { align-items: flex-start; }
+  .linhaTitulo { font-size: var(--font-size-base); }
+  .rodape { align-items: flex-start; flex-direction: column; }
 }

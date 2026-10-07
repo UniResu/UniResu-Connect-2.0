@@ -54,6 +54,8 @@ export interface OrcidData {
 export interface User {
   id: string;
   email: string;
+  /** Identificador público (ex.: "matheus-gabriel"); é o que o fórum exibe no lugar do e-mail. */
+  username?: string;
   nome: string;
   nome_social?: string;
   avatar_url?: string;

@@ -1,17 +1,17 @@
 "use client";
 
 /**
- * ForumPage — v2.2 (Refatorada)
+ * ForumPage — v3 (threads, estilo "Stack Overflow ultraminimalista")
  *
- * Regras de negócio aplicadas:
- *  [R1] Botões Editar/Excluir só existem no DOM para o autor do tópico.
- *  [R2] Nenhum input/lista/handler de comentários — apenas o corpo do tópico.
- *  [R3] Reações Like/Dislike com contadores e optimistic UI update.
- *  [R4] Auth guards: visitantes leem; logados criam/editam/reagem.
+ * O fórum é uma lista de perguntas; o objetivo é expor conteúdo, não
+ * interatividade. Regras de negócio:
+ *  [R1] Editar/Excluir só aparecem para o autor (autoria por `autor_id`).
+ *  [R2] Sem comentários/respostas: cada pergunta é um texto completo.
+ *  [R3] Votos (a favor/contra) com atualização otimista; votos = likes - dislikes.
+ *  [R4] Visitantes leem; logados perguntam, editam e votam.
+ *  [R5] Privacidade: a API não devolve e-mail; o autor aparece como @username.
  *
- * Separação de responsabilidades:
- *  - `ForumPage`  → container, fetch, criação e orquestração de callbacks.
- *  - `TopicoCard` → card isolado com estado local de edição + UI memoizada.
+ * Busca e ordenação são feitas no cliente sobre a lista já carregada.
  */
 
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -27,278 +27,298 @@ interface Topico {
   titulo: string;
   conteudo_original?: string;
   descricao?: string; // campo legado — fallback de leitura apenas
-  autor_email: string;
-  autor_id?: string;
+  autor_id?: string | null;
+  autor_username?: string | null;
+  autor_nome?: string | null;
   data_criacao: string;
   visualizacoes: number;
-  likes: string[];    // array de IDs de usuários
-  dislikes: string[]; // array de IDs de usuários
+  likes: string[]; // IDs de usuários
+  dislikes: string[]; // IDs de usuários
 }
 
-type ReactionType = "like" | "dislike";
+type TipoVoto = "like" | "dislike";
+type Ordem = "recentes" | "votadas";
 
-// ── Helpers puros (fora do componente p/ não recriar em cada render) ─────
+// ── Helpers puros ─────────────────────────────────────────────────────────
 
-/** [R1] Autoria: checa por id (novo) e email (fallback p/ docs legados). */
-function verificarAutoria(topico: Topico, user: User | null): boolean {
-  if (!user) return false;
-  if (topico.autor_id && topico.autor_id === user.id) return true;
-  return topico.autor_email === user.email;
+function conteudoDe(topico: Topico) {
+  return topico.conteudo_original || topico.descricao || "";
+}
+
+function votosDe(topico: Topico) {
+  return topico.likes.length - topico.dislikes.length;
+}
+
+/** [R1] Autoria somente por id: o e-mail não existe mais na resposta. */
+function ehAutor(topico: Topico, user: User | null) {
+  return !!user && !!topico.autor_id && topico.autor_id === user.id;
+}
+
+/** Datas sem fuso vêm do Mongo em UTC; sem o "Z" o navegador leria como hora local. */
+function parsearData(iso: string) {
+  const temFuso = /(Z|[+-]\d{2}:?\d{2})$/.test(iso);
+  return new Date(temFuso ? iso : `${iso}Z`);
+}
+
+function plural(n: number, singular: string, pluralForm: string) {
+  return `${n} ${Math.abs(n) === 1 ? singular : pluralForm}`;
+}
+
+function tempoRelativo(iso: string, agora = Date.now()) {
+  const t = parsearData(iso).getTime();
+  if (Number.isNaN(t)) return "";
+  const seg = Math.max(0, Math.round((agora - t) / 1000));
+  if (seg < 60) return "agora";
+  const min = Math.round(seg / 60);
+  if (min < 60) return `há ${min} min`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `há ${h} h`;
+  const d = Math.round(h / 24);
+  if (d < 30) return `há ${plural(d, "dia", "dias")}`;
+  const m = Math.round(d / 30);
+  if (m < 12) return `há ${plural(m, "mês", "meses")}`;
+  return `há ${plural(Math.round(d / 365), "ano", "anos")}`;
+}
+
+function dataCompleta(iso: string) {
+  const d = parsearData(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString("pt-BR", { dateStyle: "long", timeStyle: "short" });
+}
+
+/** Primeiras ~180 letras do conteúdo, cortadas em palavra inteira. */
+function resumo(texto: string, max = 180) {
+  const limpo = texto.replace(/\s+/g, " ").trim();
+  if (limpo.length <= max) return limpo;
+  const corte = limpo.lastIndexOf(" ", max);
+  return `${limpo.slice(0, corte > max / 2 ? corte : max)}…`;
+}
+
+/** Busca sem acentos e sem caixa ("extensao" encontra "Extensão"). */
+function normalizar(texto: string) {
+  return texto.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+}
+
+/** Parágrafos separados por linha em branco; quebras simples ficam dentro do <p>. */
+function paragrafos(texto: string) {
+  return texto
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
 }
 
 /**
- * [R3] Aplica no cliente a mesma lógica de toggle que o backend executa,
- * permitindo atualização otimista antes do round-trip da API.
- *  - Mesmo tipo já presente → remove (toggle off).
- *  - Tipo oposto presente   → troca.
- *  - Nada presente          → adiciona.
+ * [R3] Mesma lógica de toggle do backend, aplicada localmente para a
+ * atualização otimista: repetir o voto remove; votar o oposto troca.
  */
-function aplicarReacaoLocal(
-  topico: Topico,
-  usuarioId: string,
-  tipo: ReactionType
-): Topico {
+function aplicarVotoLocal(topico: Topico, usuarioId: string, tipo: TipoVoto): Topico {
   const tinhaLike = topico.likes.includes(usuarioId);
   const tinhaDislike = topico.dislikes.includes(usuarioId);
-
-  // Remove o usuário de ambos e reinsere só se for um toggle "on"
   const likes = topico.likes.filter((id) => id !== usuarioId);
   const dislikes = topico.dislikes.filter((id) => id !== usuarioId);
-
   if (tipo === "like" && !tinhaLike) likes.push(usuarioId);
   if (tipo === "dislike" && !tinhaDislike) dislikes.push(usuarioId);
-
   return { ...topico, likes, dislikes };
 }
 
-function formatarData(iso: string) {
-  try {
-    return new Date(iso).toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return "";
-  }
+function mensagemDeErro(err: unknown, padrao: string) {
+  const detail = (err as { detail?: unknown })?.detail;
+  return typeof detail === "string" && detail ? detail : padrao;
 }
 
-// ── TopicoCard ────────────────────────────────────────────────────────────
+// ── Ícones (SVG inline, sem dependências e sem emoji) ─────────────────────
 
-interface TopicoCardProps {
+function Seta({ direcao }: { direcao: "cima" | "baixo" }) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {direcao === "cima" ? <path d="M12 19V5M5 12l7-7 7 7" /> : <path d="M12 5v14M19 12l-7 7-7-7" />}
+    </svg>
+  );
+}
+
+// ── Meta: "@username | há 3 dias | 12 visualizações | 4 votos" ───────────
+
+function MetaPergunta({ topico }: { topico: Topico }) {
+  return (
+    <div className={styles.meta}>
+      <span className={`${styles.metaItem} ${styles.metaAutor}`} title={topico.autor_nome || undefined}>
+        @{topico.autor_username || "usuario"}
+      </span>
+      <span className={styles.metaItem} title={dataCompleta(topico.data_criacao)}>
+        {tempoRelativo(topico.data_criacao)}
+      </span>
+      <span className={styles.metaItem}>{plural(topico.visualizacoes, "visualização", "visualizações")}</span>
+      <span className={styles.metaItem}>{plural(votosDe(topico), "voto", "votos")}</span>
+    </div>
+  );
+}
+
+// ── Linha da lista (fechada: título + resumo; aberta: thread completa) ───
+
+interface LinhaPerguntaProps {
   topico: Topico;
   user: User | null;
-  isAuthenticated: boolean;
-  expandido: boolean;
-  reagindo: boolean;
-  onToggleExpandido: () => void;
+  aberta: boolean;
+  votando: boolean;
+  onAbrir: () => void;
   onEditar: (topico: Topico, titulo: string, conteudo: string) => Promise<void>;
   onExcluir: (topicoId: string) => Promise<void>;
-  onReagir: (topicoId: string, tipo: ReactionType) => Promise<void>;
+  onVotar: (topicoId: string, tipo: TipoVoto) => Promise<void>;
 }
 
-function TopicoCard({
-  topico,
-  user,
-  isAuthenticated,
-  expandido,
-  reagindo,
-  onToggleExpandido,
-  onEditar,
-  onExcluir,
-  onReagir,
-}: TopicoCardProps) {
-  const [modoEdicao, setModoEdicao] = useState(false);
+function LinhaPergunta({ topico, user, aberta, votando, onAbrir, onEditar, onExcluir, onVotar }: LinhaPerguntaProps) {
+  const [editando, setEditando] = useState(false);
   const [editTitulo, setEditTitulo] = useState(topico.titulo);
-  const [editConteudo, setEditConteudo] = useState(
-    topico.conteudo_original || topico.descricao || ""
-  );
+  const [editConteudo, setEditConteudo] = useState(conteudoDe(topico));
   const [salvando, setSalvando] = useState(false);
 
-  // [R1] Flag de autoria memoizada — só recalcula quando topico/user mudam.
-  const ehAutor = useMemo(
-    () => verificarAutoria(topico, user),
-    [topico, user]
-  );
+  const autor = ehAutor(topico, user);
+  const conteudo = conteudoDe(topico);
 
-  // [R3] Estado local da reação do usuário logado — deriva dos arrays.
-  const minhaReacao = useMemo<ReactionType | null>(() => {
+  const meuVoto = useMemo<TipoVoto | null>(() => {
     if (!user) return null;
     if (topico.likes.includes(user.id)) return "like";
     if (topico.dislikes.includes(user.id)) return "dislike";
     return null;
   }, [topico.likes, topico.dislikes, user]);
 
-  const totalLikes = topico.likes.length;
-  const totalDislikes = topico.dislikes.length;
-
   function iniciarEdicao() {
     setEditTitulo(topico.titulo);
-    setEditConteudo(topico.conteudo_original || topico.descricao || "");
-    setModoEdicao(true);
+    setEditConteudo(conteudo);
+    setEditando(true);
   }
 
-  function cancelarEdicao() {
-    setModoEdicao(false);
-  }
-
-  async function salvarEdicao() {
+  async function salvarEdicao(e: React.FormEvent) {
+    e.preventDefault();
     if (!editTitulo.trim() || !editConteudo.trim()) return;
     setSalvando(true);
     try {
-      await onEditar(topico, editTitulo, editConteudo);
-      setModoEdicao(false);
+      await onEditar(topico, editTitulo.trim(), editConteudo.trim());
+      setEditando(false);
     } catch {
-      // onEditar já exibe erro; mantemos o form aberto p/ o usuário tentar de novo.
+      // O container já mostrou o erro; o formulário fica aberto para nova tentativa.
     } finally {
       setSalvando(false);
     }
   }
 
   return (
-    <div className={styles.topicoCard}>
-      <button
-        type="button"
-        className={styles.topicoHeader}
-        onClick={onToggleExpandido}
-      >
-        <div className={styles.topicoInfo}>
-          <h3 className={styles.topicoTitulo}>{topico.titulo}</h3>
-          <div className={styles.topicoMeta}>
-            <span>{topico.autor_email}</span>
-            <span>•</span>
-            <span>{formatarData(topico.data_criacao)}</span>
-            <span>•</span>
-            <span>{topico.visualizacoes} visualizações</span>
-          </div>
-        </div>
-        <span
-          className={`${styles.chevron} ${expandido ? styles.chevronOpen : ""}`}
-        >
-          ▼
-        </span>
-      </button>
+    <li className={`${styles.linha} ${aberta ? styles.linhaAberta : ""}`}>
+      {/* O <button> dentro do <h2> é o controle acessível; o clique no cabeçalho inteiro também abre. */}
+      <div className={styles.linhaCabecalho} onClick={onAbrir}>
+        <h2 className={styles.linhaTitulo}>
+          <button type="button" className={styles.linhaTituloBtn} aria-expanded={aberta}>
+            {topico.titulo}
+          </button>
+        </h2>
+        {!aberta && conteudo && <p className={styles.resumo}>{resumo(conteudo)}</p>}
+        <MetaPergunta topico={topico} />
+      </div>
 
-      {expandido && (
-        <div className={styles.topicoBody}>
-          {/* [R1] Botões Editar/Excluir — renderizados SOMENTE se for o autor */}
-          {ehAutor && !modoEdicao && (
-            <div className={styles.autorActions}>
-              <button
-                type="button"
-                onClick={iniciarEdicao}
-                className={styles.editBtn}
-                title="Editar tópico"
-              >
-                ✏️ Editar
-              </button>
-              <button
-                type="button"
-                onClick={() => onExcluir(topico.id)}
-                className={styles.deleteBtn}
-                title="Excluir tópico"
-              >
-                🗑️ Excluir
-              </button>
-            </div>
-          )}
-
-          {modoEdicao ? (
-            <div className={styles.editForm}>
+      {aberta && (
+        <div className={styles.thread}>
+          {editando ? (
+            <form className={styles.formPergunta} onSubmit={salvarEdicao}>
               <input
                 type="text"
                 value={editTitulo}
                 onChange={(e) => setEditTitulo(e.target.value)}
-                className={styles.formInput}
-                placeholder="Título"
+                className={styles.campo}
+                maxLength={200}
+                required
+                aria-label="Título"
               />
               <textarea
                 value={editConteudo}
                 onChange={(e) => setEditConteudo(e.target.value)}
-                className={styles.formTextarea}
-                rows={5}
-                placeholder="Conteúdo"
+                className={styles.campo}
+                rows={8}
+                required
+                aria-label="Conteúdo"
               />
-              <div className={styles.editFormActions}>
-                <button
-                  type="button"
-                  onClick={cancelarEdicao}
-                  className={styles.cancelEditBtn}
-                >
+              <div className={styles.formAcoes}>
+                <button type="button" className={styles.acaoTexto} onClick={() => setEditando(false)}>
                   Cancelar
                 </button>
-                <button
-                  type="button"
-                  onClick={salvarEdicao}
-                  disabled={salvando}
-                  className={styles.submitBtn}
-                >
-                  {salvando ? "Salvando..." : "Salvar Alterações"}
+                <button type="submit" className={styles.btnPrimario} disabled={salvando}>
+                  {salvando ? "Salvando..." : "Salvar"}
                 </button>
               </div>
-            </div>
+            </form>
           ) : (
-            <div className={styles.topicoConteudoOriginal}>
-              <p>
-                {topico.conteudo_original ||
-                  topico.descricao ||
-                  "Tópico sem descrição."}
-              </p>
+            <div className={styles.corpo}>
+              {conteudo ? paragrafos(conteudo).map((p, i) => <p key={i}>{p}</p>) : <p>Pergunta sem descrição.</p>}
             </div>
           )}
 
-          <hr className={styles.divider} />
+          {!editando && (
+            <div className={styles.rodape}>
+              {user ? (
+                <div className={styles.votos}>
+                  <button
+                    type="button"
+                    className={styles.votoBtn}
+                    onClick={() => onVotar(topico.id, "like")}
+                    disabled={votando}
+                    aria-pressed={meuVoto === "like"}
+                    aria-label="Votar a favor"
+                    title="Votar a favor"
+                  >
+                    <Seta direcao="cima" />
+                  </button>
+                  <span className={styles.votosTotal} aria-live="polite">
+                    {votosDe(topico)}
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.votoBtn}
+                    onClick={() => onVotar(topico.id, "dislike")}
+                    disabled={votando}
+                    aria-pressed={meuVoto === "dislike"}
+                    aria-label="Votar contra"
+                    title="Votar contra"
+                  >
+                    <Seta direcao="baixo" />
+                  </button>
+                  <span className={styles.votosRotulo}>{plural(votosDe(topico), "voto", "votos")}</span>
+                </div>
+              ) : (
+                // [R4] Visitante: vê o total, não vota.
+                <span className={styles.dicaLogin}>
+                  {plural(votosDe(topico), "voto", "votos")}. <a href="/login">Entre</a> para votar.
+                </span>
+              )}
 
-          {/* [R3] Barra de reações Like / Dislike */}
-          <div className={styles.reactionBar}>
-            {isAuthenticated ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => onReagir(topico.id, "like")}
-                  disabled={reagindo}
-                  aria-pressed={minhaReacao === "like"}
-                  className={`${styles.reactionBtn} ${
-                    minhaReacao === "like" ? styles.reactionActive : ""
-                  }`}
-                  title="Curtir"
-                >
-                  👍{" "}
-                  <span className={styles.reactionCount}>{totalLikes}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => onReagir(topico.id, "dislike")}
-                  disabled={reagindo}
-                  aria-pressed={minhaReacao === "dislike"}
-                  className={`${styles.reactionBtn} ${
-                    minhaReacao === "dislike" ? styles.reactionActiveNeg : ""
-                  }`}
-                  title="Não curtir"
-                >
-                  👎{" "}
-                  <span className={styles.reactionCount}>{totalDislikes}</span>
-                </button>
-              </>
-            ) : (
-              // [R4] Visitante: vê contadores, mas não interage.
-              <div className={styles.reactionReadOnly}>
-                <span className={styles.reactionBtnDisabled}>
-                  👍 <span>{totalLikes}</span>
-                </span>
-                <span className={styles.reactionBtnDisabled}>
-                  👎 <span>{totalDislikes}</span>
-                </span>
-                <span className={styles.loginHintSmall}>
-                  <a href="/login">Entre</a> para reagir
-                </span>
-              </div>
-            )}
-          </div>
+              {/* [R1] Só o autor vê Editar/Excluir */}
+              {autor && (
+                <div className={styles.acoesAutor}>
+                  <button type="button" className={styles.acaoTexto} onClick={iniciarEdicao}>
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.acaoTexto} ${styles.acaoPerigo}`}
+                    onClick={() => onExcluir(topico.id)}
+                  >
+                    Excluir
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
-    </div>
+    </li>
   );
 }
 
@@ -308,115 +328,150 @@ export default function ForumPage() {
   const { token, user, isAuthenticated } = useAuth();
 
   const [topicos, setTopicos] = useState<Topico[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [expandidoId, setExpandidoId] = useState<string | null>(null);
-  const [reagindoId, setReagindoId] = useState<string | null>(null);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState("");
+  const [abertoId, setAbertoId] = useState<string | null>(null);
+  const [votandoId, setVotandoId] = useState<string | null>(null);
 
-  // Criar tópico
+  // Busca e ordenação (no cliente)
+  const [busca, setBusca] = useState("");
+  const [ordem, setOrdem] = useState<Ordem>("recentes");
+
+  // Nova pergunta
+  const [mostrarForm, setMostrarForm] = useState(false);
   const [novoTitulo, setNovoTitulo] = useState("");
   const [novoConteudo, setNovoConteudo] = useState("");
-  const [showForm, setShowForm] = useState(false);
-  const [criando, setCriando] = useState(false);
+  const [publicando, setPublicando] = useState(false);
 
-  // ── Data fetching ──
-  const carregarTopicos = useCallback(async () => {
-    setIsLoading(true);
+  const carregar = useCallback(async () => {
+    setCarregando(true);
     try {
       const data = await api.get<Topico[]>("/api/forum/topicos");
       setTopicos(data);
+      setErro("");
     } catch {
       setTopicos([]);
+      setErro("Não foi possível carregar as perguntas. Tente novamente em instantes.");
     } finally {
-      setIsLoading(false);
+      setCarregando(false);
     }
   }, []);
 
   useEffect(() => {
-    carregarTopicos();
-  }, [carregarTopicos]);
+    carregar();
+  }, [carregar]);
 
-  // ── Criar tópico ([R4] só autenticados) ──
-  async function criarTopico(e: React.FormEvent) {
+  const visiveis = useMemo(() => {
+    const termo = normalizar(busca.trim());
+    const filtrados = termo
+      ? topicos.filter((t) => normalizar(`${t.titulo} ${conteudoDe(t)}`).includes(termo))
+      : topicos.slice();
+    const porData = (a: Topico, b: Topico) =>
+      parsearData(b.data_criacao).getTime() - parsearData(a.data_criacao).getTime();
+    if (ordem === "votadas") {
+      filtrados.sort((a, b) => votosDe(b) - votosDe(a) || b.visualizacoes - a.visualizacoes || porData(a, b));
+    } else {
+      filtrados.sort(porData);
+    }
+    return filtrados;
+  }, [topicos, busca, ordem]);
+
+  const substituir = useCallback((atualizado: Topico) => {
+    setTopicos((prev) => prev.map((t) => (t.id === atualizado.id ? atualizado : t)));
+  }, []);
+
+  // Abrir conta uma visualização no servidor; a lista é atualizada com a resposta.
+  const abrir = useCallback(
+    (id: string) => {
+      if (abertoId === id) {
+        setAbertoId(null);
+        return;
+      }
+      setAbertoId(id);
+      api
+        .get<Topico>(`/api/forum/topicos/${id}`)
+        .then(substituir)
+        .catch(() => {
+          // Contagem de visualização é cosmética: falha silenciosa.
+        });
+    },
+    [abertoId, substituir]
+  );
+
+  // ── Perguntar ([R4] só autenticados) ──
+  async function publicar(e: React.FormEvent) {
     e.preventDefault();
-    if (!isAuthenticated) return;
-    if (!novoTitulo.trim() || !novoConteudo.trim()) return;
-    setCriando(true);
+    if (!isAuthenticated || !novoTitulo.trim() || !novoConteudo.trim()) return;
+    setPublicando(true);
     try {
-      await api.post(
+      const criado = await api.post<Topico>(
         "/api/forum/topicos",
-        { titulo: novoTitulo, conteudo: novoConteudo },
+        { titulo: novoTitulo.trim(), conteudo: novoConteudo.trim() },
         { token: token || undefined }
       );
+      setTopicos((prev) => [criado, ...prev]);
       setNovoTitulo("");
       setNovoConteudo("");
-      setShowForm(false);
-      await carregarTopicos();
-    } catch {
-      alert("Erro ao criar tópico.");
+      setMostrarForm(false);
+      setErro("");
+      // Garante que a pergunta nova apareça (no topo) e já aberta.
+      setBusca("");
+      setOrdem("recentes");
+      setAbertoId(criado.id);
+    } catch (err) {
+      setErro(mensagemDeErro(err, "Não foi possível publicar a pergunta."));
     } finally {
-      setCriando(false);
+      setPublicando(false);
     }
   }
 
-  // ── Editar ([R1] só o autor; backend valida de novo) ──
-  const editarTopico = useCallback(
+  // ── Editar ([R1] só o autor; o backend valida de novo) ──
+  const editar = useCallback(
     async (topico: Topico, titulo: string, conteudo: string) => {
-      if (!isAuthenticated || !verificarAutoria(topico, user)) return;
+      if (!isAuthenticated || !ehAutor(topico, user)) return;
       try {
         const atualizado = await api.patch<Topico>(
           `/api/forum/topicos/${topico.id}`,
           { titulo, conteudo },
           { token: token || undefined }
         );
-        setTopicos((prev) =>
-          prev.map((t) => (t.id === topico.id ? atualizado : t))
-        );
+        substituir(atualizado);
+        setErro("");
       } catch (err) {
-        alert("Erro ao salvar edição.");
-        throw err; // propaga p/ o TopicoCard manter o form aberto
+        setErro(mensagemDeErro(err, "Não foi possível salvar a edição."));
+        throw err; // a linha mantém o formulário aberto
       }
     },
-    [isAuthenticated, token, user]
+    [isAuthenticated, token, user, substituir]
   );
 
   // ── Excluir ([R1] só o autor) ──
-  const excluirTopico = useCallback(
+  const excluir = useCallback(
     async (topicoId: string) => {
       if (!isAuthenticated) return;
-      if (
-        !confirm(
-          "Tem certeza que deseja excluir este tópico? Esta ação é irreversível."
-        )
-      )
-        return;
+      if (!confirm("Excluir esta pergunta? Esta ação não pode ser desfeita.")) return;
       try {
-        await api.delete(`/api/forum/topicos/${topicoId}`, {
-          token: token || undefined,
-        });
+        await api.delete(`/api/forum/topicos/${topicoId}`, { token: token || undefined });
         setTopicos((prev) => prev.filter((t) => t.id !== topicoId));
-        setExpandidoId((curr) => (curr === topicoId ? null : curr));
-      } catch {
-        alert("Erro ao excluir tópico.");
+        setAbertoId((atual) => (atual === topicoId ? null : atual));
+        setErro("");
+      } catch (err) {
+        setErro(mensagemDeErro(err, "Não foi possível excluir a pergunta."));
       }
     },
     [isAuthenticated, token]
   );
 
-  // ── Reagir ([R3] optimistic update com rollback) ──
-  const reagirTopico = useCallback(
-    async (topicoId: string, tipo: ReactionType) => {
-      if (!isAuthenticated || !user) return;
-      if (reagindoId) return; // evita double-click
+  // ── Votar ([R3] otimista, com rollback) ──
+  const votar = useCallback(
+    async (topicoId: string, tipo: TipoVoto) => {
+      if (!isAuthenticated || !user || votandoId) return;
+      setVotandoId(topicoId);
 
-      setReagindoId(topicoId);
-
-      // Snapshot p/ rollback em caso de falha.
-      let snapshot: Topico[] = [];
+      let anterior: Topico[] = [];
       setTopicos((prev) => {
-        snapshot = prev;
-        return prev.map((t) =>
-          t.id === topicoId ? aplicarReacaoLocal(t, user.id, tipo) : t
-        );
+        anterior = prev;
+        return prev.map((t) => (t.id === topicoId ? aplicarVotoLocal(t, user.id, tipo) : t));
       });
 
       try {
@@ -425,107 +480,140 @@ export default function ForumPage() {
           { tipo },
           { token: token || undefined }
         );
-        // Reconcilia com a resposta autoritativa do servidor.
-        setTopicos((prev) =>
-          prev.map((t) => (t.id === topicoId ? atualizado : t))
-        );
-      } catch {
-        setTopicos(snapshot);
-        alert("Erro ao registrar reação.");
+        substituir(atualizado);
+      } catch (err) {
+        setTopicos(anterior);
+        setErro(mensagemDeErro(err, "Não foi possível registrar o voto."));
       } finally {
-        setReagindoId(null);
+        setVotandoId(null);
       }
     },
-    [isAuthenticated, user, token, reagindoId]
+    [isAuthenticated, user, token, votandoId, substituir]
   );
 
-  const toggleExpandido = useCallback((id: string) => {
-    setExpandidoId((curr) => (curr === id ? null : id));
-  }, []);
+  const totalFiltrado =
+    visiveis.length === topicos.length
+      ? plural(topicos.length, "pergunta", "perguntas")
+      : `${visiveis.length} de ${plural(topicos.length, "pergunta", "perguntas")}`;
 
   // ── Render ──
   return (
     <div className={styles.page}>
-      <div className={styles.header}>
-        <div className={styles.headerTop}>
-          <div>
-            <h1 className={styles.title}>💬 Fórum Acadêmico</h1>
-            <p className={styles.subtitle}>
-              Discussões, dúvidas e conhecimento compartilhado
-            </p>
-          </div>
-
-          {/* [R4] Visitantes não veem o botão de criar tópico */}
-          {isAuthenticated ? (
-            <button
-              type="button"
-              onClick={() => setShowForm((v) => !v)}
-              className={styles.newTopicButton}
-            >
-              {showForm ? "Cancelar" : "+ Novo Tópico"}
-            </button>
-          ) : (
-            <p className={styles.loginHint}>
-              <a href="/login">Entre</a> para publicar um tópico
-            </p>
-          )}
+      <header className={styles.cabecalho}>
+        <div>
+          <h1 className={styles.titulo}>Fórum Acadêmico</h1>
+          <p className={styles.subtitulo}>Perguntas sobre pesquisa, extensão e vida universitária.</p>
         </div>
-      </div>
 
-      {/* [R4] Formulário de criação — exclusivo para autenticados */}
-      {isAuthenticated && showForm && (
-        <form onSubmit={criarTopico} className={styles.createForm}>
+        {/* [R4] Visitantes veem a lista e a dica para entrar */}
+        {isAuthenticated ? (
+          <button type="button" className={styles.btnPrimario} onClick={() => setMostrarForm((v) => !v)}>
+            {mostrarForm ? "Cancelar" : "Fazer uma pergunta"}
+          </button>
+        ) : (
+          <p className={styles.dicaLogin}>
+            <a href="/login">Entre</a> para fazer uma pergunta.
+          </p>
+        )}
+      </header>
+
+      {isAuthenticated && mostrarForm && (
+        <form onSubmit={publicar} className={styles.formPergunta}>
           <input
             type="text"
             value={novoTitulo}
             onChange={(e) => setNovoTitulo(e.target.value)}
-            placeholder="Título do tópico"
+            placeholder="Título: resuma a dúvida em uma frase"
+            className={styles.campo}
+            maxLength={200}
             required
-            className={styles.formInput}
+            autoFocus
+            aria-label="Título da pergunta"
           />
           <textarea
             value={novoConteudo}
             onChange={(e) => setNovoConteudo(e.target.value)}
-            placeholder="Escreva o conteúdo do seu tópico..."
+            placeholder="Dê contexto: curso, o que você já tentou e o que precisa saber. Separe parágrafos com uma linha em branco."
+            className={styles.campo}
+            rows={6}
             required
-            rows={4}
-            className={styles.formTextarea}
+            aria-label="Conteúdo da pergunta"
           />
-          <button type="submit" disabled={criando} className={styles.submitBtn}>
-            {criando ? "Publicando..." : "Publicar Tópico"}
-          </button>
+          <div className={styles.formAcoes}>
+            <span className={styles.dicaForm}>Publicada como @{user?.username || "você"}. Não há respostas: escreva a pergunta completa.</span>
+            <button type="submit" className={styles.btnPrimario} disabled={publicando}>
+              {publicando ? "Publicando..." : "Publicar pergunta"}
+            </button>
+          </div>
         </form>
       )}
 
-      {isLoading ? (
-        <div className={styles.loadingList}>
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className={styles.skeletonRow} />
-          ))}
+      <div className={styles.barra}>
+        <input
+          type="search"
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar nas perguntas"
+          className={styles.busca}
+          aria-label="Buscar nas perguntas"
+        />
+        <div className={styles.ordem} role="group" aria-label="Ordenar">
+          <button
+            type="button"
+            className={styles.ordemBtn}
+            aria-pressed={ordem === "recentes"}
+            onClick={() => setOrdem("recentes")}
+          >
+            Recentes
+          </button>
+          <button
+            type="button"
+            className={styles.ordemBtn}
+            aria-pressed={ordem === "votadas"}
+            onClick={() => setOrdem("votadas")}
+          >
+            Mais votadas
+          </button>
         </div>
-      ) : topicos.length === 0 ? (
-        <div className={styles.emptyState}>
-          <span className={styles.emptyIcon}>🗣️</span>
-          <h3>Nenhum tópico ainda</h3>
-          <p>Seja o primeiro a iniciar uma discussão!</p>
+      </div>
+
+      {erro && (
+        <p className={styles.erro} role="alert">
+          {erro}
+        </p>
+      )}
+
+      {carregando ? (
+        <div aria-busy="true">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className={styles.esqueleto} />
+          ))}
         </div>
       ) : (
-        <div className={styles.topicosList}>
-          {topicos.map((topico) => (
-            <TopicoCard
-              key={topico.id}
-              topico={topico}
-              user={user}
-              isAuthenticated={isAuthenticated}
-              expandido={expandidoId === topico.id}
-              reagindo={reagindoId === topico.id}
-              onToggleExpandido={() => toggleExpandido(topico.id)}
-              onEditar={editarTopico}
-              onExcluir={excluirTopico}
-              onReagir={reagirTopico}
-            />
-          ))}
-        </div>
+        <>
+          <p className={styles.contagem}>{totalFiltrado}</p>
+          {visiveis.length === 0 ? (
+            <p className={styles.vazio}>
+              {topicos.length === 0 ? "Nenhuma pergunta ainda." : "Nenhuma pergunta corresponde à busca."}
+            </p>
+          ) : (
+            <ul className={styles.lista}>
+              {visiveis.map((topico) => (
+                <LinhaPergunta
+                  key={topico.id}
+                  topico={topico}
+                  user={user}
+                  aberta={abertoId === topico.id}
+                  votando={votandoId === topico.id}
+                  onAbrir={() => abrir(topico.id)}
+                  onEditar={editar}
+                  onExcluir={excluir}
+                  onVotar={votar}
+                />
+              ))}
+            </ul>
+          )}
+        </>
       )}
     </div>
   );

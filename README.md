@@ -165,11 +165,32 @@ O envio de e-mail continua usando `RESEND_API_KEY`, `EMAIL_REMETENTE` e `EMAIL_S
 cd backend
 pip install -r requirements-dev.txt
 pytest          # parser do SIGAA (HTML real salvo), parser da UNIRIO (fixtures sintéticas até a captura),
-                # upsert, jobs, listagem, candidatura
+                # upsert, jobs, listagem, candidatura, fórum (privacidade, seed, usernames)
 ruff check .
 
 cd ../frontend
 npm run lint
+```
+
+---
+
+### **Fórum**
+
+A aba **Fórum** é uma lista de perguntas em estilo thread (sem comentários nem respostas, por regra de negócio): título, resumo, uma linha de meta (`@username`, há quanto tempo, visualizações, votos) e, ao abrir, o texto completo com os botões de voto. Busca e ordenação (**Recentes** / **Mais votadas**) acontecem no navegador sobre a lista carregada.
+
+**Username no lugar do e-mail**
+
+* A API do fórum **nunca devolve e-mail**: cada tópico traz `autor_username` e `autor_nome` (nome social ou nome), resolvidos a partir de `autor_id` com uma única consulta em lote em `usuarios`. Tópicos antigos sem autor identificável aparecem como `@usuario`.
+* O campo `username` da collection `usuarios` é gerado a partir do **nome** (nunca do e-mail): minúsculas, 3 a 30 caracteres de `[a-z0-9._-]`, único (`matheus-gabriel`, `matheus-gabriel-2`...). É criado no registro, no primeiro login via ORCID e, para contas antigas, pelo backfill que roda no startup da API (`migrar_dados`, em `backend/database/indexes.py`). O índice único `uniq_username` é *sparse*, para não quebrar antes do backfill. A lógica fica em `backend/services/usernames.py`.
+* `GET /api/forum/topicos/{id}` devolve um tópico e soma uma visualização (`$inc`).
+
+**Seed de perguntas**
+
+`backend/jobs/seed_forum.py` publica 15 perguntas frequentes da vida acadêmica (iniciação científica, carta de intenção, Lattes, ORCID, bolsas, comitê de ética, revistas predatórias...), cada uma com um texto que funciona como entrada de FAQ. O autor é o usuário de sistema **Equipe UniResu** (`@uniresu`, `forum@uniresu.org`, `sistema: true`, sem `senha_hash`, logo sem login), criado pelo próprio seed. É idempotente (os tópicos levam `seed: "forum_v1"` e uma `seed_chave`; só entram os que faltam) e roda automaticamente no startup da API, dentro de `migrar_dados`, então a produção é populada no próximo deploy sem acesso manual ao banco. Para rodar à mão (usa o `MONGO_URI` do `backend/.env`):
+
+```bash
+cd backend
+python -m jobs.seed_forum
 ```
 
 ---
