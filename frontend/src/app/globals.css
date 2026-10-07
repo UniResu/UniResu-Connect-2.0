@@ -63,6 +63,18 @@
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
 
+  /* ── Surfaces (cards, caixas e painéis) ── */
+  /* Vidro claro e discreto: fundo translúcido quase branco, borda de 1px
+     semitransparente, brilho na aresta de cima e sombra externa suave.
+     O fundo claro pede texto escuro dentro das caixas. Onde há fundo escuro
+     ou degradê atrás, o módulo soma backdrop-filter com --surface-blur, para
+     o fundo aparecer desfocado através da caixa. */
+  --surface: rgba(247, 244, 252, 0.9);
+  --surface-border: rgba(76, 5, 104, 0.14);
+  --surface-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --surface-shadow: 0 8px 24px rgba(30, 10, 50, 0.1), 0 2px 6px rgba(30, 10, 50, 0.06);
+  --surface-blur: blur(8px);
+
   /* ── Transitions ── */
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;

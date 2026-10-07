@@ -36,11 +36,12 @@
 /* ── Formulário ── */
 
 .formCard {
-  background: var(--bg-primary);
-  border: 1px solid var(--border);
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
   border-radius: var(--radius-xl);
   padding: var(--space-2xl);
   margin-bottom: var(--space-2xl);
+  box-shadow: var(--surface-highlight), var(--surface-shadow);
   animation: slideDown 0.3s ease;
 }
 
@@ -153,15 +154,16 @@
 }
 
 .projetoCard {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-light);
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
   border-radius: var(--radius-xl);
   padding: var(--space-xl);
+  box-shadow: var(--surface-highlight), var(--surface-shadow);
   transition: all var(--transition-normal);
 }
 .projetoCard:hover {
   border-color: var(--primary-200);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--surface-highlight), var(--shadow-lg);
 }
 
 .projetoHeader {
@@ -301,12 +303,16 @@
 }
 
 .confirmModal {
-  background: white;
+  background: var(--surface);
+  backdrop-filter: var(--surface-blur);
+  -webkit-backdrop-filter: var(--surface-blur);
+  border: 1px solid var(--surface-border);
   border-radius: var(--radius-xl);
   padding: var(--space-2xl);
   max-width: 400px;
   width: 90%;
   text-align: center;
+  box-shadow: var(--surface-highlight), var(--shadow-xl);
 }
 
 .confirmModal h3 {

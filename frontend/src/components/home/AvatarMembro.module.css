@@ -12,12 +12,12 @@
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
   margin: 0;
 }
 
@@ -36,11 +36,11 @@
   border-radius: 50%;
   background: #ffffff;
   /* Roxo do ícone: mais saturado que --primary para ler bem em 16 px sobre
-     branco (contraste ~6:1); o anel tem a cor efetiva do card (fundo
-     translúcido sobre o degradê da seção), para parecer um recorte. */
+     branco (contraste ~6:1); o anel tem a cor efetiva do card (superfície
+     clara translúcida sobre o degradê da seção), para parecer um recorte. */
   color: #7a1fb0;
-  border: 2px solid #3a0257;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  border: 2px solid #e2dce9;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;

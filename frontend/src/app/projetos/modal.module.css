@@ -14,12 +14,15 @@
 }
 
 .modal {
-  background: var(--bg-primary);
+  background: var(--surface);
+  backdrop-filter: var(--surface-blur);
+  -webkit-backdrop-filter: var(--surface-blur);
+  border: 1px solid var(--surface-border);
   width: 90%;
   max-width: 600px;
   max-height: 90vh;
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-xl);
+  box-shadow: var(--surface-highlight), var(--shadow-xl);
   overflow-y: auto;
   position: relative;
   padding: var(--space-2xl);
