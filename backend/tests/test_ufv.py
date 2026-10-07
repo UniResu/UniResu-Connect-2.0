@@ -93,6 +93,7 @@ async def test_sync_grava_com_origem_ufv_e_desativa_encerrados(db):
     doc = await db.projetos.find_one({"ufv_id": "1"})
     assert doc["origem"] == "ufv" and doc["instituicao"] == "UFV" and doc["modulo"] == "extensao"
     assert doc["area_cnpq"] == "Ciências Exatas e da Terra" and doc["situacao"] == "EM EXECUÇÃO"
+    assert doc["area_conhecimento"] == "Ciências Exatas e da Terra"  # a área CNPq dos dados abertos
     assert doc["nome_professor"] == "ARIANE PIOVEZAN ENTRINGER" and doc["ativo"] is True
 
     # o projeto 2 terminou: some da consulta e fica inativo; projetos de outras fontes não mudam

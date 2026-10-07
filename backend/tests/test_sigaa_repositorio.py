@@ -55,6 +55,34 @@ async def test_grava_campos_para_listagem(db):
     assert doc["primeira_coleta"] == doc["ultima_coleta"]
 
 
+async def test_grava_area_do_conhecimento_para_cada_fonte(db):
+    from services.fontes import UNIRIO
+
+    await repositorio.upsert_projetos(db, [
+        reg(titulo="Horta comunitária", unidade="DEPARTAMENTO DE AGRONOMIA"),
+        reg(sigaa_id="2", titulo="Robótica educacional", unidade="CAMPUS PORTO VELHO"),
+        reg(sigaa_id="3", titulo="Encontro de egressos", unidade="CAMPUS PORTO VELHO"),
+    ])
+    await repositorio.upsert_projetos(db, [
+        {"modulo": "extensao", "unirio_id": "9", "titulo": "Maré de Saúde", "coordenador": "BRUNO LIMA",
+         "unidade": "Departamento de Interpretacao Teatral", "ano": "2018", "detalhe_ok": True,
+         "extras": {"area_tematica": "Saúde"}},
+    ], fonte=UNIRIO)
+
+    areas = {d["titulo"]: d["area_conhecimento"] async for d in db.projetos.find({})}
+    assert areas == {
+        "Horta comunitária": "Ciências Agrárias",            # pela unidade
+        "Robótica educacional": "Engenharias",               # pelo título (o campus não diz a área)
+        "Encontro de egressos": "Multidisciplinar",          # sem pista
+        "Maré de Saúde": "Linguística, Letras e Artes",      # pela unidade (teatro)
+    }
+
+    # uma nova coleta com o detalhe (unidade por extenso) reclassifica o mesmo documento
+    await repositorio.upsert_projetos(db, [reg(sigaa_id="3", titulo="Encontro de egressos",
+                                               unidade="DEPARTAMENTO DE ENFERMAGEM")])
+    assert (await db.projetos.find_one({"sigaa_id": "3"}))["area_conhecimento"] == "Ciências da Saúde"
+
+
 async def test_garantir_modulo_migra_docs_antigos_do_sigaa(db):
     await db.projetos.insert_many([
         {"origem": "sigaa", "tipo_sigaa": "extensao", "titulo": "Antigo", "chave_sigaa": "x"},

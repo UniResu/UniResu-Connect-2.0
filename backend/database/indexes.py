@@ -51,6 +51,8 @@ async def criar_indices(db) -> None:
         [("ativo", ASCENDING), ("instituicao", ASCENDING), ("modulo", ASCENDING), ("unidade", ASCENDING)],
         name="listagem_filtros_v2",
     )
+    # Filtro e contagem por grande área do CNPq (busca e /projetos/filtros).
+    await db.projetos.create_index([("area_conhecimento", ASCENDING)], name="area_conhecimento")
     await db.sigaa_sync_runs.create_index([("iniciada_em", DESCENDING)], name="runs_recentes")
     await db.sigaa_sync_runs.create_index([("fonte", ASCENDING), ("finalizada_em", DESCENDING)], name="runs_por_fonte")
     # Rate limit e checagem de duplicidade das candidaturas.
@@ -101,6 +103,7 @@ async def migrar_forum_legado(db) -> dict:
 async def migrar_dados(db) -> None:
     """Migrações leves de dados, independentes dos índices (uma falha em
     create_index não pode impedir que rodem). Idempotentes."""
+    from services.areas import garantir_area_conhecimento
     from services.sigaa.repositorio import garantir_modulo
     from services.usernames import preencher_usernames
     from jobs.seed_forum import seed_forum
@@ -110,6 +113,13 @@ async def migrar_dados(db) -> None:
         logger.info("Campo `modulo` preenchido em %d projetos do SIGAA.", migrados)
 
     # Cada passo abaixo é independente: a falha de um não impede o seguinte.
+    try:
+        classificados = await garantir_area_conhecimento(db)
+        if classificados:
+            logger.info("Campo `area_conhecimento` preenchido em %d projeto(s).", classificados)
+    except Exception as e:
+        logger.error("Falha ao preencher a área do conhecimento dos projetos: %s", e)
+
     try:
         # O índice único vem ANTES do backfill: é ele, e não a leitura em
         # memória, que garante a unicidade se dois processos preencherem ao

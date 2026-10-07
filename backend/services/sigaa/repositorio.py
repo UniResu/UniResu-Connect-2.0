@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Iterable, Optional
 
+from services.areas import classificar_area
 from services.fontes import MODULO_LABEL, MODULOS, SIGAA, Fonte
 from services.sigaa.parser import normalizar
 
@@ -127,6 +128,9 @@ def _campos_completos(reg: dict, fonte: Fonte, agora: datetime) -> dict:
         campos["tipo_sigaa"] = modulo
     # Campos extras que a fonte queira guardar (ex.: área temática, palavras-chave).
     campos.update(reg.get("extras") or {})
+    # Grande área do CNPq, derivada do que a fonte publica (área CNPq da UFV,
+    # unidade, título, descrição...). Vale para todas as fontes.
+    campos["area_conhecimento"] = classificar_area(campos)
     return campos
 
 
