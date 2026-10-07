@@ -23,6 +23,10 @@ async def resumo(db) -> dict:
             "em_execucao": {"$sum": {"$cond": [
                 {"$and": [{"$ne": ["$ativo", False]}, {"$eq": ["$situacao", "EM EXECUÇÃO"]}]}, 1, 0]}},
             "com_detalhe": {"$sum": {"$cond": [{"$eq": ["$detalhe_ok", True]}, 1, 0]}},
+            "sem_link": {"$sum": {"$cond": [{"$in": [{"$ifNull": ["$link_detalhe", ""]}, ["", None]]}, 1, 0]}},
+            "sem_email": {"$sum": {"$cond": [{"$and": [
+                {"$in": [{"$ifNull": ["$email_professor", ""]}, ["", None]]},
+                {"$in": [{"$ifNull": ["$email_contato_manual", ""]}, ["", None]]}]}, 1, 0]}},
         }},
         {"$sort": {"_id.origem": 1, "_id.modulo": 1}},
     ]).to_list(length=None)
@@ -34,11 +38,12 @@ async def resumo(db) -> dict:
 
 
 def imprimir(dados: dict) -> None:
-    print("Projetos por fonte e módulo (total / ativos / em execução / com detalhe):")
+    print("Projetos por fonte e módulo (total / ativos / em execução / com detalhe / sem link / sem e-mail):")
     for linha in dados["projetos"]:
         chave = linha["_id"]
         print(f"  {chave.get('origem') or 'manual':8s} {chave.get('modulo') or '-':10s} "
-              f"{linha['total']:5d} / {linha['ativos']:5d} / {linha['em_execucao']:5d} / {linha['com_detalhe']:5d}")
+              f"{linha['total']:5d} / {linha['ativos']:5d} / {linha['em_execucao']:5d} / {linha['com_detalhe']:5d}"
+              f" / {linha.get('sem_link', 0):5d} / {linha.get('sem_email', 0):5d}")
     print("\nÚltimas execuções dos syncs:")
     for r in dados["runs"]:
         inicio = r.get("iniciada_em")
