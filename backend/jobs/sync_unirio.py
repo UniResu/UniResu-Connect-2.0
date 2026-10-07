@@ -22,6 +22,7 @@ Mesmas regras de segurança do sync do SIGAA:
 import asyncio
 import base64
 import gzip
+import inspect
 import json
 import logging
 import os
@@ -36,6 +37,7 @@ from dotenv import load_dotenv
 from services.fontes import UNIRIO
 from services.http_client import ErroColeta
 from services.sigaa import repositorio
+from services.sigaa.parser import SITUACAO_EM_EXECUCAO
 from services.unirio import parser
 from services.unirio.config import UnirioConfig
 from services.unirio.scraper import (
@@ -71,7 +73,8 @@ async def executar_sync(
         "iniciada_em": inicio,
         "status": "executando",
         "dry_run": dry_run,
-        "config": {"modulos": cfg.modulos, "extensao_status": cfg.extensao_status, "max_paginas": cfg.max_paginas},
+        "config": {"modulos": cfg.modulos, "extensao_status": cfg.extensao_status, "max_paginas": cfg.max_paginas,
+                   "detalhes": cfg.detalhes},
     }
     run_id = None
     if not dry_run:
@@ -90,6 +93,33 @@ async def executar_sync(
         raise
 
 
+async def ids_sem_detalhe(db, modulo: str, cfg: UnirioConfig) -> set[str]:
+    """Ids (unirio_id) cujo detalhe não precisa ser reaberto nesta execução.
+
+    Modo `incremental`: projetos já gravados com detalhe. Na pesquisa, os que
+    ainda constam como em execução ficam de fora do conjunto (são reabertos
+    para perceber o encerramento); na extensão a própria listagem já vem
+    filtrada por "em andamento", então sumir dela é o sinal de encerramento.
+    Modo `completo`: conjunto vazio (reabre tudo).
+    """
+    if cfg.detalhes != "incremental":
+        return set()
+    filtro: dict = {"origem": UNIRIO.origem, "modulo": modulo, "detalhe_ok": True,
+                    UNIRIO.campo_id: {"$ne": None}}
+    if modulo == "pesquisa":
+        filtro["situacao"] = {"$ne": SITUACAO_EM_EXECUCAO}
+    cursor = db.projetos.find(filtro, {UNIRIO.campo_id: 1})
+    return {str(doc[UNIRIO.campo_id]) for doc in await cursor.to_list(length=None)}
+
+
+def _coletar(coletor, client, pular: set[str]):
+    """Chama o coletor passando `pular_detalhe` quando ele aceita (os coletores
+    reais aceitam; dublês de teste podem receber só o cliente)."""
+    if "pular_detalhe" in inspect.signature(coletor).parameters:
+        return coletor(client, pular_detalhe=pular)
+    return coletor(client)
+
+
 async def _executar(db, cfg, coletores, client, alertar, dry_run, run, run_id, inicio) -> dict:
     modulos: dict = {}
     erros: list[dict] = []
@@ -98,9 +128,10 @@ async def _executar(db, cfg, coletores, client, alertar, dry_run, run, run_id, i
 
     for modulo in cfg.modulos:
         stats = {"coletados": 0, "novos": 0, "atualizados": 0, "desativados": 0,
-                 "erros_detalhe": 0, "paginas": 0, "completa": True, "status": "sucesso"}
+                 "erros_detalhe": 0, "detalhes_pulados": 0, "paginas": 0, "completa": True, "status": "sucesso"}
         try:
-            res = await asyncio.to_thread(coletores[modulo], client)
+            pular = set() if dry_run or db is None else await ids_sem_detalhe(db, modulo, cfg)
+            res = await asyncio.to_thread(_coletar, coletores[modulo], client, pular)
         except Exception as e:  # falha na busca/listagem do módulo
             logger.error("UNIRIO %s: busca falhou: %s", modulo, e)
             erros.append({"modulo": modulo, "erro": f"busca falhou: {e}"})
@@ -111,6 +142,7 @@ async def _executar(db, cfg, coletores, client, alertar, dry_run, run, run_id, i
 
         erros.extend(res.erros)
         stats["erros_detalhe"] = len(res.erros)
+        stats["detalhes_pulados"] = getattr(res, "pulados", 0)
         stats["coletados"] = len(res.itens)
         stats["paginas"] = res.paginas
         stats["completa"] = res.completa
@@ -162,9 +194,11 @@ async def _executar(db, cfg, coletores, client, alertar, dry_run, run, run_id, i
                 status, atualizacao["duracao_segundos"], client.total_requisicoes,
                 " [DRY-RUN: nada gravado]" if dry_run else "")
     for modulo, s in modulos.items():
-        logger.info("  %-9s coletados=%d páginas=%d%s novos=%d atualizados=%d desativados=%d erros_detalhe=%d [%s]",
+        logger.info("  %-9s coletados=%d páginas=%d%s novos=%d atualizados=%d desativados=%d erros_detalhe=%d "
+                    "detalhes_pulados=%d [%s]",
                     modulo, s["coletados"], s["paginas"], "" if s["completa"] else " (incompleta)",
-                    s["novos"], s["atualizados"], s["desativados"], s["erros_detalhe"], s["status"])
+                    s["novos"], s["atualizados"], s["desativados"], s["erros_detalhe"], s["detalhes_pulados"],
+                    s["status"])
     if dry_run:
         for modulo, itens in amostras.items():
             print(f"\n=== Amostra ({modulo}) ===")

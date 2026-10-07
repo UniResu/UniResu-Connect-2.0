@@ -74,7 +74,7 @@ A aba **Projetos Acadêmicos** lista, além dos projetos cadastrados pelos profe
 **Sync com a UNIRIO**
 
 * Fontes: [Portal da Pesquisa](https://sistemas.unirio.br/projetos/search/index) e [Portal da Extensão](https://sistemas2.unirio.br/extensao/busca/projetos?cat_termos=titulo&f_ano=0&f_area=0&f_centro=0&f_cor=0&f_lin=0&f_status=1&f_uni=0&termos=) (busca com status "em andamento").
-* `backend/jobs/sync_unirio.py` lê a busca de cada portal e abre a página de detalhe de cada projeto (coordenador(a), e-mail, unidade, período, resumo, palavras-chave, área temática, linhas de extensão). Extensão: GET na busca pública e paginação por link (`pag=N`, 5 projetos por página, cerca de 390 projetos em andamento). Pesquisa: o portal (web2py) só lista após um POST no formulário de busca em `default/index`, que redireciona para `search/index` com todos os projetos numa única tabela (cerca de 2.300, desde 1992); se o portal passar a exigir algum filtro, o job busca por ano de referência. A primeira coleta completa leva perto de uma hora e meia por causa da pausa entre requisições. O parser fica em `backend/services/unirio/parser.py`; o cliente HTTP (pausa, timeout, retry) é o mesmo do SIGAA (`backend/services/http_client.py`).
+* `backend/jobs/sync_unirio.py` lê a busca de cada portal e abre a página de detalhe de cada projeto (coordenador(a), e-mail, unidade, período, resumo, palavras-chave, área temática, linhas de extensão). Extensão: GET na busca pública e paginação por link (`pag=N`, 5 projetos por página, cerca de 390 projetos em andamento). Pesquisa: o portal (web2py) só lista após um POST no formulário de busca em `default/index`, que redireciona para `search/index` com todos os projetos numa única tabela (cerca de 2.300, desde 1992); se o portal passar a exigir algum filtro, o job busca por ano de referência. A primeira coleta completa leva perto de duas horas por causa da pausa entre requisições (cerca de 2.700 páginas de detalhe); as execuções seguintes são **incrementais** (`UNIRIO_DETALHES=incremental`, padrão): a listagem inteira é percorrida de novo, mas só se abre o detalhe de projetos novos e, na pesquisa, dos que ainda constam como em execução, para perceber quando encerram. Projetos já conhecidos e encerrados ficam como estão, e o que some da listagem fica inativo. Use `completo` para reler todos os detalhes. A plataforma exibe só os projetos em execução; os demais ficam gravados com a situação lida. O parser fica em `backend/services/unirio/parser.py`; o cliente HTTP (pausa, timeout, retry) é o mesmo do SIGAA (`backend/services/http_client.py`).
 * Grava na collection `projetos` com `origem: "unirio"`, `instituicao: "UNIRIO"` e `modulo` (`pesquisa`/`extensao`), com chave natural em `chave_unirio`. As regras são as mesmas do SIGAA: projetos manuais nunca são tocados, uma fonte nunca encosta nos documentos da outra, e o que some da fonte fica `ativo: false`.
 * Uma listagem que parou antes da última página (teto `UNIRIO_MAX_PAGINAS` ou paginação não reconhecida) é tratada como falha: o que foi lido é gravado, mas **nada é desativado** e o alerta é enviado. Se o processo for morto pelo timeout do Actions, a run fica `abortada`.
 * As fixtures `backend/tests/fixtures/unirio_*.html` são o HTML real dos dois portais (anonimizado: nomes e e-mails trocados, resumos encurtados). Se o layout mudar, rode o modo `captura`, baixe o artifact `captura-unirio` e atualize parser e fixtures.
@@ -89,6 +89,7 @@ A aba **Projetos Acadêmicos** lista, além dos projetos cadastrados pelos profe
   cd backend
   python -m jobs.sync_unirio --dry-run
   UNIRIO_MODULOS=extensao python -m jobs.sync_unirio
+  UNIRIO_DETALHES=completo python -m jobs.sync_unirio   # relê todos os detalhes (~2 h)
   ```
 
 **Projeto sem e-mail de contato**
@@ -139,6 +140,7 @@ Pelo GitHub Actions: workflow **Manutenção do banco** (`.github/workflows/manu
 | `UNIRIO_PESQUISA_ANO_MINIMO` | job | `0` (sem corte) | Ignora projetos de pesquisa com ano de referência anterior a este (a busca lista tudo desde 1992, cerca de 2.300 projetos) |
 | `UNIRIO_MAX_PAGINAS` | job | `300` | Teto de páginas percorridas por listagem (ao bater, a listagem conta como incompleta) |
 | `UNIRIO_MAX_DETALHES` | job | `0` | Teto de detalhes consultados por módulo, só em `dry-run`/`captura` (o sync real ignora) |
+| `UNIRIO_DETALHES` | job | `incremental` | Quais páginas de detalhe reabrir no sync real: `incremental` (só projetos novos e, na pesquisa, os ainda em execução; os já conhecidos e encerrados ficam como estão) ou `completo` (todos, cerca de 2 h). A listagem é sempre percorrida inteira: é ela que diz o que sumiu dos portais |
 | `UNIRIO_URL_PESQUISA` | job | URL do Portal da Pesquisa | Substitui a URL da listagem de pesquisa |
 | `UNIRIO_URL_EXTENSAO` | job | URL do Portal da Extensão | Substitui a URL da listagem de extensão |
 | `UNIRIO_PESQUISA_DETALHE_PREFIXO` | job | diretório da listagem (`/projetos/search/`) | Prefixo de caminho dos links de detalhe da pesquisa aceitos pelo parser |
@@ -159,7 +161,7 @@ O envio de e-mail continua usando `RESEND_API_KEY`, `EMAIL_REMETENTE` e `EMAIL_S
 3. **GitHub → Settings → Secrets and variables → Actions:**
    * secret `MONGO_URI` com a connection string desse usuário;
    * secret `RESEND_API_KEY` (opcional, para o alerta de falha por e-mail);
-   * variáveis opcionais: `MONGO_DB_NAME`, `EMAIL_REMETENTE`, `SIGAA_ANOS`, `SIGAA_MODULOS`, `SIGAA_PESQUISA_SITUACAO`, `SIGAA_EXTENSAO_TIPOS`, `SIGAA_ALERTA_EMAIL`, `UNIRIO_MODULOS`, `UNIRIO_MAX_DETALHES`, `UNIRIO_EXTENSAO_STATUS`, `UNIRIO_PESQUISA_DETALHE_PREFIXO`, `UNIRIO_ALERTA_EMAIL` (se ausente, usa `SIGAA_ALERTA_EMAIL`). As demais variáveis `UNIRIO_*` da tabela só são lidas em execuções locais.
+   * variáveis opcionais: `MONGO_DB_NAME`, `EMAIL_REMETENTE`, `SIGAA_ANOS`, `SIGAA_MODULOS`, `SIGAA_PESQUISA_SITUACAO`, `SIGAA_EXTENSAO_TIPOS`, `SIGAA_ALERTA_EMAIL`, `UNIRIO_MODULOS`, `UNIRIO_MAX_DETALHES`, `UNIRIO_DETALHES`, `UNIRIO_EXTENSAO_STATUS`, `UNIRIO_PESQUISA_DETALHE_PREFIXO`, `UNIRIO_ALERTA_EMAIL` (se ausente, usa `SIGAA_ALERTA_EMAIL`). As demais variáveis `UNIRIO_*` da tabela só são lidas em execuções locais.
 4. O agendamento só vale depois que o workflow estiver na branch `main`.
 
 **Testes e lint**

@@ -35,6 +35,11 @@ on:
         description: "Teto de detalhes consultados por módulo (0 = todos; útil no dry-run)"
         required: false
         default: ""
+      detalhes:
+        description: "Detalhes a reabrir: incremental (só novos e, na pesquisa, os em execução) ou completo (todos)"
+        type: choice
+        options: [incremental, completo]
+        default: incremental
 
 concurrency:
   group: sync-unirio
@@ -46,11 +51,10 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    # Um detalhe por projeto com pausa de 1,5 s: a primeira coleta completa dos
-    # dois portais pode levar bem mais de uma hora.
-    # Dry-run de validação: 16 min só para listar (2314 + 386 itens). O sync
-    # completo baixa ~2700 páginas de detalhe com pausa de 1,5 s, ou seja,
-    # perto de 2 h; a folga cobre as quedas de conexão dos portais da UNIRIO.
+    # Listar os dois portais leva ~16 min (2314 + 386 itens, pausa de 1,5 s).
+    # No modo incremental só os detalhes novos e os de pesquisa em execução
+    # são reabertos (minutos); "completo" baixa ~2700 páginas de detalhe, perto
+    # de 2 h. A folga cobre as quedas de conexão dos portais da UNIRIO.
     timeout-minutes: 300
     defaults:
       run:
@@ -83,6 +87,8 @@ jobs:
           UNIRIO_MODULOS: ${{ inputs.modulos || vars.UNIRIO_MODULOS }}
           # Só vale em dry-run/captura; o sync real ignora (com aviso no log).
           UNIRIO_MAX_DETALHES: ${{ inputs.max_detalhes || vars.UNIRIO_MAX_DETALHES }}
+          # Execução agendada: incremental (minutos). "completo" relê todos os detalhes (~2 h).
+          UNIRIO_DETALHES: ${{ inputs.detalhes || vars.UNIRIO_DETALHES || 'incremental' }}
           UNIRIO_EXTENSAO_STATUS: ${{ vars.UNIRIO_EXTENSAO_STATUS }}
           UNIRIO_PESQUISA_DETALHE_PREFIXO: ${{ vars.UNIRIO_PESQUISA_DETALHE_PREFIXO }}
           UNIRIO_PESQUISA_ANOS: ${{ vars.UNIRIO_PESQUISA_ANOS }}

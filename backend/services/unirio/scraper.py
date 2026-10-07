@@ -17,7 +17,7 @@ caso, porque "sumiu da fonte" e "não chegamos a ler" seriam indistinguíveis.
 
 import logging
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Collection, Optional
 
 from bs4 import BeautifulSoup
 
@@ -54,6 +54,8 @@ class ResultadoColeta:
     paginas: int = 0
     # False = a listagem parou com páginas ainda por ler (teto ou paginação que não avançou).
     completa: bool = True
+    # Itens cujo detalhe não foi aberto de propósito (modo incremental).
+    pulados: int = 0
 
 
 def url_inicial(cfg: UnirioConfig, modulo: str) -> str:
@@ -202,27 +204,42 @@ def listar(client: UnirioClient, modulo: str) -> tuple[list[dict], int, bool]:
     return itens, paginas, completa
 
 
-def coletar(client: UnirioClient, modulo: str) -> ResultadoColeta:
+def coletar(client: UnirioClient, modulo: str, pular_detalhe: Collection[str] = frozenset()) -> ResultadoColeta:
+    """Listagem completa + detalhe de cada item.
+
+    `pular_detalhe`: ids (unirio_id) cujo detalhe NÃO deve ser aberto nesta
+    execução (já conhecidos no banco; modo incremental). Esses itens entram no
+    resultado só com os dados da listagem e `so_listagem=True`, para que o
+    upsert confirme a presença deles sem apagar o detalhe guardado.
+    """
     res = ResultadoColeta(modulo)
     itens, res.paginas, res.completa = listar(client, modulo)
     limite = client.cfg.max_detalhes or len(itens)
-    for i, item in enumerate(itens):
+    abertos = 0
+    for item in itens:
+        if item.get("unirio_id") in pular_detalhe:
+            res.pulados += 1
+            res.itens.append({**_registro(modulo, item, None, client.cfg), "so_listagem": True})
+            continue
         detalhe = None
-        if i < limite:
+        if abertos < limite:
+            abertos += 1
             try:
                 detalhe = parser.parse_detalhe(client.get(item["link_detalhe"]))
             except (ErroColeta, ValueError) as e:
                 res.erros.append(_erro(modulo, item, e))
         res.itens.append(_registro(modulo, item, detalhe, client.cfg))
+    if res.pulados:
+        logger.info("UNIRIO %s: %d detalhe(s) já conhecido(s) não reaberto(s) (modo incremental)", modulo, res.pulados)
     return res
 
 
-def coletar_pesquisa(client: UnirioClient) -> ResultadoColeta:
-    return coletar(client, "pesquisa")
+def coletar_pesquisa(client: UnirioClient, pular_detalhe: Collection[str] = frozenset()) -> ResultadoColeta:
+    return coletar(client, "pesquisa", pular_detalhe)
 
 
-def coletar_extensao(client: UnirioClient) -> ResultadoColeta:
-    return coletar(client, "extensao")
+def coletar_extensao(client: UnirioClient, pular_detalhe: Collection[str] = frozenset()) -> ResultadoColeta:
+    return coletar(client, "extensao", pular_detalhe)
 
 
 def _registro(modulo: str, item: dict, detalhe: Optional[dict], cfg: Optional[UnirioConfig] = None) -> dict:

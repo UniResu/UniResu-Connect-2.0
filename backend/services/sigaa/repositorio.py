@@ -60,6 +60,25 @@ async def _registro_anterior_sem_coordenador(db, registro: dict, fonte: Fonte) -
     })
 
 
+async def _confirmar_presenca(db, registro: dict, fonte: Fonte, agora: datetime) -> Optional[str]:
+    """Item já conhecido cujo detalhe não foi reaberto: marca ativo e visto
+    agora, pelo id na fonte. Devolve a chave do doc (ou None se não existe)."""
+    id_fonte = _id_fonte(registro, fonte)
+    if not id_fonte:
+        return None
+    doc = await db.projetos.find_one(
+        {"origem": fonte.origem, "modulo": registro["modulo"], fonte.campo_id: id_fonte},
+        {fonte.campo_chave: 1},
+    )
+    if not doc or not doc.get(fonte.campo_chave):
+        return None
+    campos = {"ativo": True, "ultima_coleta": agora}
+    if registro.get("link_detalhe"):
+        campos["link_detalhe"] = registro["link_detalhe"]
+    await db.projetos.update_one({"_id": doc["_id"]}, {"$set": campos})
+    return doc[fonte.campo_chave]
+
+
 async def _promover_chave_incompleta(db, registro: dict, chave: str, fonte: Fonte) -> None:
     """Item salvo antes sem coordenador (detalhe falhou) e que agora veio
     completo: atualiza a chave do doc existente em vez de criar outro, para
@@ -118,6 +137,16 @@ async def upsert_projetos(
     res = ResultadoUpsert()
 
     for reg in registros:
+        if reg.get("so_listagem"):
+            # Modo incremental: o detalhe não foi reaberto de propósito. Só
+            # confirmamos que o projeto continua na fonte, sem tocar no que o
+            # detalhe anterior gravou (coordenador, e-mail, situação, resumo).
+            chave = await _confirmar_presenca(db, reg, fonte, agora)
+            if chave is not None:
+                res.atualizados += 1
+                res.chaves.append(chave)
+                continue
+            # Não estava mais no banco: segue como item só de listagem.
         anterior = await _registro_anterior_sem_coordenador(db, reg, fonte)
         if anterior is not None:
             # Detalhe indisponível nesta run: mantém coordenador/contato já

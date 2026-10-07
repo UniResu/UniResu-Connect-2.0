@@ -346,6 +346,14 @@ class TestConfig:
         monkeypatch.setenv("UNIRIO_PESQUISA_DETALHE_PREFIXO", "/projetos/projeto/")
         assert UnirioConfig().pesquisa_detalhe_prefixo == "/projetos/projeto/"
 
+    def test_modo_de_detalhes(self, monkeypatch):
+        assert UnirioConfig.from_env().detalhes == "incremental"
+        monkeypatch.setenv("UNIRIO_DETALHES", " Completo ")
+        assert UnirioConfig.from_env().detalhes == "completo"
+        monkeypatch.setenv("UNIRIO_DETALHES", "rapido")
+        with pytest.raises(ValueError):
+            UnirioConfig.from_env()
+
 
 class TestEncoding:
     class _Resp:
@@ -467,6 +475,20 @@ class TestColeta:
         assert [i["detalhe_ok"] for i in res.itens] == [True, False, False, False]
         assert res.erros == []  # itens além do teto não contam como erro
 
+    def test_pular_detalhe_de_itens_ja_conhecidos(self):
+        cliente = ClienteRoteado(UnirioConfig(), _rotas_extensao())
+        res = scraper.coletar_extensao(cliente, pular_detalhe={"8601", "8603"})
+        assert res.pulados == 2 and res.erros == []
+        assert cliente.total_requisicoes == 2 + 2  # listagem (2 páginas) + só os detalhes não pulados
+        por_id = {i["unirio_id"]: i for i in res.itens}
+        assert por_id["8601"]["so_listagem"] is True and por_id["8601"]["detalhe_ok"] is False
+        assert por_id["8601"]["titulo"] == "Projeto Extensão 1"  # só o que a listagem traz
+        assert "so_listagem" not in por_id["8602"] and por_id["8602"]["detalhe_ok"] is True
+        # o teto de detalhes conta só os que foram abertos
+        res = scraper.coletar_extensao(ClienteRoteado(UnirioConfig(max_detalhes=1), _rotas_extensao()),
+                                       pular_detalhe={"8601"})
+        assert [i.get("detalhe_ok") for i in res.itens] == [False, True, False, False]
+
     def test_pesquisa_posta_o_formulario_e_segue_a_listagem(self, monkeypatch):
         rotas = {
             URL_PESQ_FORM: FORM_PESQUISA,
@@ -557,7 +579,8 @@ async def test_sucesso_grava_com_origem_unirio_e_desativa_ausentes(db):
 
     assert run["status"] == "sucesso" and run["fonte"] == "unirio"
     assert run["modulos"]["pesquisa"] == {"coletados": 1, "novos": 0, "atualizados": 1, "desativados": 1,
-                                         "erros_detalhe": 0, "paginas": 1, "completa": True, "status": "sucesso"}
+                                         "erros_detalhe": 0, "detalhes_pulados": 0, "paginas": 1, "completa": True,
+                                         "status": "sucesso"}
     doc = await db.projetos.find_one({"unirio_id": "1"})
     assert doc["origem"] == "unirio" and doc["instituicao"] == "UNIRIO" and doc["modulo"] == "pesquisa"
     assert doc["tipo"] == "Pesquisa" and doc["palavras_chave"] == ["a", "b"]
@@ -585,6 +608,66 @@ async def test_listagem_incompleta_grava_mas_nao_desativa_e_alerta(db):
     assert await db.projetos.count_documents({"ativo": False}) == 0
     assert any("incompleta" in e["erro"] for e in run["erros"])
     assert len(alertas) == 1
+
+
+async def test_incremental_so_reabre_novos_e_pesquisa_em_execucao(db):
+    from jobs.sync_unirio import ids_sem_detalhe
+
+    # 1ª carga completa: pesquisa 1 (em execução), 2 (finalizado), 3 (detalhe falhou); extensão 9
+    await executar_sync(db, CFG, coletores(
+        [item("pesquisa", "1"), item("pesquisa", "2", situacao="FINALIZADO"),
+         item("pesquisa", "3", detalhe_ok=False, coordenador=None, email=None)],
+        [item("extensao", "9")]), ClienteNulo())
+
+    assert await ids_sem_detalhe(db, "pesquisa", CFG) == {"2"}       # finalizado e com detalhe
+    assert await ids_sem_detalhe(db, "extensao", CFG) == {"9"}       # listagem já filtra em andamento
+    assert await ids_sem_detalhe(db, "pesquisa", UnirioConfig(detalhes="completo")) == set()
+
+    # 2ª execução: o coletor recebe o conjunto e devolve o item 2 e o 9 só com a listagem
+    recebidos = {}
+
+    def fazer(modulo, itens):
+        def coletar(client, pular_detalhe=frozenset()):
+            recebidos[modulo] = set(pular_detalhe)
+            saida = []
+            for it in itens:
+                if it["unirio_id"] in pular_detalhe:
+                    saida.append({"modulo": modulo, "unirio_id": it["unirio_id"], "titulo": "Título da listagem",
+                                  "coordenador": "COORD DA LISTAGEM", "ano": "2026", "detalhe_ok": False,
+                                  "so_listagem": True})
+                else:
+                    saida.append(it)
+            return ResultadoColeta(modulo, saida, paginas=1, pulados=len(saida) - len(itens) + len(pular_detalhe))
+        return coletar
+
+    run = await executar_sync(db, CFG, {
+        "pesquisa": fazer("pesquisa", [item("pesquisa", "1", situacao="FINALIZADO"), item("pesquisa", "2"),
+                                       item("pesquisa", "3"), item("pesquisa", "4")]),
+        "extensao": fazer("extensao", [item("extensao", "9")]),
+    }, ClienteNulo())
+
+    assert recebidos == {"pesquisa": {"2"}, "extensao": {"9"}}
+    assert run["status"] == "sucesso"
+    assert run["modulos"]["pesquisa"]["detalhes_pulados"] == 1 and run["modulos"]["extensao"]["detalhes_pulados"] == 1
+    assert run["modulos"]["pesquisa"]["novos"] == 1 and run["modulos"]["pesquisa"]["desativados"] == 0
+    # o item pulado manteve o detalhe anterior e continua ativo, visto agora
+    dois = await db.projetos.find_one({"unirio_id": "2"})
+    assert dois["titulo"] == "Projeto 2" and dois["email_professor"] == "c@unirio.br"
+    assert dois["situacao"] == "FINALIZADO" and dois["detalhe_ok"] is True and dois["ativo"] is True
+    assert await db.projetos.count_documents({"origem": "unirio", "modulo": "pesquisa"}) == 4  # sem duplicata
+    # o que foi reaberto mudou: 1 encerrou, 3 ganhou detalhe
+    assert (await db.projetos.find_one({"unirio_id": "1"}))["situacao"] == "FINALIZADO"
+    assert (await db.projetos.find_one({"unirio_id": "3"}))["detalhe_ok"] is True
+    nove = await db.projetos.find_one({"unirio_id": "9"})
+    assert nove["ativo"] is True and nove["email_professor"] == "c@unirio.br"
+
+
+async def test_item_so_listagem_que_sumiu_do_banco_volta_pelo_fluxo_normal(db):
+    reg = {**item("pesquisa", "7", detalhe_ok=False, email=None), "so_listagem": True}
+    up = await repositorio.upsert_projetos(db, [reg], fonte=UNIRIO)
+    assert up.novos == 1
+    doc = await db.projetos.find_one({"unirio_id": "7"})
+    assert doc["ativo"] is True and doc["detalhe_ok"] is False
 
 
 async def test_max_detalhes_e_ignorado_no_sync_real(db):
