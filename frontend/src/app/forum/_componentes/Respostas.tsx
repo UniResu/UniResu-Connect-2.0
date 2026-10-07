@@ -14,13 +14,15 @@
  * recebe em `estado` e o atualiza por `onMudar`: assim o contador da linha de
  * meta acompanha o que acontece aqui.
  *
- * Visitantes leem e veem "Entre para responder". Quem tem o perfil incompleto
- * vai para /perfil/completar ao tentar responder (a API devolveria 403).
+ * Só quem está logado com o perfil completo responde (a API devolve 403 nos
+ * outros casos). Visitantes veem o convite para entrar; quem ainda não
+ * completou o perfil vê o link para /perfil/completar. Se a API recusar
+ * mesmo assim (sessão expirada ou perfil que ficou incompleto), a mensagem
+ * de erro traz o link para resolver.
  */
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -32,12 +34,32 @@ import {
   juntarRespostas,
   mensagemDeErro,
   plural,
+  statusDoErro,
   tempoRelativo,
   type EstadoRespostas,
   type PaginaRespostas,
   type Resposta,
 } from "./forum";
+import { AcoesAutor } from "./Pergunta";
 import styles from "../forum.module.css";
+
+/** Erro mostrado na seção; `acao` acrescenta o link que resolve o problema. */
+interface ErroAcao {
+  mensagem: string;
+  acao?: "entrar" | "completar";
+}
+
+/**
+ * 401: o token venceu, então a pessoa precisa entrar de novo. 403 ao
+ * publicar só acontece com perfil incompleto (editar e excluir também dão
+ * 403 quando a resposta é de outra pessoa, por isso `podeSerPerfil`).
+ */
+function erroDaApi(err: unknown, padrao: string, podeSerPerfil = false): ErroAcao {
+  const status = statusDoErro(err);
+  if (status === 401) return { mensagem: "Sua sessão expirou.", acao: "entrar" };
+  if (status === 403 && podeSerPerfil) return { mensagem: mensagemDeErro(err, padrao), acao: "completar" };
+  return { mensagem: mensagemDeErro(err, padrao) };
+}
 
 // ── Uma resposta ──────────────────────────────────────────────────────────
 
@@ -88,20 +110,7 @@ function ItemResposta({ resposta, autor, onEditar, onExcluir }: ItemRespostaProp
             </span>
           )}
         </div>
-        {autor && !editando && (
-          <div className={styles.acoesAutor}>
-            <button type="button" className={styles.acaoTexto} onClick={iniciarEdicao}>
-              Editar
-            </button>
-            <button
-              type="button"
-              className={`${styles.acaoTexto} ${styles.acaoPerigo}`}
-              onClick={() => onExcluir(resposta)}
-            >
-              Excluir
-            </button>
-          </div>
-        )}
+        {autor && !editando && <AcoesAutor onEditar={iniciarEdicao} onExcluir={() => onExcluir(resposta)} />}
       </div>
 
       {editando ? (
@@ -146,13 +155,12 @@ interface RespostasProps {
 
 export function Respostas({ topicoId, estado, modo, onMudar, falhou, onRecarregar }: RespostasProps) {
   const { token, user, isAuthenticated, isLoading } = useAuth();
-  const router = useRouter();
 
   const [formAberto, setFormAberto] = useState(modo === "pagina");
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [carregandoMais, setCarregandoMais] = useState(false);
-  const [erro, setErro] = useState("");
+  const [erro, setErro] = useState<ErroAcao | null>(null);
   // A resposta nova ficou depois das que estão na tela (thread cheia ou lista ainda incompleta).
   const [publicadaForaDaTela, setPublicadaForaDaTela] = useState(false);
 
@@ -165,22 +173,10 @@ export function Respostas({ topicoId, estado, modo, onMudar, falhou, onRecarrega
   // Na lista o título da pergunta é <h2>; na página da pergunta, <h1>.
   const Titulo = modo === "thread" ? "h3" : "h2";
 
-  function abrirFormulario() {
-    if (perfilIncompleto) {
-      router.push("/perfil/completar");
-      return;
-    }
-    setFormAberto(true);
-  }
-
   async function publicar(e: React.FormEvent) {
     e.preventDefault();
     const conteudo = texto.trim();
-    if (!isAuthenticated || !estado || !conteudo) return;
-    if (perfilIncompleto) {
-      router.push("/perfil/completar");
-      return;
-    }
+    if (!isAuthenticated || perfilIncompleto || !estado || !conteudo) return;
     // Só entra na tela se todas as respostas já estão nela e ainda cabe uma:
     // a nova é a mais recente, então vai para o fim da lista.
     const entraNaTela = respostas.length >= total && respostas.length < limite;
@@ -192,11 +188,11 @@ export function Respostas({ topicoId, estado, modo, onMudar, falhou, onRecarrega
         total: atual.total + 1,
       }));
       setTexto("");
-      setErro("");
+      setErro(null);
       setPublicadaForaDaTela(!entraNaTela);
       if (modo === "thread") setFormAberto(false);
     } catch (err) {
-      setErro(mensagemDeErro(err, "Não foi possível publicar a resposta."));
+      setErro(erroDaApi(err, "Não foi possível publicar a resposta.", true));
     } finally {
       setEnviando(false);
     }
@@ -213,9 +209,9 @@ export function Respostas({ topicoId, estado, modo, onMudar, falhou, onRecarrega
         ...atual,
         respostas: atual.respostas.map((r) => (r.id === atualizada.id ? atualizada : r)),
       }));
-      setErro("");
+      setErro(null);
     } catch (err) {
-      setErro(mensagemDeErro(err, "Não foi possível salvar a edição."));
+      setErro(erroDaApi(err, "Não foi possível salvar a edição."));
       throw err; // o item mantém o formulário aberto
     }
   }
@@ -230,13 +226,13 @@ export function Respostas({ topicoId, estado, modo, onMudar, falhou, onRecarrega
         respostas: atual.respostas.filter((r) => r.id !== resposta.id),
         total: Math.max(0, atual.total - 1),
       }));
-      setErro("");
+      setErro(null);
       if (haviaOcultas) {
         const pagina = await api.get<PaginaRespostas>(`${urlRespostas}?limite=${RESPOSTAS_NA_THREAD}`);
         onMudar(() => ({ respostas: pagina.respostas, total: pagina.total }));
       }
     } catch (err) {
-      setErro(mensagemDeErro(err, "Não foi possível excluir a resposta."));
+      setErro(erroDaApi(err, "Não foi possível excluir a resposta."));
     }
   }
 
@@ -251,10 +247,10 @@ export function Respostas({ topicoId, estado, modo, onMudar, falhou, onRecarrega
         respostas: juntarRespostas(atual.respostas, pagina.respostas),
         total: pagina.total,
       }));
-      setErro("");
+      setErro(null);
       setPublicadaForaDaTela(false);
     } catch (err) {
-      setErro(mensagemDeErro(err, "Não foi possível carregar mais respostas."));
+      setErro({ mensagem: mensagemDeErro(err, "Não foi possível carregar mais respostas.") });
     } finally {
       setCarregandoMais(false);
     }
@@ -316,7 +312,19 @@ export function Respostas({ topicoId, estado, modo, onMudar, falhou, onRecarrega
 
       {erro && (
         <p className={styles.erro} role="alert">
-          {erro}
+          {erro.mensagem}
+          {erro.acao === "entrar" && (
+            <>
+              {" "}
+              <Link href="/login">Entre de novo</Link> para continuar.
+            </>
+          )}
+          {erro.acao === "completar" && (
+            <>
+              {" "}
+              <Link href="/perfil/completar">Completar o perfil</Link>
+            </>
+          )}
         </p>
       )}
 
@@ -339,7 +347,13 @@ export function Respostas({ topicoId, estado, modo, onMudar, falhou, onRecarrega
           <p className={styles.dicaLogin}>
             <Link href="/login">Entre</Link> para responder.
           </p>
-        ) : formAberto && !perfilIncompleto ? (
+        ) : perfilIncompleto ? (
+          // A API devolveria 403: em vez de deixar tentar, aponta o caminho.
+          <p className={styles.dicaLogin}>
+            Para responder, <Link href="/perfil/completar">complete seu perfil</Link> com o vínculo
+            institucional, o e-mail e os aceites.
+          </p>
+        ) : formAberto ? (
           <form className={styles.formResposta} onSubmit={publicar}>
             <textarea
               value={texto}
@@ -365,7 +379,7 @@ export function Respostas({ topicoId, estado, modo, onMudar, falhou, onRecarrega
             </div>
           </form>
         ) : (
-          <button type="button" className={styles.btnSecundario} onClick={abrirFormulario}>
+          <button type="button" className={styles.btnSecundario} onClick={() => setFormAberto(true)}>
             Responder
           </button>
         )
