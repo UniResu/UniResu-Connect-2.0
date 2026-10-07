@@ -132,7 +132,7 @@ function ResetSenhaForm() {
 export default function ResetarSenhaPage() {
   return (
     <div className={styles.page}>
-      <Suspense fallback={<div style={{ color: "white" }}>Carregando validador de sessão...</div>}>
+      <Suspense fallback={<div>Carregando validador de sessão...</div>}>
         <ResetSenhaForm />
       </Suspense>
     </div>
