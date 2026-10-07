@@ -17,12 +17,14 @@ interface Projeto {
   dataPublicacao?: string;
   local?: string;
   area_estudo?: string;
+  /** Grande área do CNPq em que o projeto foi classificado. */
+  area_conhecimento?: string;
   e_remoto?: boolean;
   modalidade?: string;
   nome_professor?: string;
   tem_contato: boolean;
-  // Projetos importados de fontes externas (SIGAA/UNIR, portais da UNIRIO)
-  origem?: "sigaa" | "unirio" | string;
+  // Projetos importados de fontes externas (SIGAA/UNIR, portais da UNIRIO, dados abertos da UFV)
+  origem?: "sigaa" | "unirio" | "ufv" | string;
   modulo?: "pesquisa" | "extensao";
   tipo_sigaa?: "pesquisa" | "extensao";
   codigo?: string;
@@ -53,6 +55,17 @@ interface InstituicaoFiltro {
   total: number;
   modulos: Record<string, number>;
   unidades: UnidadeFiltro[];
+}
+
+/** Grande área do CNPq com projetos no recorte atual (já vem na ordem fixa da tabela). */
+interface AreaFiltro {
+  nome: string;
+  total: number;
+}
+
+interface FiltrosResponse {
+  instituicoes: InstituicaoFiltro[];
+  areas: AreaFiltro[];
 }
 
 /** Unidades de uma instituição que têm projetos no módulo escolhido (ou em qualquer um). */
@@ -138,9 +151,10 @@ export default function ProjetosPage() {
   const [tipoFiltro, setTipoFiltro] = useState<"" | "pesquisa" | "extensao">("");
   const [instituicaoFiltro, setInstituicaoFiltro] = useState("");
   const [unidadeEscolhida, setUnidadeFiltro] = useState("");
-  const [areaFiltro, setAreaFiltro] = useState("");
+  const [areaEscolhida, setAreaFiltro] = useState("");
   const [remotoFiltro, setRemotoFiltro] = useState(false);
   const [filtros, setFiltros] = useState<InstituicaoFiltro[]>([]);
+  const [areas, setAreas] = useState<AreaFiltro[]>([]);
 
   // Categorias: instituição > unidade/departamento. As unidades só aparecem
   // depois de escolher a instituição (sem ela o seletor fica vazio e
@@ -157,9 +171,16 @@ export default function ProjetosPage() {
     unidadeEscolhida && (filtros.length === 0 || unidadesOferecidas.includes(unidadeEscolhida))
       ? unidadeEscolhida
       : "";
+  // Áreas do conhecimento com projetos no recorte atual (texto, tipo,
+  // instituição, unidade e remoto). Uma área escolhida que saiu das opções
+  // deixa de valer, pela mesma regra da unidade.
+  const areasOferecidas = areas.map((a) => a.nome);
+  const areaFiltro =
+    areaEscolhida && (areas.length === 0 || areasOferecidas.includes(areaEscolhida)) ? areaEscolhida : "";
 
   // Ignora respostas de buscas antigas (filtros mudaram no meio do caminho).
   const buscaAtual = useRef(0);
+  const filtrosAtuais = useRef(0);
 
   // Modal State
   const [selectedProjeto, setSelectedProjeto] = useState<Projeto | null>(null);
@@ -171,17 +192,23 @@ export default function ProjetosPage() {
   const [formStatus, setFormStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [formError, setFormError] = useState("");
 
-  const montarParams = useCallback(() => {
+  // Recorte comum à busca e às opções de filtro: tudo menos a área e a paginação.
+  const montarParamsRecorte = useCallback(() => {
     const params = new URLSearchParams();
     if (buscaAplicada) params.set("q", buscaAplicada);
     if (tipoFiltro) params.set("modulo", tipoFiltro);
     if (instituicaoFiltro) params.set("instituicao", instituicaoFiltro);
     if (unidadeFiltro) params.set("unidade", unidadeFiltro);
-    if (areaFiltro) params.set("area", areaFiltro);
     if (remotoFiltro) params.set("remoto", "true");
+    return params;
+  }, [buscaAplicada, tipoFiltro, instituicaoFiltro, unidadeFiltro, remotoFiltro]);
+
+  const montarParams = useCallback(() => {
+    const params = montarParamsRecorte();
+    if (areaFiltro) params.set("area", areaFiltro);
     params.set("page_size", String(PAGE_SIZE));
     return params;
-  }, [buscaAplicada, tipoFiltro, instituicaoFiltro, unidadeFiltro, areaFiltro, remotoFiltro]);
+  }, [montarParamsRecorte, areaFiltro]);
 
   const carregarProjetos = useCallback(async () => {
     const id = ++buscaAtual.current;
@@ -213,12 +240,24 @@ export default function ProjetosPage() {
     return () => clearTimeout(t);
   }, [busca]);
 
+  // Opções de filtro. As instituições (e suas unidades) não dependem do
+  // recorte; as áreas do conhecimento sim, então a lista é refeita a cada
+  // mudança nos outros filtros, e respostas de recortes antigos são ignoradas.
   useEffect(() => {
+    const id = ++filtrosAtuais.current;
+    const query = montarParamsRecorte().toString();
     api
-      .get<{ instituicoes: InstituicaoFiltro[] }>("/api/projetos/filtros")
-      .then((f) => setFiltros(f.instituicoes || []))
-      .catch(() => setFiltros([]));
-  }, []);
+      .get<FiltrosResponse>(`/api/projetos/filtros${query ? `?${query}` : ""}`)
+      .then((f) => {
+        if (id !== filtrosAtuais.current) return;
+        setFiltros(f.instituicoes || []);
+        setAreas(f.areas || []);
+      })
+      .catch(() => {
+        if (id !== filtrosAtuais.current) return;
+        setAreas([]);
+      });
+  }, [montarParamsRecorte]);
 
   async function carregarMais() {
     const ultimo = projetos[projetos.length - 1];
@@ -407,21 +446,22 @@ export default function ProjetosPage() {
               </optgroup>
             ))}
           </select>
+          {/* Grandes áreas do CNPq, na ordem fixa da tabela, só as que têm projeto no recorte atual. */}
           <select
             value={areaFiltro}
             onChange={(e) => setAreaFiltro(e.target.value)}
             className={styles.filterInput}
+            aria-label="Área do conhecimento"
+            disabled={areas.length === 0}
           >
-            <option value="">Áreas de Estudo</option>
-            <option value="Ciências Biológicas e da Saúde">Ciências Biológicas e da Saúde</option>
-            <option value="Ciências Exatas e da Terra">Ciências Exatas e da Terra</option>
-            <option value="Ciências Humanas">Ciências Humanas</option>
-            <option value="Ciências Sociais Aplicadas">Ciências Sociais Aplicadas</option>
-            <option value="Área de Tecnologias">Área de Tecnologias</option>
-            <option value="Engenharias">Engenharias</option>
-            <option value="Ciências Agrárias">Ciências Agrárias</option>
-            <option value="Artes e Design">Artes e Design</option>
-            <option value="Linguística e Letras">Linguística e Letras</option>
+            <option value="">
+              {areas.length > 0 ? "Todas as áreas do conhecimento" : "Área do conhecimento"}
+            </option>
+            {areas.map((a) => (
+              <option key={a.nome} value={a.nome}>
+                {a.nome} ({a.total})
+              </option>
+            ))}
           </select>
           <label className={styles.checkboxLabel}>
             <input
@@ -430,7 +470,7 @@ export default function ProjetosPage() {
               onChange={(e) => setRemotoFiltro(e.target.checked)}
               className={styles.checkbox}
             />
-            Remoto
+            Mostrar apenas projetos remotos
           </label>
         </div>
       </form>
@@ -446,7 +486,7 @@ export default function ProjetosPage() {
         <div className={styles.emptyState}>
           <span className={styles.emptyIcon}>📭</span>
           <h3>Nenhum projeto encontrado com esses filtros</h3>
-          <p>Tente outra busca ou limpe os filtros de tipo e unidade.</p>
+          <p>Tente outra busca ou limpe os filtros de tipo, unidade e área.</p>
         </div>
       ) : (
         <>
@@ -471,7 +511,7 @@ export default function ProjetosPage() {
                 </div>
                 {/*
                   Tags em ordem fixa, do mais geral ao mais específico:
-                  tipo (Pesquisa/Extensão) → instituição → unidade → ano → remoto.
+                  tipo (Pesquisa/Extensão) → área do conhecimento → instituição → unidade → ano → remoto.
                   A situação fica fora do grupo, à direita, como indicador de estado,
                   para não virar um item solto quando as tags quebram de linha.
                 */}
@@ -488,6 +528,14 @@ export default function ProjetosPage() {
                         }`}
                       >
                         {projeto.tipo}
+                      </span>
+                    )}
+                    {projeto.area_conhecimento && (
+                      <span
+                        className={`${styles.metaTag} ${styles.metaArea}`}
+                        title="Área do conhecimento (grande área do CNPq)"
+                      >
+                        {projeto.area_conhecimento}
                       </span>
                     )}
                     {projeto.instituicao && (
@@ -572,8 +620,13 @@ export default function ProjetosPage() {
               {selectedProjeto.unidade && (
                 <div className={modalStyles.infoLine}><strong>Unidade/Departamento:</strong> {selectedProjeto.unidade}</div>
               )}
+              {selectedProjeto.area_conhecimento && (
+                <div className={modalStyles.infoLine}>
+                  <strong>Área do conhecimento:</strong> {selectedProjeto.area_conhecimento}
+                </div>
+              )}
               {selectedProjeto.area_tematica && (
-                <div className={modalStyles.infoLine}><strong>Área:</strong> {selectedProjeto.area_tematica}</div>
+                <div className={modalStyles.infoLine}><strong>Área temática:</strong> {selectedProjeto.area_tematica}</div>
               )}
               {selectedProjeto.grupo_pesquisa && (
                 <div className={modalStyles.infoLine}><strong>Grupo de pesquisa:</strong> {selectedProjeto.grupo_pesquisa}</div>
