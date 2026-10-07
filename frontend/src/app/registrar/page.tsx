@@ -4,7 +4,9 @@ import { useState, FormEvent } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import { PERFIS, NIVEIS, type TipoPerfil, emailInstitucionalValido } from "@/lib/perfis";
+import { PERFIS, NIVEIS, PERIODO_POR_NIVEL, type TipoPerfil, emailInstitucionalValido } from "@/lib/perfis";
+import { CODIGO_CONDUTA, CODIGO_CONDUTA_INTRODUCAO, CODIGO_CONDUTA_TITULO, DADOS_TEXTO, DADOS_TITULO } from "@/lib/codigoConduta";
+import Modal from "@/components/ui/Modal";
 import styles from "./registrar.module.css";
 
 /**
@@ -26,8 +28,9 @@ export default function RegistrarPage() {
   const [departamento, setDepartamento] = useState("");
 
   // Campos por vínculo
-  const [nivel, setNivel] = useState("graduacao");
+  const [nivel, setNivel] = useState("graduacao_incompleta");
   const [semestre, setSemestre] = useState("1");
+  const periodo = PERIODO_POR_NIVEL[nivel];
   const [titulo, setTitulo] = useState("");
   const [cargo, setCargo] = useState("");
   const [vinculoPesq, setVinculoPesq] = useState("");
@@ -37,6 +40,9 @@ export default function RegistrarPage() {
 
   const [aceiteRegras, setAceiteRegras] = useState(false);
   const [aceiteDados, setAceiteDados] = useState(false);
+  const [modal, setModal] = useState<"regras" | "dados" | null>(null);
+  // Sem e-mail acadêmico, o registro é feito pela conta ORCID, que comprova o vínculo.
+  const [semEmailAcademico, setSemEmailAcademico] = useState(false);
 
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,7 +53,7 @@ export default function RegistrarPage() {
   function dadosDoVinculo(): Record<string, unknown> {
     switch (papel) {
       case "aluno":
-        return { dados_aluno: { nivel, semestre: parseInt(semestre, 10) || 1 } };
+        return { dados_aluno: { nivel, semestre: periodo ? parseInt(semestre, 10) || 1 : null } };
       case "professor":
         return { dados_professor: { titulo: titulo || null, cargo: cargo || null, linhas_pesquisa: [] } };
       case "pesquisador":
@@ -166,19 +172,36 @@ export default function RegistrarPage() {
           {error && <div className={styles.errorMessage}>{error}</div>}
 
           <div className={styles.panel}>
-            <div className={styles.row}>
-              <label htmlFor="reg-email" className={styles.rowLabel}>E-mail institucional</label>
+            {!semEmailAcademico && (
+              <div className={styles.row}>
+                <label htmlFor="reg-email" className={styles.rowLabel}>E-mail institucional</label>
+                <input
+                  id="reg-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="voce@universidade.edu.br"
+                  required
+                  className={styles.rowInput}
+                  autoComplete="email"
+                />
+              </div>
+            )}
+            <label className={`${styles.consent} ${styles.consentCompacto}`}>
               <input
-                id="reg-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="voce@universidade.edu.br"
-                required
-                className={styles.rowInput}
-                autoComplete="email"
+                type="checkbox"
+                checked={semEmailAcademico}
+                onChange={(e) => setSemEmailAcademico(e.target.checked)}
               />
-            </div>
+              <span>Não tenho e-mail acadêmico</span>
+            </label>
+            {semEmailAcademico && (
+              <p className={styles.rowHint}>
+                Sem um e-mail acadêmico, o registro é feito com a sua conta ORCID, que comprova o vínculo com a
+                instituição. Use o botão &ldquo;Registrar com ORCID&rdquo; abaixo; depois você escolhe o vínculo e
+                completa o perfil.
+              </p>
+            )}
 
             <div className={styles.row}>
               <label htmlFor="reg-inst" className={styles.rowLabel}>Instituição</label>
@@ -239,16 +262,18 @@ export default function RegistrarPage() {
                     <select id="reg-nivel" value={nivel} onChange={(e) => setNivel(e.target.value)} className={styles.rowInput}>
                       {NIVEIS.map((n) => <option key={n.value} value={n.value}>{n.label}</option>)}
                     </select>
-                    <input
-                      type="number"
-                      value={semestre}
-                      onChange={(e) => setSemestre(e.target.value)}
-                      min={1}
-                      max={100}
-                      className={styles.rowInput}
-                      aria-label="Período"
-                      placeholder="Período"
-                    />
+                    {periodo && (
+                      <input
+                        type="number"
+                        value={semestre}
+                        onChange={(e) => setSemestre(e.target.value)}
+                        min={1}
+                        max={periodo.max}
+                        className={styles.rowInput}
+                        aria-label={periodo.rotulo}
+                        placeholder={`${periodo.rotulo} (1 a ${periodo.max})`}
+                      />
+                    )}
                   </div>
                 </div>
               </>
@@ -323,6 +348,7 @@ export default function RegistrarPage() {
               </>
             )}
 
+            {!semEmailAcademico && (
             <div className={styles.row}>
               <label htmlFor="reg-senha" className={styles.rowLabel}>Senha</label>
               <div className={styles.rowSplit}>
@@ -349,26 +375,55 @@ export default function RegistrarPage() {
                 />
               </div>
             </div>
+            )}
           </div>
 
           <div className={styles.consents}>
             <label className={styles.consent}>
               <input type="checkbox" checked={aceiteRegras} onChange={(e) => setAceiteRegras(e.target.checked)} />
-              <span>Declaro, ao fazer o registro, que estou ciente das regras de utilização e convivência da plataforma.</span>
+              <span>
+                Declaro, ao fazer o registro, que estou ciente das{" "}
+                <button
+                  type="button"
+                  className={styles.linkBotao}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setModal("regras"); }}
+                >
+                  regras de utilização e convivência
+                </button>{" "}
+                da plataforma.
+              </span>
             </label>
             <label className={styles.consent}>
               <input type="checkbox" checked={aceiteDados} onChange={(e) => setAceiteDados(e.target.checked)} />
-              <span>Declaro, ao fazer o registro, que estou ciente do compartilhamento desses dados com as coordenações dos projetos a que eu me candidatar.</span>
+              <span>
+                Declaro, ao fazer o registro, que estou ciente do{" "}
+                <button
+                  type="button"
+                  className={styles.linkBotao}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setModal("dados"); }}
+                >
+                  compartilhamento desses dados
+                </button>{" "}
+                com as coordenações dos projetos a que eu me candidatar.
+              </span>
             </label>
           </div>
 
-          <button type="submit" disabled={isSubmitting} className={styles.submitButton}>
-            {isSubmitting ? "Criando conta..." : "Registrar-se"}
-          </button>
+          {!semEmailAcademico && (
+            <>
+              <button type="submit" disabled={isSubmitting} className={styles.submitButton}>
+                {isSubmitting ? "Criando conta..." : "Registrar-se"}
+              </button>
 
-          <div className={styles.divider}><span>ou</span></div>
+              <div className={styles.divider}><span>ou</span></div>
+            </>
+          )}
 
-          <button onClick={() => loginWithOrcid()} className={styles.orcidButton} type="button">
+          <button
+            onClick={() => loginWithOrcid()}
+            className={`${styles.orcidButton} ${semEmailAcademico ? styles.orcidDestaque : ""}`}
+            type="button"
+          >
             <img
               src="https://info.orcid.org/wp-content/uploads/2019/11/orcid_16x16.png"
               alt="ORCID"
@@ -399,6 +454,16 @@ export default function RegistrarPage() {
           Já tem uma conta? <Link href="/login" className={styles.link}>Entrar</Link>
         </p>
       </div>
+
+      <Modal aberto={modal === "regras"} titulo={CODIGO_CONDUTA_TITULO} onFechar={() => setModal(null)}>
+        <p>{CODIGO_CONDUTA_INTRODUCAO}</p>
+        <ol>
+          {CODIGO_CONDUTA.map((item) => <li key={item}>{item}</li>)}
+        </ol>
+      </Modal>
+      <Modal aberto={modal === "dados"} titulo={DADOS_TITULO} onFechar={() => setModal(null)}>
+        {DADOS_TEXTO.map((p) => <p key={p}>{p}</p>)}
+      </Modal>
     </div>
   );
 }

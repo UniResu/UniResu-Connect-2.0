@@ -142,3 +142,47 @@
 @media (max-width: 640px) {
   .fieldRow { grid-template-columns: 1fr; }
 }
+
+
+/* "Não tenho e-mail acadêmico" e o passo de vincular o ORCID. */
+.checkboxLinha {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.checkboxLinha input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+}
+
+.avisoOrcid {
+  margin-top: var(--space-sm);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--primary-50);
+  border: 1px solid var(--primary-100);
+  font-size: var(--font-size-sm);
+  line-height: 1.55;
+}
+
+.orcidBotao {
+  margin-top: var(--space-sm);
+  padding: 0.55rem 1.1rem;
+  border: 2px solid var(--accent);
+  border-radius: var(--radius-md);
+  background: white;
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.orcidBotao:hover,
+.orcidBotao:focus-visible {
+  background: var(--primary-100);
+}

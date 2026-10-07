@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import { api } from "@/lib/api";
-import { NIVEL_LABELS } from "@/lib/constants";
+import { descreverNivel } from "@/lib/perfis";
 import styles from "./perfil-publico.module.css";
 
 interface PerfilPublico {
@@ -18,7 +18,7 @@ interface PerfilPublico {
   habilidades: string[];
   dados_aluno?: {
     nivel?: string;
-    semestre?: number;
+    semestre?: number | null;
     orientador?: string;
     linha_pesquisa?: string;
   };
@@ -89,14 +89,9 @@ export default function PerfilPublicoPage({
     );
   }
 
-  const nivelLabel =
-    perfil.dados_aluno?.nivel
-      ? NIVEL_LABELS[perfil.dados_aluno.nivel] || perfil.dados_aluno.nivel
-      : null;
-
   const subtitulo =
     perfil.papel === "aluno" && perfil.dados_aluno
-      ? `${nivelLabel} - ${perfil.dados_aluno.semestre}º Semestre`
+      ? descreverNivel(perfil.dados_aluno.nivel, perfil.dados_aluno.semestre)
       : perfil.papel === "professor" && perfil.dados_professor
         ? `${perfil.dados_professor.titulo || ""} ${perfil.dados_professor.cargo || "Professor"}`.trim()
         : perfil.papel === "pesquisador" && perfil.dados_pesquisador

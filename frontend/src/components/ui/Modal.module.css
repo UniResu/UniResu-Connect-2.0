@@ -1,0 +1,70 @@
+.fundo {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
+  background: rgba(13, 0, 20, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.caixa {
+  width: 100%;
+  max-width: 580px;
+  max-height: calc(100vh - 2 * var(--space-md));
+  overflow-y: auto;
+  padding: var(--space-xl);
+  border-radius: var(--radius-xl);
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--surface-border, rgba(76, 5, 104, 0.15));
+  box-shadow: var(--surface-shadow, 0 20px 50px rgba(0, 0, 0, 0.3)), inset 0 1px 0 var(--surface-highlight, rgba(255, 255, 255, 0.6));
+  color: var(--text-primary);
+}
+
+.titulo {
+  margin-bottom: var(--space-md);
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.conteudo {
+  font-size: var(--font-size-base);
+  line-height: 1.65;
+  color: var(--text-primary);
+}
+
+.conteudo p + p,
+.conteudo ol,
+.conteudo ul {
+  margin-top: var(--space-sm);
+}
+
+.conteudo ol,
+.conteudo ul {
+  padding-left: 1.25rem;
+}
+
+.conteudo li + li {
+  margin-top: var(--space-xs);
+}
+
+.fechar {
+  margin-top: var(--space-lg);
+  padding: 0.65rem 1.5rem;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: var(--text-on-primary);
+  font-weight: 600;
+  font-size: var(--font-size-base);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.fechar:hover,
+.fechar:focus-visible {
+  background: var(--primary-dark);
+}

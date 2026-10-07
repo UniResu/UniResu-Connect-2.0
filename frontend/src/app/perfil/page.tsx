@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { NIVEL_LABELS } from "@/lib/constants";
+import { descreverNivel } from "@/lib/perfis";
 import { PERFIL_LABELS, emailProvisorio } from "@/lib/perfis";
 import styles from "./perfil.module.css";
 
@@ -14,7 +14,7 @@ import styles from "./perfil.module.css";
  * os campos que o Next reconhece, e o `next build` recusa qualquer outro. */
 function subtituloDoPerfil(user: {
   papel: string;
-  dados_aluno?: { nivel?: string; semestre?: number } | null;
+  dados_aluno?: { nivel?: string; semestre?: number | null } | null;
   dados_professor?: { titulo?: string | null; cargo?: string | null } | null;
   dados_pesquisador?: { titulo?: string | null; vinculo?: string | null } | null;
   dados_tecnico?: { setor?: string | null; cargo?: string | null } | null;
@@ -23,9 +23,7 @@ function subtituloDoPerfil(user: {
 }) {
   switch (user.papel) {
     case "aluno": {
-      const nivel = user.dados_aluno?.nivel ? NIVEL_LABELS[user.dados_aluno.nivel] || user.dados_aluno.nivel : "Discente";
-      const semestre = user.dados_aluno?.semestre;
-      return semestre ? `${nivel} - ${semestre}º Semestre` : nivel;
+      return user.dados_aluno?.nivel ? descreverNivel(user.dados_aluno.nivel, user.dados_aluno.semestre) : "Discente";
     }
     case "professor":
       return `${user.dados_professor?.titulo || ""} ${user.dados_professor?.cargo || "Docente"}`.trim();

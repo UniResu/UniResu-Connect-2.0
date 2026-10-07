@@ -10,9 +10,18 @@ export const TOKEN_KEY = "uniresu_token";
 
 /** Mapear nível acadêmico para label amigável */
 export const NIVEL_LABELS: Record<string, string> = {
-  graduacao: "Graduando",
-  mestrado: "Mestrando",
-  doutorado: "Doutorando",
+  graduacao_incompleta: "Graduação em andamento",
+  graduacao_completa: "Graduação completa",
+  especializacao: "Especialização ou residência",
+  mestrado_incompleto: "Mestrado em andamento",
+  mestrado_completo: "Mestrado completo",
+  doutorado_incompleto: "Doutorado em andamento",
+  doutorado_completo: "Doutorado completo",
+  pos_doutorado: "Pós-doutorado",
+  // valores da primeira versão, ainda possíveis em contas antigas
+  graduacao: "Graduação em andamento",
+  mestrado: "Mestrado em andamento",
+  doutorado: "Doutorado em andamento",
 };
 
 /** Mapear papel para label */

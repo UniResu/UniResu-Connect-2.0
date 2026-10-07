@@ -4,7 +4,7 @@ import { useEffect, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import { PERFIS, NIVEIS, type TipoPerfil, emailInstitucionalValido, emailProvisorio } from "@/lib/perfis";
+import { PERFIS, NIVEIS, type TipoPerfil, emailInstitucionalValido, emailProvisorio, PERIODO_POR_NIVEL } from "@/lib/perfis";
 import styles from "../../registrar/registrar.module.css";
 
 /**
@@ -23,8 +23,9 @@ export default function CompletarPerfilPage() {
   const [instituicao, setInstituicao] = useState("");
   const [curso, setCurso] = useState("");
   const [departamento, setDepartamento] = useState("");
-  const [nivel, setNivel] = useState("graduacao");
+  const [nivel, setNivel] = useState("graduacao_incompleta");
   const [semestre, setSemestre] = useState("1");
+  const periodo = PERIODO_POR_NIVEL[nivel];
   const [titulo, setTitulo] = useState("");
   const [cargo, setCargo] = useState("");
   const [vinculoPesq, setVinculoPesq] = useState("");
@@ -73,7 +74,7 @@ export default function CompletarPerfilPage() {
   function dadosDoVinculo(): Record<string, unknown> {
     switch (papel) {
       case "aluno":
-        return { dados_aluno: { nivel, semestre: parseInt(semestre, 10) || 1 } };
+        return { dados_aluno: { nivel, semestre: periodo ? parseInt(semestre, 10) || 1 : null } };
       case "professor":
         return { dados_professor: { titulo: titulo || null, cargo: cargo || null } };
       case "pesquisador":
@@ -187,8 +188,11 @@ export default function CompletarPerfilPage() {
                     <select id="cp-nivel" value={nivel} onChange={(e) => setNivel(e.target.value)} className={styles.rowInput}>
                       {NIVEIS.map((n) => <option key={n.value} value={n.value}>{n.label}</option>)}
                     </select>
-                    <input type="number" value={semestre} onChange={(e) => setSemestre(e.target.value)} min={1} max={100}
-                      className={styles.rowInput} aria-label="Período" placeholder="Período" />
+                    {periodo && (
+                      <input type="number" value={semestre} onChange={(e) => setSemestre(e.target.value)} min={1}
+                        max={periodo.max} className={styles.rowInput} aria-label={periodo.rotulo}
+                        placeholder={`${periodo.rotulo} (1 a ${periodo.max})`} />
+                    )}
                   </div>
                 </div>
               </>

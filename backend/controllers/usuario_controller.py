@@ -27,7 +27,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Sub-documento mínimo quando o registro não traz os dados do vínculo.
 DADOS_PADRAO = {
-    PapelUsuario.ALUNO: {"nivel": "graduacao", "semestre": 1},
+    PapelUsuario.ALUNO: {"nivel": "graduacao_incompleta", "semestre": 1},
     PapelUsuario.PROFESSOR: {"linhas_pesquisa": []},
     PapelUsuario.PESQUISADOR: {"linhas_pesquisa": []},
     PapelUsuario.TECNICO: {},

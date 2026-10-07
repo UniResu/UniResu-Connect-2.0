@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
-import { PERFIS, NIVEIS, type TipoPerfil, emailProvisorio } from "@/lib/perfis";
+import { PERFIS, NIVEIS, PERIODO_POR_NIVEL, nivelAtual, type TipoPerfil, emailProvisorio } from "@/lib/perfis";
 import styles from "./editar.module.css";
 
 /**
@@ -14,7 +14,9 @@ import styles from "./editar.module.css";
  * interesses e habilidades.
  */
 export default function EditarPerfilPage() {
-  const { user, token, isAuthenticated, isLoading: authLoading, refreshUser } = useAuth();
+  const { user, token, isAuthenticated, isLoading: authLoading, refreshUser, loginWithOrcid } = useAuth();
+  // Quem não tem e-mail acadêmico comprova o vínculo pela conta ORCID.
+  const [semEmailAcademico, setSemEmailAcademico] = useState(false);
   const router = useRouter();
 
   const [nome, setNome] = useState("");
@@ -31,8 +33,9 @@ export default function EditarPerfilPage() {
   // estados: campos homônimos (titulação, cargo, linhas de pesquisa) não
   // podem ser compartilhados, senão trocar de vínculo e voltar sobrescreve
   // os dados do vínculo anterior, que continuam gravados no banco.
-  const [nivel, setNivel] = useState("graduacao");
+  const [nivel, setNivel] = useState("graduacao_incompleta");
   const [semestre, setSemestre] = useState("1");
+  const periodo = PERIODO_POR_NIVEL[nivel];
   const [orientador, setOrientador] = useState("");
   const [linhaPesquisa, setLinhaPesquisa] = useState("");
   const [tituloProf, setTituloProf] = useState("");
@@ -71,7 +74,7 @@ export default function EditarPerfilPage() {
     setHabilidades(user.habilidades.join(", "));
 
     if (user.dados_aluno) {
-      setNivel(user.dados_aluno.nivel || "graduacao");
+      setNivel(nivelAtual(user.dados_aluno.nivel));
       setSemestre(String(user.dados_aluno.semestre || 1));
       setOrientador(user.dados_aluno.orientador || "");
       setLinhaPesquisa(user.dados_aluno.linha_pesquisa || "");
@@ -127,7 +130,7 @@ export default function EditarPerfilPage() {
       if (papel === "aluno") {
         payload.dados_aluno = {
           nivel,
-          semestre: parseInt(semestre) || 1,
+          semestre: periodo ? parseInt(semestre) || 1 : null,
           orientador: orientador || null,
           linha_pesquisa: linhaPesquisa || null,
         };
@@ -219,6 +222,21 @@ export default function EditarPerfilPage() {
                 "O e-mail da conta não muda por aqui."
               )}
             </span>
+            <label className={styles.checkboxLinha}>
+              <input type="checkbox" checked={semEmailAcademico} onChange={(e) => setSemEmailAcademico(e.target.checked)} />
+              <span>Não tenho e-mail acadêmico</span>
+            </label>
+            {semEmailAcademico && (
+              <div className={styles.avisoOrcid}>
+                <p>
+                  Sem um e-mail acadêmico, o vínculo com a instituição é comprovado pela conta ORCID. Vincule a sua
+                  conta ORCID a este perfil: você passa a entrar por ela e o perfil importa a formação e as publicações.
+                </p>
+                <button type="button" className={styles.orcidBotao} onClick={() => loginWithOrcid()}>
+                  Vincular conta ORCID
+                </button>
+              </div>
+            )}
           </div>
           <div className={styles.field}>
             <label htmlFor="edit-bio">Sobre mim</label>
@@ -266,10 +284,12 @@ export default function EditarPerfilPage() {
                   {NIVEIS.map((n) => <option key={n.value} value={n.value}>{n.label}</option>)}
                 </select>
               </div>
-              <div className={styles.field}>
-                <label htmlFor="edit-sem">Período</label>
-                <input id="edit-sem" type="number" value={semestre} onChange={(e) => setSemestre(e.target.value)} min="1" max="100" className={styles.input} />
-              </div>
+              {periodo && (
+                <div className={styles.field}>
+                  <label htmlFor="edit-sem">{periodo.rotulo}</label>
+                  <input id="edit-sem" type="number" value={semestre} onChange={(e) => setSemestre(e.target.value)} min="1" max={periodo.max} className={styles.input} />
+                </div>
+              )}
             </div>
             <div className={styles.field}>
               <label htmlFor="edit-orient">Orientador(a)</label>

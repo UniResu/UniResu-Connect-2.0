@@ -9,11 +9,23 @@ export type { DadosEgresso, DadosTecnico } from "@/lib/perfis";
 
 /** Vínculo institucional (ver `lib/perfis.ts` para os rótulos). */
 export type PapelUsuario = TipoPerfil;
-export type NivelAcademico = "graduacao" | "mestrado" | "doutorado";
+export type NivelAcademico =
+  | "graduacao_incompleta"
+  | "graduacao_completa"
+  | "especializacao"
+  | "mestrado_incompleto"
+  | "mestrado_completo"
+  | "doutorado_incompleto"
+  | "doutorado_completo"
+  | "pos_doutorado"
+  // valores da primeira versão, ainda possíveis em contas antigas
+  | "graduacao"
+  | "mestrado"
+  | "doutorado";
 
 export interface DadosAluno {
   nivel: NivelAcademico;
-  semestre: number;
+  semestre?: number | null;
   orientador?: string;
   linha_pesquisa?: string;
 }

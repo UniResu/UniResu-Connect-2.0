@@ -23,7 +23,9 @@ async def test_registro_discente_grava_aceites_e_dados_do_vinculo(api, db):
     assert r.status_code == 201, r.text
     corpo = r.json()
     assert corpo["papel"] == "aluno" and corpo["perfil_completo"] is True
-    assert corpo["dados_aluno"] == {"nivel": "mestrado", "semestre": 3, "orientador": None, "linha_pesquisa": None}
+    # o valor antigo "mestrado" vira o nível atual em andamento
+    assert corpo["dados_aluno"] == {"nivel": "mestrado_incompleto", "semestre": 3, "orientador": None,
+                                    "linha_pesquisa": None}
     assert corpo["username"] == "ana-beatriz-souza"
     assert "senha_hash" not in corpo
     doc = await db.usuarios.find_one({"email": "ana.souza@unirio.br"})
@@ -283,3 +285,28 @@ async def test_perfil_publico_expoe_username_e_vinculo_sem_email(api_orcid, db):
     assert corpo["username"] == "carlos-lima" and corpo["papel"] == "tecnico"
     assert corpo["dados_tecnico"]["setor"] == "Biblioteca"
     assert "email" not in corpo
+
+
+
+def test_niveis_academicos_novos_e_antigos():
+    from models.usuario_model import DadosAluno
+
+    assert DadosAluno(nivel="graduacao").nivel.value == "graduacao_incompleta"
+    assert DadosAluno(nivel="graduacao_incompleta", semestre=7).semestre == 7
+    assert DadosAluno(nivel="graduacao_completa", semestre=7).semestre is None
+    assert DadosAluno(nivel="doutorado_incompleto").semestre == 1
+    assert DadosAluno(nivel="pos_doutorado").semestre is None
+
+
+async def test_migracao_dos_niveis_academicos(db):
+    from database.indexes import migrar_niveis_academicos
+
+    await db.usuarios.insert_many([
+        {"email": "a@unir.br", "dados_aluno": {"nivel": "graduacao", "semestre": 3}},
+        {"email": "b@unir.br", "dados_aluno": {"nivel": "doutorado", "semestre": 2}},
+        {"email": "c@unir.br", "dados_aluno": {"nivel": "mestrado_completo", "semestre": None}},
+    ])
+    assert await migrar_niveis_academicos(db) == 2
+    assert (await db.usuarios.find_one({"email": "a@unir.br"}))["dados_aluno"]["nivel"] == "graduacao_incompleta"
+    assert (await db.usuarios.find_one({"email": "b@unir.br"}))["dados_aluno"]["nivel"] == "doutorado_incompleto"
+    assert await migrar_niveis_academicos(db) == 0

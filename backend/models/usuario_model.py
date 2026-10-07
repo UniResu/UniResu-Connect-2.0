@@ -30,9 +30,34 @@ class PapelUsuario(str, Enum):
 
 
 class NivelAcademico(str, Enum):
+    """Grau de instrução do discente. Os três últimos valores são os da
+    primeira versão; continuam aceitos na entrada e são convertidos para os
+    novos pela validação de `DadosAluno` (e pela migração no startup)."""
+    GRADUACAO_INCOMPLETA = "graduacao_incompleta"
+    GRADUACAO_COMPLETA = "graduacao_completa"
+    ESPECIALIZACAO = "especializacao"
+    MESTRADO_INCOMPLETO = "mestrado_incompleto"
+    MESTRADO_COMPLETO = "mestrado_completo"
+    DOUTORADO_INCOMPLETO = "doutorado_incompleto"
+    DOUTORADO_COMPLETO = "doutorado_completo"
+    POS_DOUTORADO = "pos_doutorado"
     GRADUACAO = "graduacao"
     MESTRADO = "mestrado"
     DOUTORADO = "doutorado"
+
+
+NIVEIS_ANTIGOS = {
+    "graduacao": NivelAcademico.GRADUACAO_INCOMPLETA,
+    "mestrado": NivelAcademico.MESTRADO_INCOMPLETO,
+    "doutorado": NivelAcademico.DOUTORADO_INCOMPLETO,
+}
+
+# Níveis "em andamento", em que o campo numérico faz sentido: rótulo e teto.
+NIVEIS_EM_ANDAMENTO = {
+    NivelAcademico.GRADUACAO_INCOMPLETA: ("Período", 12),
+    NivelAcademico.MESTRADO_INCOMPLETO: ("Semestre", 6),
+    NivelAcademico.DOUTORADO_INCOMPLETO: ("Semestre", 10),
+}
 
 
 # ═══════════════════════════════════════════
@@ -40,11 +65,29 @@ class NivelAcademico(str, Enum):
 # ═══════════════════════════════════════════
 
 class DadosAluno(BaseModel):
-    """Campos exclusivos de alunos."""
-    nivel: NivelAcademico = NivelAcademico.GRADUACAO
-    semestre: int = Field(ge=1, le=100, default=1)
+    """Campos exclusivos de alunos. `semestre` é o período (graduação) ou o
+    semestre (mestrado, doutorado) e só existe nos níveis em andamento."""
+    nivel: NivelAcademico = NivelAcademico.GRADUACAO_INCOMPLETA
+    semestre: Optional[int] = Field(None, ge=1, le=100)
     orientador: Optional[str] = None
     linha_pesquisa: Optional[str] = None
+
+    @field_validator("nivel", mode="before")
+    @classmethod
+    def nivel_atual(cls, valor):
+        """Valores antigos (graduacao, mestrado, doutorado) viram os novos."""
+        if isinstance(valor, str) and valor in NIVEIS_ANTIGOS:
+            return NIVEIS_ANTIGOS[valor]
+        return valor
+
+    @model_validator(mode="after")
+    def semestre_so_em_andamento(self):
+        if self.nivel in NIVEIS_EM_ANDAMENTO:
+            if self.semestre is None:
+                self.semestre = 1
+        else:
+            self.semestre = None
+        return self
 
 
 class DadosProfessor(BaseModel):

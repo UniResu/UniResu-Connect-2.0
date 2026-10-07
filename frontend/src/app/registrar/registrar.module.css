@@ -491,3 +491,32 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Trecho do aceite que abre o modal (botão com cara de link). */
+.linkBotao {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--primary);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.linkBotao:hover,
+.linkBotao:focus-visible {
+  color: var(--primary-dark);
+}
+
+/* Checkbox "Não tenho e-mail acadêmico", dentro do painel. */
+.consentCompacto {
+  margin: var(--space-xs) 0 var(--space-sm);
+}
+
+/* Sem e-mail acadêmico, o ORCID vira o caminho principal. */
+.orcidDestaque {
+  border-width: 2px;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(162, 66, 181, 0.15);
+}

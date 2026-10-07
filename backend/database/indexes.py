@@ -107,6 +107,20 @@ async def migrar_forum_legado(db) -> dict:
     return contagem
 
 
+async def migrar_niveis_academicos(db) -> int:
+    """Contas de discente com os níveis da primeira versão (graduacao,
+    mestrado, doutorado) passam para os valores atuais (em andamento).
+    Idempotente. Devolve quantos documentos mudaram."""
+    from models.usuario_model import NIVEIS_ANTIGOS
+
+    total = 0
+    for antigo, novo in NIVEIS_ANTIGOS.items():
+        resultado = await db.usuarios.update_many({"dados_aluno.nivel": antigo},
+                                                   {"$set": {"dados_aluno.nivel": novo.value}})
+        total += resultado.modified_count
+    return total
+
+
 async def migrar_dados(db) -> None:
     """Migrações leves de dados, independentes dos índices (uma falha em
     create_index não pode impedir que rodem). Idempotentes."""
@@ -142,6 +156,13 @@ async def migrar_dados(db) -> None:
             logger.info("Username gerado para %d usuário(s) sem o campo.", preenchidos)
     except Exception as e:
         logger.error("Falha no backfill de usernames: %s", e)
+
+    try:
+        niveis = await migrar_niveis_academicos(db)
+        if niveis:
+            logger.info("Grau de instrução atualizado em %d conta(s) de discente.", niveis)
+    except Exception as e:
+        logger.error("Falha na migração dos graus de instrução: %s", e)
 
     try:
         contagem = await migrar_forum_legado(db)
