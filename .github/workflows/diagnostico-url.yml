@@ -23,6 +23,10 @@ on:
         description: "Se a resposta for CSV: colunas (separadas por vírgula) cujas contagens de valores imprimir"
         required: false
         default: ""
+      resumo:
+        description: "Só uma linha por URL (status, tamanho e marcadores encontrados no corpo); serve para testar dezenas de portais de uma vez"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -30,7 +34,7 @@ permissions:
 jobs:
   diagnostico:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
       - name: Baixar e mostrar
         env:
@@ -38,8 +42,26 @@ jobs:
           BYTES: ${{ inputs.bytes }}
           CAUDA: ${{ inputs.cauda }}
           CSV_COLUNAS: ${{ inputs.csv_colunas }}
+          RESUMO: ${{ inputs.resumo }}
         run: |
           for url in $URLS; do
+            if [ "$RESUMO" = "true" ]; then
+              # Uma linha por URL: status final, tamanho e marcadores do corpo.
+              rm -f /tmp/h.txt /tmp/b.bin
+              erro=""
+              curl -sS -L -m 45 -A "UniResuConnect/2.1 (+https://uniresu.org; diagnostico)" \
+                -D /tmp/h.txt -o /tmp/b.bin "$url" 2>/dev/null || erro="curl=$?"
+              status=$(grep -a '^HTTP/' /tmp/h.txt 2>/dev/null | tail -1 | awk '{print $2}')
+              tamanho=$(stat -c %s /tmp/b.bin 2>/dev/null || echo 0)
+              achados=""
+              for m in "consulta_extensao" "consulta_projetos" "Ano de" "Título" "Unidade" "Coordenador" \
+                       "Situação" "login" "senha" "javax.faces" "SIGAA" "Erro" "indisponível"; do
+                grep -a -q -i -- "$m" /tmp/b.bin 2>/dev/null && achados="$achados [$m]"
+              done
+              final=$(grep -a -i '^location:' /tmp/h.txt 2>/dev/null | tail -1 | tr -d '\r' | cut -c11- | cut -c1-120)
+              echo "RESUMO | $url | HTTP ${status:--} $erro | ${tamanho} bytes |$achados${final:+ | redirecionou para: $final}"
+              continue
+            fi
             echo "=================================================================="
             echo "URL: $url"
             curl -sS -L -m 300 -A "UniResuConnect/2.1 (+https://uniresu.org; diagnostico)" \
