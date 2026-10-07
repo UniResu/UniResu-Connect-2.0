@@ -39,6 +39,7 @@ async def test_orcid_vincula_a_conta_por_senha_ao_confirmar_o_email(api_real, db
     # algo feito pela conta provisória antes da vinculação
     await db.candidaturas.insert_one({"usuario_id": str(prov), "nome_aluno": "Carlos"})
     await db.topicos_forum.insert_one({"titulo": "Pergunta", "autor_id": str(prov), "likes": [], "dislikes": []})
+    await db.respostas_forum.insert_one({"topico_id": "x", "autor_id": str(prov), "conteudo": "Resposta"})
 
     r = await api_real.patch("/api/perfil", json={"email": "Ana.Souza@unirio.br"}, headers=_headers(prov))
     assert r.status_code == 200, r.text
@@ -56,6 +57,7 @@ async def test_orcid_vincula_a_conta_por_senha_ao_confirmar_o_email(api_real, db
     assert provisoria["ativo"] is False and "orcid" not in provisoria and provisoria["mesclada_em"] == dona
     assert (await db.candidaturas.find_one({"nome_aluno": "Carlos"}))["usuario_id"] == str(dona)
     assert (await db.topicos_forum.find_one({"titulo": "Pergunta"}))["autor_id"] == str(dona)
+    assert (await db.respostas_forum.find_one({"conteudo": "Resposta"}))["autor_id"] == str(dona)
     # o token da provisória morre; o login ORCID encontra a conta de destino
     assert (await api_real.get("/api/auth/me", headers=_headers(prov))).status_code == 401
     assert (await db.usuarios.find_one({"orcid.orcid_id": "0000-0002-1234-5678"}))["_id"] == dona

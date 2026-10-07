@@ -419,7 +419,7 @@ async def _vincular_orcid_a_conta_existente(db, provisoria: Dict[str, Any], dest
                                             agora: datetime) -> None:
     """Move o ORCID da conta provisória para a conta por senha dona do e-mail
     e desativa a provisória. O que a provisória produziu (candidaturas,
-    tópicos do fórum) passa a pertencer à conta de destino."""
+    tópicos e respostas do fórum) passa a pertencer à conta de destino."""
     id_prov, id_dest = provisoria["_id"], destino["_id"]
     campos_destino: Dict[str, Any] = {
         "orcid": provisoria["orcid"],
@@ -436,6 +436,7 @@ async def _vincular_orcid_a_conta_existente(db, provisoria: Dict[str, Any], dest
 
     await db.candidaturas.update_many({"usuario_id": str(id_prov)}, {"$set": {"usuario_id": str(id_dest)}})
     await db.topicos_forum.update_many({"autor_id": str(id_prov)}, {"$set": {"autor_id": str(id_dest)}})
+    await db.respostas_forum.update_many({"autor_id": str(id_prov)}, {"$set": {"autor_id": str(id_dest)}})
 
     await db.usuarios.update_one(
         {"_id": id_prov},

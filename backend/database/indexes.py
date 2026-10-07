@@ -66,6 +66,13 @@ async def criar_indices(db) -> None:
         unique=True,
         sparse=True,
     )
+    # Respostas do fórum: listagem por tópico em ordem cronológica e contagem.
+    # O `_id` no fim é o desempate da ordenação (paginação estável); o índice
+    # também atende consultas só por (topico_id, data_criacao).
+    await db.respostas_forum.create_index(
+        [("topico_id", ASCENDING), ("data_criacao", ASCENDING), ("_id", ASCENDING)],
+        name="respostas_por_topico",
+    )
     logger.info("Índices do MongoDB verificados/criados.")
 
 

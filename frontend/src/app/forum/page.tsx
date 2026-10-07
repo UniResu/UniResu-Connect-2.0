@@ -1,91 +1,47 @@
 "use client";
 
 /**
- * ForumPage — v3 (threads, estilo "Stack Overflow ultraminimalista")
+ * ForumPage — v4 (threads, estilo "Stack Overflow ultraminimalista")
  *
  * O fórum é uma lista de perguntas; o objetivo é expor conteúdo, não
  * interatividade. Regras de negócio:
  *  [R1] Editar/Excluir só aparecem para o autor (autoria por `autor_id`).
- *  [R2] Sem comentários/respostas: cada pergunta é um texto completo.
+ *  [R2] Respostas com um único nível: a pergunta aberta mostra até 10, da
+ *       mais antiga para a mais nova; com mais de 10, o link "Ver todas as N
+ *       respostas" leva para /forum/[id], que mostra todas.
  *  [R3] Votos (a favor/contra) com atualização otimista; votos = likes - dislikes.
- *  [R4] Visitantes leem; logados perguntam, editam e votam.
+ *  [R4] Visitantes leem; logados perguntam, respondem, editam e votam.
  *  [R5] Privacidade: a API não devolve e-mail; o autor aparece como @username.
  *
  * Busca e ordenação são feitas no cliente sobre a lista já carregada.
  */
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import type { User } from "@/types/user";
+import {
+  aplicarVotoLocal,
+  conteudoDe,
+  ehAutor,
+  mensagemDeErro,
+  paragrafos,
+  parsearData,
+  plural,
+  votosDe,
+  type EstadoRespostas,
+  type TipoVoto,
+  type Topico,
+} from "./_componentes/forum";
+import { MetaPergunta, Votos } from "./_componentes/Pergunta";
+import { Respostas } from "./_componentes/Respostas";
 import styles from "./forum.module.css";
 
-// ── Tipos ─────────────────────────────────────────────────────────────────
-
-interface Topico {
-  id: string;
-  titulo: string;
-  conteudo_original?: string;
-  descricao?: string; // campo legado — fallback de leitura apenas
-  autor_id?: string | null;
-  autor_username?: string | null;
-  autor_nome?: string | null;
-  data_criacao: string;
-  visualizacoes: number;
-  likes: string[]; // IDs de usuários
-  dislikes: string[]; // IDs de usuários
-}
-
-type TipoVoto = "like" | "dislike";
 type Ordem = "recentes" | "votadas";
 
-// ── Helpers puros ─────────────────────────────────────────────────────────
-
-function conteudoDe(topico: Topico) {
-  return topico.conteudo_original || topico.descricao || "";
-}
-
-function votosDe(topico: Topico) {
-  return topico.likes.length - topico.dislikes.length;
-}
-
-/** [R1] Autoria somente por id: o e-mail não existe mais na resposta. */
-function ehAutor(topico: Topico, user: User | null) {
-  return !!user && !!topico.autor_id && topico.autor_id === user.id;
-}
-
-/** Datas sem fuso vêm do Mongo em UTC; sem o "Z" o navegador leria como hora local. */
-function parsearData(iso: string) {
-  const temFuso = /(Z|[+-]\d{2}:?\d{2})$/.test(iso);
-  return new Date(temFuso ? iso : `${iso}Z`);
-}
-
-function plural(n: number, singular: string, pluralForm: string) {
-  return `${n} ${Math.abs(n) === 1 ? singular : pluralForm}`;
-}
-
-function tempoRelativo(iso: string, agora = Date.now()) {
-  const t = parsearData(iso).getTime();
-  if (Number.isNaN(t)) return "";
-  const seg = Math.max(0, Math.round((agora - t) / 1000));
-  if (seg < 60) return "agora";
-  const min = Math.round(seg / 60);
-  if (min < 60) return `há ${min} min`;
-  const h = Math.round(min / 60);
-  if (h < 24) return `há ${h} h`;
-  const d = Math.round(h / 24);
-  if (d < 30) return `há ${plural(d, "dia", "dias")}`;
-  const m = Math.round(d / 30);
-  if (m < 12) return `há ${plural(m, "mês", "meses")}`;
-  return `há ${plural(Math.round(d / 365), "ano", "anos")}`;
-}
-
-function dataCompleta(iso: string) {
-  const d = parsearData(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleString("pt-BR", { dateStyle: "long", timeStyle: "short" });
-}
+// ── Helpers da lista ──────────────────────────────────────────────────────
 
 /** Primeiras ~180 letras do conteúdo, cortadas em palavra inteira. */
 function resumo(texto: string, max = 180) {
@@ -100,70 +56,6 @@ function normalizar(texto: string) {
   return texto.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
 
-/** Parágrafos separados por linha em branco; quebras simples ficam dentro do <p>. */
-function paragrafos(texto: string) {
-  return texto
-    .split(/\n\s*\n/)
-    .map((p) => p.trim())
-    .filter(Boolean);
-}
-
-/**
- * [R3] Mesma lógica de toggle do backend, aplicada localmente para a
- * atualização otimista: repetir o voto remove; votar o oposto troca.
- */
-function aplicarVotoLocal(topico: Topico, usuarioId: string, tipo: TipoVoto): Topico {
-  const tinhaLike = topico.likes.includes(usuarioId);
-  const tinhaDislike = topico.dislikes.includes(usuarioId);
-  const likes = topico.likes.filter((id) => id !== usuarioId);
-  const dislikes = topico.dislikes.filter((id) => id !== usuarioId);
-  if (tipo === "like" && !tinhaLike) likes.push(usuarioId);
-  if (tipo === "dislike" && !tinhaDislike) dislikes.push(usuarioId);
-  return { ...topico, likes, dislikes };
-}
-
-function mensagemDeErro(err: unknown, padrao: string) {
-  const detail = (err as { detail?: unknown })?.detail;
-  return typeof detail === "string" && detail ? detail : padrao;
-}
-
-// ── Ícones (SVG inline, sem dependências e sem emoji) ─────────────────────
-
-function Seta({ direcao }: { direcao: "cima" | "baixo" }) {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      {direcao === "cima" ? <path d="M12 19V5M5 12l7-7 7 7" /> : <path d="M12 5v14M19 12l-7 7-7-7" />}
-    </svg>
-  );
-}
-
-// ── Meta: "@username | há 3 dias | 12 visualizações | 4 votos" ───────────
-
-function MetaPergunta({ topico }: { topico: Topico }) {
-  return (
-    <div className={styles.meta}>
-      <span className={`${styles.metaItem} ${styles.metaAutor}`} title={topico.autor_nome || undefined}>
-        @{topico.autor_username || "usuario"}
-      </span>
-      <span className={styles.metaItem} title={dataCompleta(topico.data_criacao)}>
-        {tempoRelativo(topico.data_criacao)}
-      </span>
-      <span className={styles.metaItem}>{plural(topico.visualizacoes, "visualização", "visualizações")}</span>
-      <span className={styles.metaItem}>{plural(votosDe(topico), "voto", "votos")}</span>
-    </div>
-  );
-}
-
 // ── Linha da lista (fechada: título + resumo; aberta: thread completa) ───
 
 interface LinhaPerguntaProps {
@@ -171,13 +63,28 @@ interface LinhaPerguntaProps {
   user: User | null;
   aberta: boolean;
   votando: boolean;
+  falhouRespostas: boolean;
   onAbrir: () => void;
   onEditar: (topico: Topico, titulo: string, conteudo: string) => Promise<void>;
   onExcluir: (topicoId: string) => Promise<void>;
   onVotar: (topicoId: string, tipo: TipoVoto) => Promise<void>;
+  onMudarRespostas: (topicoId: string, atualizar: (atual: EstadoRespostas) => EstadoRespostas) => void;
+  onRecarregarRespostas: (topicoId: string) => void;
 }
 
-function LinhaPergunta({ topico, user, aberta, votando, onAbrir, onEditar, onExcluir, onVotar }: LinhaPerguntaProps) {
+function LinhaPergunta({
+  topico,
+  user,
+  aberta,
+  votando,
+  falhouRespostas,
+  onAbrir,
+  onEditar,
+  onExcluir,
+  onVotar,
+  onMudarRespostas,
+  onRecarregarRespostas,
+}: LinhaPerguntaProps) {
   const [editando, setEditando] = useState(false);
   const [editTitulo, setEditTitulo] = useState(topico.titulo);
   const [editConteudo, setEditConteudo] = useState(conteudoDe(topico));
@@ -185,13 +92,10 @@ function LinhaPergunta({ topico, user, aberta, votando, onAbrir, onEditar, onExc
 
   const autor = ehAutor(topico, user);
   const conteudo = conteudoDe(topico);
-
-  const meuVoto = useMemo<TipoVoto | null>(() => {
-    if (!user) return null;
-    if (topico.likes.includes(user.id)) return "like";
-    if (topico.dislikes.includes(user.id)) return "dislike";
-    return null;
-  }, [topico.likes, topico.dislikes, user]);
+  // As respostas chegam com o GET do tópico, feito ao abrir a pergunta.
+  const estadoRespostas: EstadoRespostas | null = topico.respostas
+    ? { respostas: topico.respostas, total: topico.total_respostas }
+    : null;
 
   function iniciarEdicao() {
     setEditTitulo(topico.titulo);
@@ -263,59 +167,37 @@ function LinhaPergunta({ topico, user, aberta, votando, onAbrir, onEditar, onExc
           )}
 
           {!editando && (
-            <div className={styles.rodape}>
-              {user ? (
-                <div className={styles.votos}>
-                  <button
-                    type="button"
-                    className={styles.votoBtn}
-                    onClick={() => onVotar(topico.id, "like")}
-                    disabled={votando}
-                    aria-pressed={meuVoto === "like"}
-                    aria-label="Votar a favor"
-                    title="Votar a favor"
-                  >
-                    <Seta direcao="cima" />
-                  </button>
-                  <span className={styles.votosTotal} aria-live="polite">
-                    {votosDe(topico)}
-                  </span>
-                  <button
-                    type="button"
-                    className={styles.votoBtn}
-                    onClick={() => onVotar(topico.id, "dislike")}
-                    disabled={votando}
-                    aria-pressed={meuVoto === "dislike"}
-                    aria-label="Votar contra"
-                    title="Votar contra"
-                  >
-                    <Seta direcao="baixo" />
-                  </button>
-                  <span className={styles.votosRotulo}>{plural(votosDe(topico), "voto", "votos")}</span>
-                </div>
-              ) : (
-                // [R4] Visitante: vê o total, não vota.
-                <span className={styles.dicaLogin}>
-                  {plural(votosDe(topico), "voto", "votos")}. <a href="/login">Entre</a> para votar.
-                </span>
-              )}
+            <>
+              <div className={styles.rodape}>
+                <Votos topico={topico} user={user} votando={votando} onVotar={(tipo) => onVotar(topico.id, tipo)} />
 
-              {/* [R1] Só o autor vê Editar/Excluir */}
-              {autor && (
-                <div className={styles.acoesAutor}>
-                  <button type="button" className={styles.acaoTexto} onClick={iniciarEdicao}>
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.acaoTexto} ${styles.acaoPerigo}`}
-                    onClick={() => onExcluir(topico.id)}
-                  >
-                    Excluir
-                  </button>
-                </div>
-              )}
-            </div>
+                {/* [R1] Só o autor vê Editar/Excluir */}
+                {autor && (
+                  <div className={styles.acoesAutor}>
+                    <button type="button" className={styles.acaoTexto} onClick={iniciarEdicao}>
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.acaoTexto} ${styles.acaoPerigo}`}
+                      onClick={() => onExcluir(topico.id)}
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* [R2] Até 10 respostas e, se houver mais, o link para a página da pergunta */}
+              <Respostas
+                topicoId={topico.id}
+                estado={estadoRespostas}
+                modo="thread"
+                falhou={falhouRespostas}
+                onMudar={(atualizar) => onMudarRespostas(topico.id, atualizar)}
+                onRecarregar={() => onRecarregarRespostas(topico.id)}
+              />
+            </>
           )}
         </div>
       )}
@@ -334,6 +216,8 @@ export default function ForumPage() {
   const [erro, setErro] = useState("");
   const [abertoId, setAbertoId] = useState<string | null>(null);
   const [votandoId, setVotandoId] = useState<string | null>(null);
+  // Pergunta cujo GET (com as respostas) falhou ao abrir.
+  const [falhaRespostasId, setFalhaRespostasId] = useState<string | null>(null);
 
   // Busca e ordenação (no cliente)
   const [busca, setBusca] = useState("");
@@ -378,11 +262,26 @@ export default function ForumPage() {
     return filtrados;
   }, [topicos, busca, ordem]);
 
+  /**
+   * Mescla a versão do servidor na lista. Votar e editar devolvem o tópico
+   * sem `respostas`; a mescla mantém as que já estão na tela.
+   */
   const substituir = useCallback((atualizado: Topico) => {
-    setTopicos((prev) => prev.map((t) => (t.id === atualizado.id ? atualizado : t)));
+    setTopicos((prev) => prev.map((t) => (t.id === atualizado.id ? { ...t, ...atualizado } : t)));
   }, []);
 
-  // Abrir conta uma visualização no servidor; a lista é atualizada com a resposta.
+  // O GET do tópico conta uma visualização e traz as primeiras respostas.
+  const carregarDetalhe = useCallback(
+    (id: string) => {
+      setFalhaRespostasId(null);
+      api
+        .get<Topico>(`/api/forum/topicos/${id}`)
+        .then(substituir)
+        .catch(() => setFalhaRespostasId(id));
+    },
+    [substituir]
+  );
+
   const abrir = useCallback(
     (id: string) => {
       if (abertoId === id) {
@@ -390,14 +289,22 @@ export default function ForumPage() {
         return;
       }
       setAbertoId(id);
-      api
-        .get<Topico>(`/api/forum/topicos/${id}`)
-        .then(substituir)
-        .catch(() => {
-          // Contagem de visualização é cosmética: falha silenciosa.
-        });
+      carregarDetalhe(id);
     },
-    [abertoId, substituir]
+    [abertoId, carregarDetalhe]
+  );
+
+  const mudarRespostas = useCallback(
+    (topicoId: string, atualizar: (atual: EstadoRespostas) => EstadoRespostas) => {
+      setTopicos((prev) =>
+        prev.map((t) => {
+          if (t.id !== topicoId || !t.respostas) return t;
+          const novo = atualizar({ respostas: t.respostas, total: t.total_respostas });
+          return { ...t, respostas: novo.respostas, total_respostas: novo.total };
+        })
+      );
+    },
+    []
   );
 
   // ── Perguntar ([R4] só autenticados) ──
@@ -416,7 +323,8 @@ export default function ForumPage() {
         { titulo: novoTitulo.trim(), conteudo: novoConteudo.trim() },
         { token: token || undefined }
       );
-      setTopicos((prev) => [criado, ...prev]);
+      // Pergunta nova ainda não tem respostas: abre sem precisar de outro GET.
+      setTopicos((prev) => [{ ...criado, respostas: [] }, ...prev]);
       setNovoTitulo("");
       setNovoConteudo("");
       setMostrarForm(false);
@@ -452,11 +360,11 @@ export default function ForumPage() {
     [isAuthenticated, token, user, substituir]
   );
 
-  // ── Excluir ([R1] só o autor) ──
+  // ── Excluir ([R1] só o autor; as respostas vão junto) ──
   const excluir = useCallback(
     async (topicoId: string) => {
       if (!isAuthenticated) return;
-      if (!confirm("Excluir esta pergunta? Esta ação não pode ser desfeita.")) return;
+      if (!confirm("Excluir esta pergunta e as respostas dela? Esta ação não pode ser desfeita.")) return;
       try {
         await api.delete(`/api/forum/topicos/${topicoId}`, { token: token || undefined });
         setTopicos((prev) => prev.filter((t) => t.id !== topicoId));
@@ -519,7 +427,7 @@ export default function ForumPage() {
           </button>
         ) : (
           <p className={styles.dicaLogin}>
-            <a href="/login">Entre</a> para fazer uma pergunta.
+            <Link href="/login">Entre</Link> para fazer uma pergunta.
           </p>
         )}
       </header>
@@ -547,7 +455,7 @@ export default function ForumPage() {
             aria-label="Conteúdo da pergunta"
           />
           <div className={styles.formAcoes}>
-            <span className={styles.dicaForm}>Publicada como @{user?.username || "você"}. Não há respostas: escreva a pergunta completa.</span>
+            <span className={styles.dicaForm}>Publicada como @{user?.username || "você"}.</span>
             <button type="submit" className={styles.btnPrimario} disabled={publicando}>
               {publicando ? "Publicando..." : "Publicar pergunta"}
             </button>
@@ -617,10 +525,13 @@ export default function ForumPage() {
                   user={user}
                   aberta={abertoId === topico.id}
                   votando={votandoId === topico.id}
+                  falhouRespostas={falhaRespostasId === topico.id}
                   onAbrir={() => abrir(topico.id)}
                   onEditar={editar}
                   onExcluir={excluir}
                   onVotar={votar}
+                  onMudarRespostas={mudarRespostas}
+                  onRecarregarRespostas={carregarDetalhe}
                 />
               ))}
             </ul>
