@@ -187,62 +187,6 @@
   text-align: center;
 }
 
-/* Avatar: círculo em degradê (como antes) com a silhueta de perfil dentro e
-   um selo com o símbolo da função no canto inferior direito. */
-.avatarWrap {
-  position: relative;
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 1.2rem auto;
-}
-
-.avatar {
-  background: linear-gradient(135deg, #b224ef, #00d084);
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  color: white;
-  font-weight: bold;
-  font-size: 1.5rem;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-  margin: 0;
-}
-
-.avatarPessoa {
-  width: 100%;
-  height: 100%;
-  fill: rgba(255, 255, 255, 0.92);
-}
-
-.avatarBadge {
-  position: absolute;
-  right: -4px;
-  bottom: -2px;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: #ffffff;
-  /* Roxo do ícone: mais saturado que --primary para ler bem em 16 px sobre
-     branco (contraste ~6:1); o anel tem a cor efetiva do card (fundo
-     translúcido sobre o degradê da seção), para parecer um recorte. */
-  color: #7a1fb0;
-  border: 2px solid #3a0257;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.avatarBadge svg {
-  width: 16px;
-  height: 16px;
-}
-
 .memberInfo {
   display: flex;
   flex-direction: column;

@@ -1,4 +1,4 @@
-import styles from "@/app/page.module.css";
+import styles from "./AvatarMembro.module.css";
 
 /**
  * Avatar dos membros da equipe (seção "Quem somos").
@@ -9,16 +9,6 @@ import styles from "@/app/page.module.css";
  * card. Tudo em SVG inline, sem dependência nova.
  */
 export type FuncaoMembro = "aluno" | "dev" | "cto" | "ceo" | "cmo" | "cso" | "orientador";
-
-const ROTULO_FUNCAO: Record<FuncaoMembro, string> = {
-  aluno: "estudante",
-  dev: "engenharia de software",
-  cto: "tecnologia",
-  ceo: "direção executiva",
-  cmo: "marketing",
-  cso: "ciência",
-  orientador: "orientação acadêmica",
-};
 
 function IconeFuncao({ funcao }: { funcao: FuncaoMembro }) {
   // Traços no estilo Lucide/Feather (24x24, stroke 2), cor herdada do selo.
@@ -89,20 +79,21 @@ function IconeFuncao({ funcao }: { funcao: FuncaoMembro }) {
   }
 }
 
-export default function AvatarMembro({ nome, funcao }: { nome: string; funcao?: FuncaoMembro }) {
-  const descricao = funcao ? `Avatar de ${nome}, ${ROTULO_FUNCAO[funcao]}` : `Avatar de ${nome}`;
+export default function AvatarMembro({ funcao }: { nome?: string; funcao?: FuncaoMembro }) {
+  // Decorativo para leitores de tela: o nome e a função já estão no texto
+  // logo abaixo (e no título do card), então anunciar o avatar repetiria tudo.
   return (
-    <div className={styles.avatarWrap} role="img" aria-label={descricao}>
-      <div className={styles.avatar}>
+    <div className={styles.wrap} aria-hidden="true">
+      <div className={styles.circulo}>
         {/* Silhueta de perfil: cabeça e busto, cortados pelo círculo como nos
             placeholders de redes sociais. */}
-        <svg className={styles.avatarPessoa} viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+        <svg className={styles.pessoa} viewBox="0 0 64 64" aria-hidden="true" focusable="false">
           <circle cx="32" cy="25" r="11.5" />
           <path d="M7 68c0-15.5 11-25 25-25s25 9.5 25 25z" />
         </svg>
       </div>
       {funcao && (
-        <span className={styles.avatarBadge} title={ROTULO_FUNCAO[funcao]}>
+        <span className={styles.selo} data-funcao={funcao}>
           <IconeFuncao funcao={funcao} />
         </span>
       )}
