@@ -38,6 +38,7 @@ function IconeFuncao({ funcao }: { funcao: FuncaoMembro }) {
         <svg {...comum}>
           <path d="M22 10 12 5 2 10l10 5 10-5z" />
           <path d="M6 12v5c3 3 9 3 12 0v-5" />
+          <path d="M22 10v6" />
         </svg>
       );
     case "dev": // código

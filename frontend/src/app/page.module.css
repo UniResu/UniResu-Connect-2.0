@@ -227,8 +227,11 @@
   height: 30px;
   border-radius: 50%;
   background: #ffffff;
+  /* Roxo do ícone: mais saturado que --primary para ler bem em 16 px sobre
+     branco (contraste ~6:1); o anel tem a cor efetiva do card (fundo
+     translúcido sobre o degradê da seção), para parecer um recorte. */
   color: #7a1fb0;
-  border: 2px solid #29013c;
+  border: 2px solid #3a0257;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   display: flex;
   align-items: center;
