@@ -15,6 +15,7 @@ import logging
 import resend
 from fastapi import HTTPException, status
 from passlib.context import CryptContext
+from pymongo.errors import DuplicateKeyError
 from database.connection import Database
 from models.usuario_model import DADOS_POR_PAPEL, PapelUsuario, UsuarioCreate
 from services.usernames import gerar_username_unico
@@ -141,7 +142,15 @@ async def registrar_usuario_controller(user: UsuarioCreate) -> Dict[str, Any]:
         novo_usuario_doc[campo_dados] = dict(DADOS_PADRAO.get(user.papel, {}))
 
     try:
-        result = await db.usuarios.insert_one(novo_usuario_doc)
+        try:
+            result = await db.usuarios.insert_one(novo_usuario_doc)
+        except DuplicateKeyError as e:
+            # Corrida no username (outra conta homônima criada entre a consulta
+            # e o insert): tenta uma vez com o sufixo seguinte.
+            if "username" not in str(e):
+                raise
+            novo_usuario_doc["username"] = await gerar_username_unico(db, user.nome, evitar=[username])
+            result = await db.usuarios.insert_one(novo_usuario_doc)
         usuario_criado = await db.usuarios.find_one({"_id": result.inserted_id})
 
         if usuario_criado is None:
@@ -179,7 +188,11 @@ async def login_usuario_controller(email: str, senha: str) -> Dict[str, Any]:
     db = Database.get_db()
 
     usuario = await db.usuarios.find_one({"email": email})
-    if usuario is None or not verify_password(senha, usuario.get("senha_hash", "")):
+    # Contas sem senha (login só pelo ORCID, usuário de sistema do fórum)
+    # recebem o mesmo 401 genérico: `verify_password` com hash vazio levanta
+    # UnknownHashError, o que virava 500 e denunciava que a conta existe.
+    hash_salvo = usuario.get("senha_hash") if usuario else None
+    if not hash_salvo or not verify_password(senha, hash_salvo):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email ou senha inválidos.",

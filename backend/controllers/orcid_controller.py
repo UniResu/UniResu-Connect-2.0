@@ -17,6 +17,7 @@ from typing import Dict, Any
 from fastapi import HTTPException, status
 from dotenv import load_dotenv
 import httpx
+from pymongo.errors import DuplicateKeyError
 from database.connection import Database
 from services.usernames import gerar_username_unico
 
@@ -186,7 +187,15 @@ async def processar_callback_orcid(
             "ultimo_login": datetime.now(timezone.utc),
             "ativo": True,
         }
-        result = await db.usuarios.insert_one(novo_usuario)
+        try:
+            result = await db.usuarios.insert_one(novo_usuario)
+        except DuplicateKeyError as e:
+            # Corrida no username (homônimo criado entre a consulta e o insert):
+            # tenta uma vez com o sufixo seguinte em vez de quebrar o callback.
+            if "username" not in str(e):
+                raise
+            novo_usuario["username"] = await gerar_username_unico(db, nome, evitar=[novo_usuario["username"]])
+            result = await db.usuarios.insert_one(novo_usuario)
         usuario = await db.usuarios.find_one({"_id": result.inserted_id})
 
     # Formatar resposta

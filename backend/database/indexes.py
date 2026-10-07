@@ -62,6 +62,35 @@ async def criar_indices(db) -> None:
     logger.info("Índices do MongoDB verificados/criados.")
 
 
+async def migrar_forum_legado(db) -> dict:
+    """Tópicos antigos do fórum: `autor_email` vira `autor_id` (quando o e-mail
+    corresponde a uma conta) e sai do documento; `likes`/`dislikes` inteiros
+    viram listas. Idempotente. Devolve contagens."""
+    contagem = {"autores": 0, "emails_removidos": 0, "votos": 0}
+
+    cursor = db.topicos_forum.find({"autor_email": {"$exists": True}}, {"autor_email": 1, "autor_id": 1})
+    for doc in await cursor.to_list(length=None):
+        campos = {}
+        if not doc.get("autor_id") and doc.get("autor_email"):
+            usuario = await db.usuarios.find_one({"email": doc["autor_email"]}, {"_id": 1})
+            if usuario:
+                campos["autor_id"] = str(usuario["_id"])
+                contagem["autores"] += 1
+        update = {"$unset": {"autor_email": ""}}
+        if campos:
+            update["$set"] = campos
+        await db.topicos_forum.update_one({"_id": doc["_id"]}, update)
+        contagem["emails_removidos"] += 1
+
+    cursor = db.topicos_forum.find({}, {"likes": 1, "dislikes": 1})
+    for doc in await cursor.to_list(length=None):
+        listas = {c: [] for c in ("likes", "dislikes") if not isinstance(doc.get(c), list)}
+        if listas:
+            await db.topicos_forum.update_one({"_id": doc["_id"]}, {"$set": listas})
+            contagem["votos"] += 1
+    return contagem
+
+
 async def migrar_dados(db) -> None:
     """Migrações leves de dados, independentes dos índices (uma falha em
     create_index não pode impedir que rodem). Idempotentes."""
@@ -75,13 +104,27 @@ async def migrar_dados(db) -> None:
 
     # Cada passo abaixo é independente: a falha de um não impede o seguinte.
     try:
-        # Precisa rodar ANTES de `criar_indices` (ordem do lifespan em main.py):
-        # o índice único em `username` só é criado com todo mundo preenchido.
+        # O índice único vem ANTES do backfill: é ele, e não a leitura em
+        # memória, que garante a unicidade se dois processos preencherem ao
+        # mesmo tempo (o backfill trata a colisão tentando o sufixo seguinte).
+        # Sparse: quem ainda não tem o campo não colide.
+        await db.usuarios.create_index([("username", ASCENDING)], name="uniq_username", unique=True, sparse=True)
+    except Exception as e:
+        logger.error("Falha ao criar o índice uniq_username (usernames repetidos no banco?): %s", e)
+
+    try:
         preenchidos = await preencher_usernames(db)
         if preenchidos:
             logger.info("Username gerado para %d usuário(s) sem o campo.", preenchidos)
     except Exception as e:
         logger.error("Falha no backfill de usernames: %s", e)
+
+    try:
+        contagem = await migrar_forum_legado(db)
+        if any(contagem.values()):
+            logger.info("Fórum legado migrado: %s", contagem)
+    except Exception as e:
+        logger.error("Falha na migração dos tópicos legados do fórum: %s", e)
 
     try:
         inseridos = await seed_forum(db)

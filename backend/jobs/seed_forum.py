@@ -24,6 +24,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
+from pymongo.errors import DuplicateKeyError
 
 SEED_VERSAO = "forum_v1"
 
@@ -372,16 +373,18 @@ PERGUNTAS: List[Dict[str, Any]] = [
 async def garantir_usuario_sistema(db) -> Dict[str, Any]:
     """Devolve o usuário de sistema, criando-o se não existir.
 
-    Procura pelo e-mail (chave de negócio da conta). Uma conta antiga sem
+    Procura pelo e-mail (chave de negócio da conta). A criação é um upsert
+    com `$setOnInsert`, decidido no servidor: dois processos iniciando ao
+    mesmo tempo não criam duas contas. Uma conta antiga sem
     `username`/`sistema` ganha os dois campos, sem tocar no resto.
     """
     agora = datetime.now(timezone.utc)
+    await db.usuarios.update_one(
+        {"email": USUARIO_SISTEMA["email"]},
+        {"$setOnInsert": {**USUARIO_SISTEMA, "criado_em": agora, "atualizado_em": agora}},
+        upsert=True,
+    )
     usuario = await db.usuarios.find_one({"email": USUARIO_SISTEMA["email"]})
-    if usuario is None:
-        doc = {**USUARIO_SISTEMA, "criado_em": agora, "atualizado_em": agora}
-        resultado = await db.usuarios.insert_one(doc)
-        usuario = await db.usuarios.find_one({"_id": resultado.inserted_id})
-        return usuario
 
     faltando = {
         campo: valor
@@ -413,21 +416,39 @@ def montar_topico(pergunta: Dict[str, Any], autor_id: str, agora: datetime) -> D
 
 
 async def seed_forum(db, agora: Optional[datetime] = None) -> int:
-    """Insere as perguntas do seed que ainda não existem. Devolve quantas entraram."""
+    """Insere as perguntas do seed que ainda não existem. Devolve quantas entraram.
+
+    Cada pergunta é um upsert por (`seed`, `seed_chave`) com `$setOnInsert`,
+    protegido por um índice único parcial: a decisão de inserir é do servidor,
+    então dois startups simultâneos não duplicam as perguntas.
+    """
     chaves = [p["seed_chave"] for p in PERGUNTAS]
     assert len(set(chaves)) == len(chaves), "seed_chave repetida em PERGUNTAS"
+
+    await db.topicos_forum.create_index(
+        [("seed", 1), ("seed_chave", 1)],
+        name="uniq_seed_chave",
+        unique=True,
+        partialFilterExpression={"seed": {"$exists": True}},
+    )
 
     usuario = await garantir_usuario_sistema(db)
     autor_id = str(usuario["_id"])
     agora = agora or datetime.now(timezone.utc)
 
-    cursor = db.topicos_forum.find({"seed": SEED_VERSAO}, {"seed_chave": 1})
-    existentes = {doc.get("seed_chave") for doc in await cursor.to_list(length=None)}
-
-    novos = [montar_topico(p, autor_id, agora) for p in PERGUNTAS if p["seed_chave"] not in existentes]
-    if novos:
-        await db.topicos_forum.insert_many(novos)
-    return len(novos)
+    inseridos = 0
+    for pergunta in PERGUNTAS:
+        try:
+            resultado = await db.topicos_forum.update_one(
+                {"seed": SEED_VERSAO, "seed_chave": pergunta["seed_chave"]},
+                {"$setOnInsert": montar_topico(pergunta, autor_id, agora)},
+                upsert=True,
+            )
+        except DuplicateKeyError:
+            continue  # outro processo inseriu a mesma pergunta neste instante
+        if resultado.upserted_id is not None:
+            inseridos += 1
+    return inseridos
 
 
 async def main() -> int:

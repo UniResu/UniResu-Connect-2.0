@@ -312,26 +312,25 @@ async def reagir_topico(
     if not topico:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tópico não encontrado.")
 
-    likes = _lista_de_ids(topico.get("likes"))
-    dislikes = _lista_de_ids(topico.get("dislikes"))
+    campo = "likes" if tipo == "like" else "dislikes"
+    oposto = "dislikes" if tipo == "like" else "likes"
 
-    lista_atual = likes if tipo == "like" else dislikes
-    lista_oposta = dislikes if tipo == "like" else likes
+    # Docs legados guardavam `likes: 0`: viram listas antes dos operadores de
+    # array (um `$set` só nos campos que ainda não são lista).
+    legados = {c: [] for c in ("likes", "dislikes") if not isinstance(topico.get(c), list)}
+    if legados:
+        await db.topicos_forum.update_one({"_id": oid}, {"$set": legados})
 
-    # Remove do oposto caso exista
-    if usuario_id in lista_oposta:
-        lista_oposta.remove(usuario_id)
-
-    # Toggle no atual
-    if usuario_id in lista_atual:
-        lista_atual.remove(usuario_id)
-    else:
-        lista_atual.append(usuario_id)
-
-    await db.topicos_forum.update_one(
-        {"_id": oid},
-        {"$set": {"likes": likes, "dislikes": dislikes}},
+    # Operadores atômicos no servidor: votos simultâneos de pessoas diferentes
+    # não se sobrescrevem (o read-modify-write anterior perdia votos).
+    # 1) já tinha este voto → remove (toggle off); 2) senão → adiciona e tira o oposto.
+    removido = await db.topicos_forum.update_one(
+        {"_id": oid, campo: usuario_id}, {"$pull": {campo: usuario_id}},
     )
+    if removido.modified_count == 0:
+        await db.topicos_forum.update_one(
+            {"_id": oid}, {"$addToSet": {campo: usuario_id}, "$pull": {oposto: usuario_id}},
+        )
 
     topico_atualizado = await db.topicos_forum.find_one({"_id": oid})
     return await responder_topico(db, topico_atualizado)
