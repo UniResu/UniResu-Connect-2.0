@@ -103,18 +103,92 @@ async def test_conta_orcid_nasce_incompleta_na_resposta(api_orcid):
 async def test_completar_perfil_escolhe_vinculo_email_e_aceites(api_orcid, db):
     r = await api_orcid.patch("/api/perfil", json={
         "papel": "professor", "instituicao": "UNIRIO", "departamento": "Escola de Medicina e Cirurgia",
-        "email": "carlos.lima@unirio.br", "aceite_regras": True, "aceite_dados": True, "perfil_completo": True,
+        "email": "Carlos.Lima@unirio.br", "aceite_regras": True, "aceite_dados": True, "perfil_completo": True,
         "dados_professor": {"titulo": "Dr.", "cargo": "Professor Associado", "linhas_pesquisa": ["Saúde coletiva"]},
     })
     assert r.status_code == 200, r.text
     corpo = r.json()
     assert corpo["papel"] == "professor" and corpo["perfil_completo"] is True
-    assert corpo["email"] == "carlos.lima@unirio.br"
     assert corpo["dados_professor"]["linhas_pesquisa"] == ["Saúde coletiva"]
+    # o e-mail informado fica pendente até a confirmação pelo link; a conta
+    # continua com o provisório (e logada pelo ORCID)
+    assert corpo["email"] == "0000-0002-1234-5678@orcid.placeholder"
+    assert corpo["email_pendente"] == "carlos.lima@unirio.br"
     doc = await db.usuarios.find_one({"_id": api_orcid.oid})
-    # o e-mail informado ainda precisa ser confirmado
-    assert doc["email_verificado"] is False
+    assert doc["token_verificacao_email"] and doc["token_verificacao_expira"]
+    assert "email_verificado" not in doc  # nada bloqueia o acesso enquanto isso
     assert doc["aceite_regras"] is True and doc["aceite_dados"] is True and doc["aceites_em"] is not None
+
+    # confirmação pelo link: o e-mail institucional passa a ser o da conta
+    r = await api_orcid.get("/api/auth/verificar-email", params={"token": doc["token_verificacao_email"]})
+    assert r.status_code == 200, r.text
+    doc = await db.usuarios.find_one({"_id": api_orcid.oid})
+    assert doc["email"] == "carlos.lima@unirio.br" and doc["email_verificado"] is True
+    assert "email_pendente" not in doc and "token_verificacao_email" not in doc
+
+
+async def test_confirmacao_falha_se_o_email_foi_registrado_por_outra_conta_nesse_meio_tempo(api_orcid, db):
+    await api_orcid.patch("/api/perfil", json={"email": "carlos.lima@unirio.br"})
+    token = (await db.usuarios.find_one({"_id": api_orcid.oid}))["token_verificacao_email"]
+    await db.usuarios.insert_one({"email": "carlos.lima@unirio.br", "nome": "Outro", "papel": "aluno"})
+    r = await api_orcid.get("/api/auth/verificar-email", params={"token": token})
+    assert r.status_code == 400 and "outra conta" in r.text
+    doc = await db.usuarios.find_one({"_id": api_orcid.oid})
+    assert doc["email"] == "0000-0002-1234-5678@orcid.placeholder"
+
+
+async def test_reenviar_verificacao_aceita_o_email_pendente(api_orcid, db):
+    await api_orcid.patch("/api/perfil", json={"email": "carlos.lima@unirio.br"})
+    antes = (await db.usuarios.find_one({"_id": api_orcid.oid}))["token_verificacao_email"]
+    r = await api_orcid.post("/api/auth/reenviar-verificacao", json={"email": "carlos.lima@unirio.br"})
+    assert r.status_code == 200, r.text
+    depois = (await db.usuarios.find_one({"_id": api_orcid.oid}))["token_verificacao_email"]
+    assert depois and depois != antes
+
+
+# ── sessão (token) sobrevive à troca de e-mail ─────────────────────────────
+
+@pytest.fixture
+async def api_sem_override(db):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        yield client
+
+
+async def test_token_com_uid_continua_valido_depois_da_troca_de_email(api_sem_override, db):
+    from auth.autenticacao import token_para_usuario
+    oid = ObjectId()
+    await db.usuarios.insert_one({"_id": oid, "email": "0000-0002-9999-0000@orcid.placeholder", "nome": "Dani",
+                                  "papel": "pesquisador", "orcid": {"orcid_id": "0000-0002-9999-0000"}})
+    token = token_para_usuario({"_id": oid, "email": "0000-0002-9999-0000@orcid.placeholder", "papel": "pesquisador"})
+    headers = {"Authorization": f"Bearer {token}"}
+
+    assert (await api_sem_override.get("/api/auth/me", headers=headers)).status_code == 200
+    # a conta troca de e-mail (como na confirmação do e-mail institucional)
+    await db.usuarios.update_one({"_id": oid}, {"$set": {"email": "dani@unirio.br", "email_verificado": True}})
+    r = await api_sem_override.get("/api/auth/me", headers=headers)
+    assert r.status_code == 200, r.text
+    assert r.json()["email"] == "dani@unirio.br"
+
+
+async def test_token_antigo_so_com_email_continua_aceito(api_sem_override, db):
+    from auth.autenticacao import create_access_token
+    await db.usuarios.insert_one({"email": "antiga@unir.br", "nome": "Conta antiga", "papel": "aluno",
+                                  "email_verificado": True})
+    token = create_access_token({"sub": "antiga@unir.br", "papel": "aluno"})
+    r = await api_sem_override.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200, r.text
+    # uid inválido não derruba a requisição: cai no e-mail
+    token = create_access_token({"sub": "antiga@unir.br", "uid": "nao-e-objectid"})
+    assert (await api_sem_override.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})).status_code == 200
+
+
+async def test_conta_por_senha_sem_email_verificado_segue_bloqueada(api_sem_override, db):
+    from auth.autenticacao import token_para_usuario
+    oid = ObjectId()
+    await db.usuarios.insert_one({"_id": oid, "email": "nova@unir.br", "nome": "Nova", "papel": "aluno",
+                                  "email_verificado": False})
+    token = token_para_usuario({"_id": oid, "email": "nova@unir.br"})
+    assert (await api_sem_override.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})).status_code == 403
 
 
 async def test_trocar_vinculo_cria_sub_documento_do_novo_tipo(api_orcid, db):
@@ -130,6 +204,12 @@ async def test_email_so_muda_enquanto_for_o_provisorio(api_orcid, db):
     r = await api_orcid.patch("/api/perfil", json={"email": "carlos@gmail.com"})
     assert r.status_code == 400 and "institucionais" in r.text
     assert (await api_orcid.patch("/api/perfil", json={"email": "carlos.lima@unirio.br"})).status_code == 200
+    # enquanto não confirmou, pode corrigir o e-mail informado
+    r = await api_orcid.patch("/api/perfil", json={"email": "c.lima@unirio.br"})
+    assert r.status_code == 200 and r.json()["email_pendente"] == "c.lima@unirio.br"
+    # depois de confirmado, o e-mail da conta não muda mais por aqui
+    token = (await db.usuarios.find_one({"_id": api_orcid.oid}))["token_verificacao_email"]
+    assert (await api_orcid.get("/api/auth/verificar-email", params={"token": token})).status_code == 200
     r = await api_orcid.patch("/api/perfil", json={"email": "outro@unirio.br"})
     assert r.status_code == 400 and "não pode ser alterado" in r.text
 
@@ -137,6 +217,11 @@ async def test_email_so_muda_enquanto_for_o_provisorio(api_orcid, db):
 async def test_email_informado_nao_pode_pertencer_a_outra_conta(api_orcid, db):
     await db.usuarios.insert_one({"email": "carlos.lima@unirio.br", "nome": "Outro", "papel": "aluno"})
     r = await api_orcid.patch("/api/perfil", json={"email": "carlos.lima@unirio.br"})
+    assert r.status_code == 400 and "já está cadastrado" in r.text
+    # nem estar pendente em outra conta
+    await db.usuarios.insert_one({"email": "x@orcid.placeholder", "email_pendente": "c2@unirio.br", "nome": "Y",
+                                  "papel": "aluno"})
+    r = await api_orcid.patch("/api/perfil", json={"email": "c2@unirio.br"})
     assert r.status_code == 400 and "já está cadastrado" in r.text
 
 

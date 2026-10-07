@@ -129,9 +129,24 @@
   line-height: 1.5;
 }
 
-.noticeCard a {
+.noticeCard a,
+.linkButton {
   color: var(--primary);
   font-weight: 600;
+}
+
+.linkButton {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.linkButton:disabled {
+  cursor: default;
+  opacity: 0.7;
 }
 
 .orcidBadge {

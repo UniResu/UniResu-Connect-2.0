@@ -199,7 +199,11 @@ export default function EditarPerfilPage() {
           <div className={styles.field}>
             <label htmlFor="edit-email">E-mail</label>
             <input id="edit-email" type="email" value={user.email} disabled className={styles.input} />
-            <span className={styles.hint}>O e-mail da conta não muda por aqui.</span>
+            <span className={styles.hint}>
+              {user.email_pendente
+                ? `Aguardando a confirmação de ${user.email_pendente} pelo link enviado.`
+                : "O e-mail da conta não muda por aqui."}
+            </span>
           </div>
           <div className={styles.field}>
             <label htmlFor="edit-bio">Sobre mim</label>

@@ -1,0 +1,75 @@
+# Tarefas de manutenção do banco de produção, executadas à mão pelo GitHub
+# Actions (não há agendamento). Hoje: remover os projetos de teste cadastrados
+# antes das coletas do SIGAA/UNIRIO (backend/jobs/remover_projetos_teste.py).
+#
+# Credencial: o usuário restrito dos syncs (secret MONGO_URI) só pode ler,
+# inserir e atualizar. Apagar exige um usuário com `remove`: crie o secret
+# MONGO_URI_ADMIN com a connection string do usuário da API (a mesma que o
+# Render usa) ou de um usuário com readWrite no banco. Sem esse secret, o job
+# tenta com MONGO_URI e falha na hora de apagar (a listagem funciona).
+#
+# Sem marcar "confirmar", o job só lista o que seria removido.
+
+name: Manutenção do banco
+
+on:
+  workflow_dispatch:
+    inputs:
+      tarefa:
+        description: "Tarefa"
+        type: choice
+        options: [remover-projetos-teste]
+        default: remover-projetos-teste
+      confirmar:
+        description: "Apagar de fato (desmarcado = só listar)"
+        type: boolean
+        default: false
+      todos_manuais:
+        description: "Incluir todo projeto sem origem de coleta, mesmo os criados depois da primeira coleta do SIGAA"
+        type: boolean
+        default: false
+      antes_de:
+        description: "Data de corte AAAA-MM-DD (vazio = primeira coleta do SIGAA; ignorado com a opção acima)"
+        required: false
+        default: ""
+
+concurrency:
+  group: manutencao-banco
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  manutencao:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Remover projetos de teste
+        if: inputs.tarefa == 'remover-projetos-teste'
+        run: |
+          args=()
+          if [ "${{ inputs.confirmar }}" = "true" ]; then args+=(--confirmar); fi
+          if [ "${{ inputs.todos_manuais }}" = "true" ]; then
+            args+=(--todos)
+          elif [ -n "${{ inputs.antes_de }}" ]; then
+            args+=(--antes-de "${{ inputs.antes_de }}")
+          fi
+          python -m jobs.remover_projetos_teste "${args[@]}"
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI_ADMIN || secrets.MONGO_URI }}
+          MONGO_DB_NAME: ${{ vars.MONGO_DB_NAME || 'UniResuDB' }}

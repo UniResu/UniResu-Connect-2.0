@@ -206,6 +206,9 @@ class UsuarioResponse(BaseModel):
     """Resposta completa do usuário logado (sem dados sensíveis)."""
     id: str
     email: EmailStr
+    # E-mail institucional informado por uma conta do ORCID e ainda não
+    # confirmado pelo link enviado; substitui `email` na confirmação.
+    email_pendente: Optional[EmailStr] = None
     username: Optional[str] = None           # identificador público (fórum); gerado do nome
     nome: str
     nome_social: Optional[str] = None

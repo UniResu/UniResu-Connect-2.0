@@ -359,17 +359,29 @@ async def verificar_email_controller(token: str) -> bool:
             detail="O link de confirmação é inválido ou expirou.",
         )
 
+    campos = {"email_verificado": True, "atualizado_em": agora}
+
+    # Conta do ORCID confirmando o e-mail institucional informado em
+    # /perfil/completar: só agora ele substitui o provisório. Alguém pode ter
+    # registrado o mesmo e-mail nesse meio-tempo, por isso a checagem aqui.
+    pendente = usuario.get("email_pendente")
+    if pendente:
+        if await db.usuarios.find_one({"email": pendente, "_id": {"$ne": usuario["_id"]}}):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Este e-mail já está cadastrado em outra conta.",
+            )
+        campos["email"] = pendente
+
     # Ativar a conta e limpar tokens de verificação
     await db.usuarios.update_one(
         {"_id": usuario["_id"]},
         {
-            "$set": {
-                "email_verificado": True,
-                "atualizado_em": agora,
-            },
+            "$set": campos,
             "$unset": {
                 "token_verificacao_email": "",
                 "token_verificacao_expira": "",
+                "email_pendente": "",
             },
         },
     )
@@ -383,12 +395,15 @@ async def reenviar_verificacao_controller(email: str) -> None:
     Útil caso o token original tenha expirado ou o e-mail não chegou.
     """
     db = Database.get_db()
-    usuario = await db.usuarios.find_one({"email": email})
+    # `email_pendente`: e-mail institucional informado por uma conta do ORCID
+    # e ainda não confirmado.
+    usuario = await db.usuarios.find_one({"$or": [{"email": email}, {"email_pendente": email}]})
 
     if not usuario:
         return  # Retorno silencioso (segurança)
 
-    if usuario.get("email_verificado", True):
+    pendente = usuario.get("email_pendente") == email
+    if usuario.get("email_verificado", True) and not pendente:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Este e-mail já foi verificado.",

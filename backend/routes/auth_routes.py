@@ -30,7 +30,7 @@ from controllers.usuario_controller import (
     verificar_email_controller,
     reenviar_verificacao_controller,
 )
-from auth.autenticacao import create_access_token, get_usuario_atual
+from auth.autenticacao import get_usuario_atual, token_para_usuario
 
 router = APIRouter()
 
@@ -66,9 +66,7 @@ async def orcid_callback(payload: OrcidCallbackRequest):
     usuario = await processar_callback_orcid(payload.code, payload.state)
 
     # Gerar JWT interno
-    access_token = create_access_token(
-        data={"sub": usuario["email"], "papel": usuario.get("papel", "pesquisador")}
-    )
+    access_token = token_para_usuario(usuario)
 
     return {
         "access_token": access_token,
@@ -88,9 +86,7 @@ async def login_email_senha(login: LoginRequest):
     """
     usuario = await login_usuario_controller(login.email, login.senha)
 
-    access_token = create_access_token(
-        data={"sub": usuario["email"], "papel": usuario.get("papel", "aluno")}
-    )
+    access_token = token_para_usuario(usuario)
 
     return {
         "access_token": access_token,

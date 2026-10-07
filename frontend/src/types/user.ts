@@ -59,6 +59,8 @@ export interface OrcidData {
 export interface User {
   id: string;
   email: string;
+  /** E-mail institucional informado por uma conta do ORCID e ainda não confirmado pelo link enviado. */
+  email_pendente?: string | null;
   /** Identificador público (ex.: "matheus-gabriel"); é o que o fórum exibe no lugar do e-mail. */
   username?: string;
   nome: string;

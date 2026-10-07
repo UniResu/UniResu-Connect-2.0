@@ -11,6 +11,8 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from dotenv import load_dotenv
+from bson import ObjectId
+from bson.errors import InvalidId
 from database.connection import Database
 
 load_dotenv()
@@ -47,6 +49,15 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
+def token_para_usuario(usuario: dict) -> str:
+    """Token de sessão de uma conta: `sub` = e-mail (compatível com tokens
+    antigos) e `uid` = id da conta, que é o que `get_usuario_atual` prefere."""
+    return create_access_token(
+        data={"sub": usuario["email"], "uid": str(usuario.get("id") or usuario.get("_id")),
+              "papel": usuario.get("papel", "aluno")}
+    )
+
+
 async def get_usuario_atual(token: str = Depends(oauth2_scheme)) -> dict:
     """Decodifica o token JWT e retorna os dados do usuário.
 
@@ -73,13 +84,24 @@ async def get_usuario_atual(token: str = Depends(oauth2_scheme)) -> dict:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
+        uid = payload.get("uid")
         if email is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
 
     db = Database.get_db()
-    usuario = await db.usuarios.find_one({"email": email})
+    # Tokens novos levam o id da conta: a sessão sobrevive à troca do e-mail
+    # (conta criada pelo ORCID que informa o e-mail institucional depois).
+    # Tokens antigos só têm o e-mail em `sub`.
+    usuario = None
+    if uid:
+        try:
+            usuario = await db.usuarios.find_one({"_id": ObjectId(uid)})
+        except (InvalidId, TypeError):
+            usuario = None
+    if usuario is None:
+        usuario = await db.usuarios.find_one({"email": email})
 
     if usuario is None:
         raise credentials_exception

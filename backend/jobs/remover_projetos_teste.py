@@ -9,13 +9,17 @@ cadastrados por professores DEPOIS disso são preservados.
 
 Por padrão só lista (dry-run). Para apagar de fato: --confirmar.
 As candidaturas que apontam para os projetos removidos também são apagadas
-(--manter-candidaturas preserva).
+(--manter-candidaturas preserva). `--todos` ignora a data de corte e inclui
+todo projeto sem origem de coleta (útil enquanto a plataforma só tem os
+cadastros de teste).
 
 Uso (a partir de backend/, usa o MONGO_URI do .env — precisa de um usuário
-com permissão de `remove`; o usuário restrito do job não tem):
+com permissão de `remove`; o usuário restrito do job não tem). Também roda
+pelo GitHub Actions (workflow "Manutenção do banco"):
     python -m jobs.remover_projetos_teste
     python -m jobs.remover_projetos_teste --confirmar
     python -m jobs.remover_projetos_teste --antes-de 2026-09-29 --confirmar
+    python -m jobs.remover_projetos_teste --todos --confirmar
 """
 
 import argparse
@@ -86,6 +90,8 @@ async def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--confirmar", action="store_true", help="apaga de fato (sem isso, só lista)")
     ap.add_argument("--antes-de", help="data de corte AAAA-MM-DD (padrão: primeira coleta do SIGAA)")
+    ap.add_argument("--todos", action="store_true",
+                    help="sem data de corte: todo projeto sem origem de coleta (SIGAA/UNIRIO) é alvo")
     ap.add_argument("--manter-candidaturas", action="store_true", help="não apaga as candidaturas desses projetos")
     args = ap.parse_args()
 
@@ -94,12 +100,15 @@ async def main() -> int:
     await Database.connect()
     try:
         db = Database.get_db()
-        corte = await data_corte(db, args.antes_de)
+        corte = None if args.todos else await data_corte(db, args.antes_de)
         resumo = await remover_projetos_teste(db, corte, args.confirmar, args.manter_candidaturas)
     finally:
         await Database.disconnect()
 
-    print(f"Data de corte: {resumo['corte'] or '(nenhuma coleta registrada: todos os manuais)'}")
+    if args.todos:
+        print("Data de corte: (nenhuma, --todos: todos os projetos sem origem de coleta)")
+    else:
+        print(f"Data de corte: {resumo['corte'] or '(nenhuma coleta registrada: todos os manuais)'}")
     print(f"Projetos de teste encontrados: {resumo['projetos']} (candidaturas ligadas: {resumo['candidaturas']})")
     for t in resumo["titulos"]:
         print(f"  - {t}")

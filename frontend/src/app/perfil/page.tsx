@@ -2,8 +2,9 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { api } from "@/lib/api";
 import { NIVEL_LABELS } from "@/lib/constants";
 import { PERFIL_LABELS, emailProvisorio } from "@/lib/perfis";
 import styles from "./perfil.module.css";
@@ -47,6 +48,7 @@ export function subtituloDoPerfil(user: {
 export default function PerfilPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const [reenvio, setReenvio] = useState<"" | "enviando" | "enviado" | "erro">("");
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -64,13 +66,22 @@ export default function PerfilPage() {
 
   if (!user) return null;
 
-  const extra = user as typeof user & {
-    username?: string;
-    perfil_completo?: boolean;
-    dados_tecnico?: { setor?: string | null; cargo?: string | null } | null;
-    dados_egresso?: { ano_conclusao?: number | null; atuacao?: string | null } | null;
-  };
-  const perfilIncompleto = extra.perfil_completo === false || emailProvisorio(user.email);
+  const extra = user;
+  const perfilIncompleto = user.perfil_completo === false;
+  // Conta do ORCID que informou o e-mail institucional e ainda não confirmou.
+  const emailPendente = user.email_pendente || null;
+  const semEmail = !perfilIncompleto && !emailPendente && emailProvisorio(user.email);
+
+  async function reenviarConfirmacao() {
+    if (!emailPendente) return;
+    setReenvio("enviando");
+    try {
+      await api.post("/api/auth/reenviar-verificacao", { email: emailPendente });
+      setReenvio("enviado");
+    } catch {
+      setReenvio("erro");
+    }
+  }
 
   return (
     <div className={styles.container}>
@@ -89,6 +100,29 @@ export default function PerfilPage() {
           Seu perfil ainda não está completo: falta escolher o vínculo institucional
           {emailProvisorio(user.email) ? " e informar o e-mail institucional" : ""}.{" "}
           <Link href="/perfil/completar">Completar agora</Link>
+        </div>
+      )}
+
+      {emailPendente && (
+        <div className={styles.noticeCard}>
+          Enviamos um link de confirmação para <strong>{emailPendente}</strong>. Até você confirmar, a conta
+          continua com o e-mail provisório do ORCID.{" "}
+          {reenvio === "enviado" ? (
+            <span>Novo link enviado.</span>
+          ) : reenvio === "erro" ? (
+            <span>Não foi possível reenviar agora. Tente de novo em instantes.</span>
+          ) : (
+            <button type="button" className={styles.linkButton} onClick={reenviarConfirmacao} disabled={reenvio === "enviando"}>
+              {reenvio === "enviando" ? "Reenviando..." : "Reenviar e-mail"}
+            </button>
+          )}
+        </div>
+      )}
+
+      {semEmail && (
+        <div className={styles.noticeCard}>
+          Sua conta ainda usa o e-mail provisório do ORCID.{" "}
+          <Link href="/perfil/completar">Informar o e-mail institucional</Link>
         </div>
       )}
 

@@ -106,13 +106,16 @@ python -m jobs.definir_contato --codigo PVC2148-2026 --remover
 
 **Projetos de teste anteriores ao SIGAA**
 
-Os projetos cadastrados manualmente antes da primeira coleta do SIGAA eram apenas de teste. Para removê-los (o script lista primeiro; só apaga com `--confirmar`; precisa de um usuário do Atlas com permissão de remoção, não o usuário restrito dos jobs):
+Os projetos cadastrados manualmente antes da primeira coleta do SIGAA eram apenas de teste. Eles ficam na mesma collection `projetos` (banco `UniResuDB`) que os milhares de projetos coletados; para vê-los no Atlas, filtre por `{ "origem": { "$exists": false } }`. O script lista primeiro e só apaga com `--confirmar`; ele precisa de um usuário do Atlas com permissão de remoção, não o usuário restrito dos jobs:
 
 ```bash
 cd backend
-python -m jobs.remover_projetos_teste               # lista o que seria removido
-python -m jobs.remover_projetos_teste --confirmar   # remove (e as candidaturas ligadas)
+python -m jobs.remover_projetos_teste                     # lista o que seria removido
+python -m jobs.remover_projetos_teste --confirmar         # remove (e as candidaturas ligadas)
+python -m jobs.remover_projetos_teste --todos --confirmar # todo projeto sem origem de coleta, sem data de corte
 ```
+
+Pelo GitHub Actions: workflow **Manutenção do banco** (`.github/workflows/manutencao.yml`), tarefa `remover-projetos-teste`. Sem marcar **confirmar** ele só lista. Para apagar, crie antes o secret `MONGO_URI_ADMIN` com a connection string do usuário da API (a mesma do Render) ou de um usuário com `readWrite`; sem ele o job usa `MONGO_URI` e a remoção falha por falta de permissão.
 
 **Filtros da busca**
 

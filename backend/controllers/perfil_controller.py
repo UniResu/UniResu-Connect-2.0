@@ -6,10 +6,12 @@ mesma coleção 'usuarios' do MongoDB (Single Collection Pattern).
 """
 
 from typing import Dict, Any
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+import secrets
 from bson import ObjectId
 from fastapi import HTTPException, status
 from database.connection import Database
+from controllers.usuario_controller import _enviar_email_verificacao
 from models.usuario_model import DADOS_POR_PAPEL, PerfilUpdate
 from services.emails_institucionais import email_provisorio, validar_email_institucional
 
@@ -148,6 +150,10 @@ async def atualizar_perfil_controller(
             update_fields[campo_dados] = dados_dict.pop(campo_dados)
 
     # E-mail: só pode ser definido aqui enquanto for o provisório do ORCID.
+    # Fica em `email_pendente` até a pessoa confirmar pelo link enviado (mesmo
+    # fluxo de verificação do registro); enquanto isso a conta continua
+    # funcionando pelo login do ORCID, com o e-mail provisório.
+    enviar_verificacao = None
     if "email" in dados_dict:
         novo_email = str(dados_dict["email"]).strip().lower()
         if not email_provisorio(atual.get("email")):
@@ -157,10 +163,15 @@ async def atualizar_perfil_controller(
             validar_email_institucional(novo_email)
         except ValueError as e:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-        if await db.usuarios.find_one({"email": novo_email, "_id": {"$ne": oid}}):
+        em_uso = await db.usuarios.find_one(
+            {"$or": [{"email": novo_email}, {"email_pendente": novo_email}], "_id": {"$ne": oid}})
+        if em_uso:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Este email já está cadastrado.")
-        update_fields["email"] = novo_email
-        update_fields["email_verificado"] = False
+        token = secrets.token_urlsafe(48)
+        update_fields["email_pendente"] = novo_email
+        update_fields["token_verificacao_email"] = token
+        update_fields["token_verificacao_expira"] = agora + timedelta(hours=24)
+        enviar_verificacao = (novo_email, token)
 
     # Aceites (regras da plataforma e compartilhamento de dados)
     if dados_dict.get("aceite_regras") or dados_dict.get("aceite_dados"):
@@ -189,6 +200,10 @@ async def atualizar_perfil_controller(
     update_fields["atualizado_em"] = agora
 
     await db.usuarios.update_one({"_id": oid}, {"$set": update_fields})
+
+    if enviar_verificacao:
+        novo_email, token = enviar_verificacao
+        await _enviar_email_verificacao(novo_email, atual.get("nome", "Usuário"), token)
 
     # Retorna perfil atualizado
     return await obter_perfil_controller(user_id)
