@@ -114,7 +114,7 @@ export default function HomePage() {
                   <div className={styles.avatar}>JG</div>
                   <div className={styles.memberInfo}>
                     <p className={styles.memberName}>Juliana Gimenes Müller</p>
-                    <p className={styles.memberRole}>CTO (Technology)</p>
+                    <p className={styles.memberRole}>Co-fundadora & CTO (Technology)</p>
                   </div>
                 </div>
                 <div className={styles.teamMember}>

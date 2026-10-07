@@ -8,8 +8,8 @@ import styles from "./Navbar.module.css";
 
 const LINKS = [
   { href: "/", label: "Home" },
-  { href: "/#quem-somos", label: "Quem Somos" },
-  { href: "/projetos", label: "Projetos Acadêmicos" },
+  { href: "/#quem-somos", label: "Quem somos" },
+  { href: "/projetos", label: "Projetos acadêmicos" },
   { href: "/forum", label: "Fórum" },
 ];
 
