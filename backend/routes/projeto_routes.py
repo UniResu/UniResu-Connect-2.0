@@ -23,8 +23,13 @@ from models.projeto_model import (
     FiltrosResponse,
 )
 from auth.autenticacao import get_usuario_atual, get_usuario_com_perfil_completo
+from services.areas import AREAS_CONHECIMENTO
 
 router = APIRouter()
+
+# Grande área do CNPq aceita como filtro (valor exato; outro valor dá 422).
+AreaConhecimento = Literal[AREAS_CONHECIMENTO]
+Modulo = Literal["pesquisa", "extensao"]
 
 PAPEIS_PERMITIDOS = ("professor", "pesquisador")
 
@@ -44,12 +49,11 @@ def verificar_papel(usuario: dict):
 async def buscar_projetos_route(
     q: Optional[str] = Query(None, max_length=200),
     local: Optional[str] = None,
-    area: Optional[str] = None,
+    area: Optional[AreaConhecimento] = Query(None, description="Grande área do CNPq (valor exato da lista)"),
     remoto: bool = False,
     tipos: Optional[str] = Query(None),
-    modulo: Optional[Literal["pesquisa", "extensao"]] = Query(None, description="Pesquisa ou extensão"),
-    tipo_sigaa: Optional[Literal["pesquisa", "extensao"]] = Query(None, deprecated=True,
-                                                                  description="Nome antigo de `modulo`"),
+    modulo: Optional[Modulo] = Query(None, description="Pesquisa ou extensão"),
+    tipo_sigaa: Optional[Modulo] = Query(None, deprecated=True, description="Nome antigo de `modulo`"),
     unidade: Optional[str] = Query(None, max_length=300, description="Unidade/departamento"),
     instituicao: Optional[str] = Query(None, max_length=200, description="Instituição (sigla ou nome; ex.: UNIR, UNIRIO)"),
     incluir_inativos: bool = Query(False, description="Inclui projetos inativos/finalizados"),
@@ -74,8 +78,8 @@ async def buscar_projetos_route(
 
 @router.get("/projetos/unidades", response_model=List[str])
 async def listar_unidades_route(
-    modulo: Optional[Literal["pesquisa", "extensao"]] = None,
-    tipo_sigaa: Optional[Literal["pesquisa", "extensao"]] = Query(None, deprecated=True),
+    modulo: Optional[Modulo] = None,
+    tipo_sigaa: Optional[Modulo] = Query(None, deprecated=True),
     instituicao: Optional[str] = Query(None, max_length=200),
 ):
     """Unidades/departamentos com projetos ativos (opções do filtro)."""
@@ -89,9 +93,18 @@ async def listar_instituicoes_route():
 
 
 @router.get("/projetos/filtros", response_model=FiltrosResponse)
-async def listar_filtros_route():
-    """Opções de filtro agrupadas: instituição > unidades/departamentos, com contagens."""
-    return await listar_filtros_controller()
+async def listar_filtros_route(
+    q: Optional[str] = Query(None, max_length=200),
+    modulo: Optional[Modulo] = Query(None, description="Pesquisa ou extensão"),
+    instituicao: Optional[str] = Query(None, max_length=200),
+    unidade: Optional[str] = Query(None, max_length=300),
+    remoto: bool = False,
+):
+    """Opções de filtro: instituições > unidades/departamentos, com contagens, e
+    as grandes áreas do CNPq com projetos no recorte dado por `q`, `modulo`,
+    `instituicao`, `unidade` e `remoto` (os mesmos parâmetros da busca)."""
+    return await listar_filtros_controller(q=q, modulo=modulo, instituicao=instituicao, unidade=unidade,
+                                           remoto=remoto)
 
 
 @router.get("/projetos/fontes/status", response_model=FontesStatusResponse)

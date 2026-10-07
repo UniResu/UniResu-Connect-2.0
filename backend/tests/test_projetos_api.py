@@ -3,34 +3,45 @@
 from datetime import datetime, timezone
 
 import pytest
+from bson import ObjectId
+
+
+EXATAS = "Ciências Exatas e da Terra"
+ENGENHARIAS = "Engenharias"
+SAUDE = "Ciências da Saúde"
+AGRARIAS = "Ciências Agrárias"
+HUMANAS = "Ciências Humanas"
 
 
 def sigaa(titulo, tipo="pesquisa", unidade="CAMPUS PORTO VELHO", situacao="EM EXECUÇÃO", ativo=True,
-          coordenador="ANA PAULA SOUZA", email="ana@unir.br"):
+          coordenador="ANA PAULA SOUZA", email="ana@unir.br", area=EXATAS):
     return {"origem": "sigaa", "chave_sigaa": f"{tipo}|{titulo}", "modulo": tipo, "tipo_sigaa": tipo,
             "tipo": "Pesquisa" if tipo == "pesquisa" else "Extensão", "titulo": titulo, "instituicao": "UNIR",
             "nome_professor": coordenador, "email_professor": email, "unidade": unidade,
-            "situacao": situacao, "ano": "2026", "ativo": ativo}
+            "situacao": situacao, "ano": "2026", "ativo": ativo, "area_conhecimento": area}
 
 
-def unirio(titulo, modulo="extensao", unidade="ESCOLA DE MEDICINA E CIRURGIA", situacao="EM EXECUÇÃO"):
+def unirio(titulo, modulo="extensao", unidade="ESCOLA DE MEDICINA E CIRURGIA", situacao="EM EXECUÇÃO", area=SAUDE):
     return {"origem": "unirio", "chave_unirio": f"{modulo}|{titulo}", "modulo": modulo, "unirio_id": titulo,
             "tipo": "Pesquisa" if modulo == "pesquisa" else "Extensão", "titulo": titulo, "instituicao": "UNIRIO",
             "nome_professor": "CARLA MENEZES", "email_professor": "carla@unirio.br", "unidade": unidade,
-            "situacao": situacao, "ano": "2026", "ativo": True, "palavras_chave": ["saúde", "extensão"]}
+            "situacao": situacao, "ano": "2026", "ativo": True, "palavras_chave": ["saúde", "extensão"],
+            "area_conhecimento": area}
 
 
 @pytest.fixture
 async def base(db):
     await db.projetos.insert_many([
-        sigaa("Robótica educacional"),
-        sigaa("Horta comunitária", tipo="extensao", unidade="DEPARTAMENTO DE AGRONOMIA", coordenador="BRUNO LIMA"),
+        sigaa("Robótica educacional", area=ENGENHARIAS),
+        sigaa("Horta comunitária", tipo="extensao", unidade="DEPARTAMENTO DE AGRONOMIA", coordenador="BRUNO LIMA",
+              area=AGRARIAS),
         sigaa("Projeto finalizado", situacao="FINALIZADO"),
         sigaa("Sumiu do SIGAA", ativo=False),
         sigaa("Sem contato", email=None),
         unirio("Clínica de leitura"),
         {"titulo": "Projeto manual do professor", "descricao": "Cadastrado na plataforma",
-         "nome_professor": "Prof. Manual", "email_professor": "manual@unir.br", "tipo_projeto": "voluntario_aberto"},
+         "nome_professor": "Prof. Manual", "email_professor": "manual@unir.br", "tipo_projeto": "voluntario_aberto",
+         "area_conhecimento": HUMANAS},
     ])
     return db
 
@@ -73,6 +84,48 @@ async def test_filtro_por_instituicao(api, base):
 async def test_filtro_por_unidade(api, base):
     r = await api.get("/api/projetos/buscar", params={"unidade": "DEPARTAMENTO DE AGRONOMIA"})
     assert titulos(r) == ["Horta comunitária"]
+
+
+async def test_filtro_por_area_do_conhecimento(api, base):
+    r = await api.get("/api/projetos/buscar", params={"area": ENGENHARIAS})
+    assert titulos(r) == ["Robótica educacional"]
+    assert r.json()[0]["area_conhecimento"] == ENGENHARIAS
+    r = await api.get("/api/projetos/buscar", params={"area": AGRARIAS, "modulo": "extensao"})
+    assert titulos(r) == ["Horta comunitária"]
+    # projetos fora da busca padrão (finalizado, inativo) continuam de fora
+    assert titulos(await api.get("/api/projetos/buscar", params={"area": EXATAS})) == ["Sem contato"]
+    # só o valor exato da tabela do CNPq
+    r = await api.get("/api/projetos/buscar", params={"area": "Agrárias"})
+    assert r.status_code == 422
+
+
+async def test_filtros_trazem_areas_com_contagem_na_ordem_fixa(api, base):
+    r = await api.get("/api/projetos/filtros")
+    assert r.status_code == 200, r.text
+    # só projetos visíveis ("Projeto finalizado" e "Sumiu do SIGAA" não contam), na ordem da tabela do CNPq
+    assert r.json()["areas"] == [
+        {"nome": EXATAS, "total": 1},
+        {"nome": ENGENHARIAS, "total": 1},
+        {"nome": SAUDE, "total": 1},
+        {"nome": AGRARIAS, "total": 1},
+        {"nome": HUMANAS, "total": 1},
+    ]
+
+
+async def test_areas_respeitam_o_recorte_dos_outros_filtros(api, base):
+    async def areas(**params):
+        r = await api.get("/api/projetos/filtros", params=params)
+        assert r.status_code == 200, r.text
+        return [(a["nome"], a["total"]) for a in r.json()["areas"]]
+
+    assert await areas(instituicao="UNIR") == [(EXATAS, 1), (ENGENHARIAS, 1), (AGRARIAS, 1)]
+    assert await areas(modulo="extensao") == [(SAUDE, 1), (AGRARIAS, 1)]
+    assert await areas(q="robótica") == [(ENGENHARIAS, 1)]
+    assert await areas(unidade="DEPARTAMENTO DE AGRONOMIA") == [(AGRARIAS, 1)]
+    assert await areas(q="nada disso") == []
+    # as instituições não dependem do recorte (o front estreita pela quebra por módulo)
+    r = (await api.get("/api/projetos/filtros", params={"q": "nada disso"})).json()
+    assert [i["sigla"] for i in r["instituicoes"]] == ["UNIR", "UNIRIO"]
 
 
 async def test_busca_por_titulo_e_por_coordenador(api, base):
@@ -189,6 +242,49 @@ async def test_status_por_fonte_ignora_falhas_e_dry_runs(api_professor, db):
     assert r["fontes"]["unirio"]["ultima_atualizacao"].startswith("2026-09-21T07:00:00")
     # rota antiga continua respondendo
     assert (await api.get("/api/projetos/sigaa/status")).json() == r
+
+
+async def test_projeto_manual_ganha_area_do_conhecimento_ao_ser_criado(api_professor, db):
+    api = api_professor
+    r = await api.post("/api/projetos", json={"titulo": "Horta na escola",
+                                               "descricao": "Cultivo de hortaliças com os alunos"})
+    assert r.status_code == 201, r.text
+    assert r.json()["area_conhecimento"] == AGRARIAS
+    doc = await db.projetos.find_one({"titulo": "Horta na escola"})
+    assert doc["area_conhecimento"] == AGRARIAS and doc["autor_id"] == "prof-1"
+
+    # informada pelo autor (aceita sem acentos e em minúsculas, grava o nome canônico)
+    r = await api.post("/api/projetos", json={"titulo": "Horta na escola", "descricao": "Cultivo",
+                                               "area_conhecimento": "ciencias humanas"})
+    assert r.status_code == 201 and r.json()["area_conhecimento"] == HUMANAS
+
+    # fora da tabela do CNPq
+    r = await api.post("/api/projetos", json={"titulo": "X", "descricao": "Y", "area_conhecimento": "Tecnologias"})
+    assert r.status_code == 422
+    assert "Área do conhecimento desconhecida" in r.text
+
+    # vazio conta como não informado
+    r = await api.post("/api/projetos", json={"titulo": "Sarau de poesia", "descricao": "Z", "area_conhecimento": ""})
+    assert r.status_code == 201 and r.json()["area_conhecimento"] == "Linguística, Letras e Artes"
+
+
+async def test_editar_projeto_manual_reclassifica_quando_a_area_nao_vem(api_professor, db):
+    api = api_professor
+    criado = (await api.post("/api/projetos", json={"titulo": "Horta na escola", "descricao": "Cultivo"})).json()
+    assert criado["area_conhecimento"] == AGRARIAS
+
+    r = await api.put(f"/api/projetos/{criado['id']}", json={"titulo": "Oficina de violão", "descricao": "Música"})
+    assert r.status_code == 200, r.text
+    assert r.json()["area_conhecimento"] == "Linguística, Letras e Artes"
+
+    r = await api.put(f"/api/projetos/{criado['id']}", json={"titulo": "Oficina de violão", "descricao": "Música",
+                                                              "area_conhecimento": HUMANAS})
+    assert r.status_code == 200 and r.json()["area_conhecimento"] == HUMANAS
+    assert (await db.projetos.find_one({"_id": ObjectId(criado["id"])}))["area_conhecimento"] == HUMANAS
+
+    # e o projeto manual aparece na busca pública pela área
+    r = await api.get("/api/projetos/buscar", params={"area": HUMANAS})
+    assert titulos(r) == ["Oficina de violão"]
 
 
 async def test_projeto_coletado_sem_situacao_nao_aparece(api, base):
