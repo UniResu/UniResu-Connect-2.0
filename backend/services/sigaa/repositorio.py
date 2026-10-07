@@ -50,11 +50,6 @@ def _escopo(fonte: Fonte) -> dict:
     return {"origem": fonte.origem, "instituicao": {"$in": [fonte.instituicao, None]}}
 
 
-def _identidade(fonte: Fonte) -> dict:
-    """Campos de origem gravados em um documento novo."""
-    return {"origem": fonte.origem, "instituicao": fonte.instituicao}
-
-
 @dataclass
 class ResultadoUpsert:
     novos: int = 0
@@ -190,7 +185,8 @@ async def upsert_projetos(
             {**_escopo(fonte), fonte.campo_chave: chave},
             {
                 "$set": campos,
-                "$setOnInsert": {**_identidade(fonte), fonte.campo_chave: chave, "primeira_coleta": agora},
+                # `instituicao` já vai no $set (o Mongo recusa o mesmo caminho nos dois operadores).
+                "$setOnInsert": {"origem": fonte.origem, fonte.campo_chave: chave, "primeira_coleta": agora},
             },
             upsert=True,
         )
