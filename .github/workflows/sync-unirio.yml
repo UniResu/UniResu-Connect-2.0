@@ -48,7 +48,10 @@ jobs:
     runs-on: ubuntu-latest
     # Um detalhe por projeto com pausa de 1,5 s: a primeira coleta completa dos
     # dois portais pode levar bem mais de uma hora.
-    timeout-minutes: 180
+    # Dry-run de validação: 16 min só para listar (2314 + 386 itens). O sync
+    # completo baixa ~2700 páginas de detalhe com pausa de 1,5 s, ou seja,
+    # perto de 2 h; a folga cobre as quedas de conexão dos portais da UNIRIO.
+    timeout-minutes: 300
     defaults:
       run:
         working-directory: backend
