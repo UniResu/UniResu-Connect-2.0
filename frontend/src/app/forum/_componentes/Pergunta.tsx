@@ -2,12 +2,23 @@
 
 /**
  * Peças da pergunta usadas na lista (/forum) e na página da pergunta
- * (/forum/[id]): linha de meta e controles de voto.
+ * (/forum/[id]): linha de meta, corpo em parágrafos, controles de voto,
+ * ações do autor e o formulário de edição.
  */
 
+import { useState } from "react";
 import Link from "next/link";
 import type { User } from "@/types/user";
-import { dataCompleta, plural, tempoRelativo, votosDe, type TipoVoto, type Topico } from "./forum";
+import {
+  conteudoDe,
+  dataCompleta,
+  paragrafos,
+  plural,
+  tempoRelativo,
+  votosDe,
+  type TipoVoto,
+  type Topico,
+} from "./forum";
 import styles from "../forum.module.css";
 
 // ── Ícones (SVG inline, sem dependências e sem emoji) ─────────────────────
@@ -45,6 +56,96 @@ export function MetaPergunta({ topico }: { topico: Topico }) {
       <span className={styles.metaItem}>{plural(votosDe(topico), "voto", "votos")}</span>
       <span className={styles.metaItem}>{plural(topico.total_respostas ?? 0, "resposta", "respostas")}</span>
     </div>
+  );
+}
+
+// ── Corpo: parágrafos separados por linha em branco ───────────────────────
+
+export function CorpoPergunta({ topico }: { topico: Topico }) {
+  const conteudo = conteudoDe(topico);
+  return (
+    <div className={styles.corpo}>
+      {conteudo ? paragrafos(conteudo).map((p, i) => <p key={i}>{p}</p>) : <p>Pergunta sem descrição.</p>}
+    </div>
+  );
+}
+
+// ── Ações do autor: Editar e Excluir (a API confere a autoria de novo) ────
+
+interface AcoesAutorProps {
+  onEditar: () => void;
+  onExcluir: () => void;
+}
+
+export function AcoesAutor({ onEditar, onExcluir }: AcoesAutorProps) {
+  return (
+    <div className={styles.acoesAutor}>
+      <button type="button" className={styles.acaoTexto} onClick={onEditar}>
+        Editar
+      </button>
+      <button type="button" className={`${styles.acaoTexto} ${styles.acaoPerigo}`} onClick={onExcluir}>
+        Excluir
+      </button>
+    </div>
+  );
+}
+
+// ── Edição da pergunta: título e conteúdo ─────────────────────────────────
+
+interface FormPerguntaProps {
+  titulo: string;
+  conteudo: string;
+  onCancelar: () => void;
+  /** Deve lançar em caso de falha: o formulário então continua aberto para nova tentativa. */
+  onSalvar: (titulo: string, conteudo: string) => Promise<void>;
+}
+
+export function FormPergunta({ titulo, conteudo, onCancelar, onSalvar }: FormPerguntaProps) {
+  const [editTitulo, setEditTitulo] = useState(titulo);
+  const [editConteudo, setEditConteudo] = useState(conteudo);
+  const [salvando, setSalvando] = useState(false);
+
+  async function salvar(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editTitulo.trim() || !editConteudo.trim()) return;
+    setSalvando(true);
+    try {
+      await onSalvar(editTitulo.trim(), editConteudo.trim());
+    } catch {
+      // Quem chamou já mostrou o erro; os campos ficam como estavam.
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <form className={styles.formPergunta} onSubmit={salvar}>
+      <input
+        type="text"
+        value={editTitulo}
+        onChange={(e) => setEditTitulo(e.target.value)}
+        className={styles.campo}
+        maxLength={200}
+        required
+        aria-label="Título"
+      />
+      <textarea
+        value={editConteudo}
+        onChange={(e) => setEditConteudo(e.target.value)}
+        className={styles.campo}
+        rows={8}
+        required
+        aria-label="Conteúdo"
+      />
+      <div className={styles.formAcoes}>
+        <button type="button" className={styles.acaoTexto} onClick={onCancelar}>
+          Cancelar
+        </button>
+        <button type="submit" className={styles.btnPrimario} disabled={salvando}>
+          {salvando ? "Salvando..." : "Salvar"}
+        </button>
+      </div>
+    </form>
   );
 }
 

@@ -27,7 +27,6 @@ import {
   conteudoDe,
   ehAutor,
   mensagemDeErro,
-  paragrafos,
   parsearData,
   plural,
   votosDe,
@@ -35,7 +34,7 @@ import {
   type TipoVoto,
   type Topico,
 } from "./_componentes/forum";
-import { MetaPergunta, Votos } from "./_componentes/Pergunta";
+import { AcoesAutor, CorpoPergunta, FormPergunta, MetaPergunta, Votos } from "./_componentes/Pergunta";
 import { Respostas } from "./_componentes/Respostas";
 import styles from "./forum.module.css";
 
@@ -86,9 +85,6 @@ function LinhaPergunta({
   onRecarregarRespostas,
 }: LinhaPerguntaProps) {
   const [editando, setEditando] = useState(false);
-  const [editTitulo, setEditTitulo] = useState(topico.titulo);
-  const [editConteudo, setEditConteudo] = useState(conteudoDe(topico));
-  const [salvando, setSalvando] = useState(false);
 
   const autor = ehAutor(topico, user);
   const conteudo = conteudoDe(topico);
@@ -97,24 +93,10 @@ function LinhaPergunta({
     ? { respostas: topico.respostas, total: topico.total_respostas }
     : null;
 
-  function iniciarEdicao() {
-    setEditTitulo(topico.titulo);
-    setEditConteudo(conteudo);
-    setEditando(true);
-  }
-
-  async function salvarEdicao(e: React.FormEvent) {
-    e.preventDefault();
-    if (!editTitulo.trim() || !editConteudo.trim()) return;
-    setSalvando(true);
-    try {
-      await onEditar(topico, editTitulo.trim(), editConteudo.trim());
-      setEditando(false);
-    } catch {
-      // O container já mostrou o erro; o formulário fica aberto para nova tentativa.
-    } finally {
-      setSalvando(false);
-    }
+  // Se salvar falhar, `onEditar` lança e o formulário continua aberto.
+  async function salvarEdicao(titulo: string, novoConteudo: string) {
+    await onEditar(topico, titulo, novoConteudo);
+    setEditando(false);
   }
 
   return (
@@ -133,59 +115,27 @@ function LinhaPergunta({
       {aberta && (
         <div className={styles.thread}>
           {editando ? (
-            <form className={styles.formPergunta} onSubmit={salvarEdicao}>
-              <input
-                type="text"
-                value={editTitulo}
-                onChange={(e) => setEditTitulo(e.target.value)}
-                className={styles.campo}
-                maxLength={200}
-                required
-                aria-label="Título"
-              />
-              <textarea
-                value={editConteudo}
-                onChange={(e) => setEditConteudo(e.target.value)}
-                className={styles.campo}
-                rows={8}
-                required
-                aria-label="Conteúdo"
-              />
-              <div className={styles.formAcoes}>
-                <button type="button" className={styles.acaoTexto} onClick={() => setEditando(false)}>
-                  Cancelar
-                </button>
-                <button type="submit" className={styles.btnPrimario} disabled={salvando}>
-                  {salvando ? "Salvando..." : "Salvar"}
-                </button>
-              </div>
-            </form>
+            <FormPergunta
+              titulo={topico.titulo}
+              conteudo={conteudo}
+              onCancelar={() => setEditando(false)}
+              onSalvar={salvarEdicao}
+            />
           ) : (
-            <div className={styles.corpo}>
-              {conteudo ? paragrafos(conteudo).map((p, i) => <p key={i}>{p}</p>) : <p>Pergunta sem descrição.</p>}
-            </div>
-          )}
-
-          {!editando && (
             <>
+              <CorpoPergunta topico={topico} />
+
               <div className={styles.rodape}>
                 <Votos topico={topico} user={user} votando={votando} onVotar={(tipo) => onVotar(topico.id, tipo)} />
 
-                {/* [R1] Só o autor vê Editar/Excluir */}
-                {autor && (
-                  <div className={styles.acoesAutor}>
-                    <button type="button" className={styles.acaoTexto} onClick={iniciarEdicao}>
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      className={`${styles.acaoTexto} ${styles.acaoPerigo}`}
-                      onClick={() => onExcluir(topico.id)}
-                    >
-                      Excluir
-                    </button>
-                  </div>
-                )}
+                <div className={styles.acoesAutor}>
+                  {/* Endereço próprio da pergunta, para compartilhar ou ler com todas as respostas */}
+                  <Link href={`/forum/${topico.id}`} className={styles.acaoTexto}>
+                    Página da pergunta
+                  </Link>
+                  {/* [R1] Só o autor vê Editar/Excluir */}
+                  {autor && <AcoesAutor onEditar={() => setEditando(true)} onExcluir={() => onExcluir(topico.id)} />}
+                </div>
               </div>
 
               {/* [R2] Até 10 respostas e, se houver mais, o link para a página da pergunta */}
