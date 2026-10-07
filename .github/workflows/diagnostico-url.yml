@@ -19,6 +19,10 @@ on:
         description: "Quantos bytes do FIM de cada resposta imprimir (0 = nenhum; útil em CSV grande)"
         required: false
         default: "0"
+      csv_colunas:
+        description: "Se a resposta for CSV: colunas (separadas por vírgula) cujas contagens de valores imprimir"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -33,6 +37,7 @@ jobs:
           URLS: ${{ inputs.urls }}
           BYTES: ${{ inputs.bytes }}
           CAUDA: ${{ inputs.cauda }}
+          CSV_COLUNAS: ${{ inputs.csv_colunas }}
         run: |
           for url in $URLS; do
             echo "=================================================================="
@@ -46,6 +51,32 @@ jobs:
             if [ "${CAUDA:-0}" != "0" ]; then
               echo "--- fim do corpo"
               tail -c "$CAUDA" /tmp/b.bin 2>/dev/null | iconv -f utf-8 -t utf-8 -c; echo
+            fi
+            if [ -n "$CSV_COLUNAS" ]; then
+              echo "--- contagens por coluna"
+              python3 - "$CSV_COLUNAS" <<'PY'
+          import collections, csv, sys
+          colunas = [c.strip() for c in sys.argv[1].split(",") if c.strip()]
+          csv.field_size_limit(10**8)
+          with open("/tmp/b.bin", encoding="utf-8-sig", errors="replace", newline="") as f:
+              amostra = f.read(20000); f.seek(0)
+              try:
+                  dialeto = csv.Sniffer().sniff(amostra, delimiters=";,\t|")
+              except csv.Error:
+                  dialeto = csv.excel
+              leitor = csv.DictReader(f, dialect=dialeto)
+              contagens = {c: collections.Counter() for c in colunas}
+              linhas = 0
+              for linha in leitor:
+                  linhas += 1
+                  for c in colunas:
+                      contagens[c][(linha.get(c) or "").strip()[:80]] += 1
+          print(f"delimitador={dialeto.delimiter!r} linhas={linhas} colunas={leitor.fieldnames}")
+          for c in colunas:
+              print(f"\n[{c}] {len(contagens[c])} valores distintos; os 40 mais comuns:")
+              for valor, n in contagens[c].most_common(40):
+                  print(f"  {n:8d}  {valor!r}")
+          PY
             fi
             rm -f /tmp/h.txt /tmp/b.bin
           done
