@@ -92,6 +92,20 @@ A aba **Projetos Acadêmicos** lista, além dos projetos cadastrados pelos profe
   UNIRIO_DETALHES=completo python -m jobs.sync_unirio   # relê todos os detalhes (~2 h)
   ```
 
+**Sync com a UFV**
+
+* Fonte: portal de dados abertos da Universidade Federal de Viçosa ([dados.ufv.br](https://dados.ufv.br/dataset/projetos-e-programas-de-extensao)), conjunto "Projetos e programas de extensão". `backend/jobs/sync_ufv.py` consulta a API DataStore do CKAN com SQL e pede só os projetos e programas em execução hoje (início no passado e término no futuro), em páginas de 200. São duas ou três requisições e a execução termina em segundos, sem raspar páginas.
+* O conjunto de projetos de pesquisa da UFV também está no portal, mas os dados param em 2010, então só a extensão é coletada.
+* Grava com `origem: "ufv"`, `instituicao: "UFV"`, `modulo: "extensao"` e chave natural em `chave_ufv`. O coordenador vem da lista de envolvidos (quem coordena no período atual). O conjunto não traz e-mail nem departamento: para receber candidaturas, cadastre o contato manualmente (abaixo). A área CNPq fica em `area_cnpq`.
+* Projetos da UFV que saem da consulta (terminaram) ficam `ativo: false`. Uma consulta vazia ou com erro é falha e não desativa nada.
+* Agendamento: toda segunda às 10:30 UTC (`.github/workflows/sync-ufv.yml`), com modos `sync` e `dry-run` na execução manual.
+
+  ```bash
+  cd backend
+  python -m jobs.sync_ufv --dry-run
+  python -m jobs.sync_ufv
+  ```
+
 **Projeto sem e-mail de contato**
 
 O e-mail vem da página de detalhe da fonte (SIGAA ou portal da UNIRIO). Quando não vier (ou não for o endereço certo), cadastre o contato manualmente — ele tem prioridade e nunca é sobrescrito pelo sync:

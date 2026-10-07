@@ -23,5 +23,6 @@ class Fonte:
 
 SIGAA = Fonte("sigaa", "UNIR", "SIGAA/UNIR", "chave_sigaa", "sigaa_id")
 UNIRIO = Fonte("unirio", "UNIRIO", "Portais da UNIRIO", "chave_unirio", "unirio_id")
+UFV = Fonte("ufv", "UFV", "Dados abertos da UFV", "chave_ufv", "ufv_id")
 
-FONTES = {f.origem: f for f in (SIGAA, UNIRIO)}
+FONTES = {f.origem: f for f in (SIGAA, UNIRIO, UFV)}

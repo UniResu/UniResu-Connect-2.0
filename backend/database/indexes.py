@@ -40,6 +40,13 @@ async def criar_indices(db) -> None:
         [("origem", ASCENDING), ("modulo", ASCENDING), ("unirio_id", ASCENDING)],
         name="unirio_id_por_modulo",
     )
+    # Chave natural dos projetos da UFV (dados abertos).
+    await db.projetos.create_index(
+        [("chave_ufv", ASCENDING)],
+        name="uniq_chave_ufv",
+        unique=True,
+        partialFilterExpression={"origem": "ufv"},
+    )
     await db.projetos.create_index(
         [("ativo", ASCENDING), ("instituicao", ASCENDING), ("modulo", ASCENDING), ("unidade", ASCENDING)],
         name="listagem_filtros_v2",

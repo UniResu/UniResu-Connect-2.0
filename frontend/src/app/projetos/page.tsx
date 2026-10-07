@@ -64,6 +64,7 @@ function unidadesVisiveis(inst: InstituicaoFiltro, modulo: string) {
 const FONTE_NOME: Record<string, string> = {
   sigaa: "SIGAA",
   unirio: "Portal da UNIRIO",
+  ufv: "sistema de extensão da UFV",
 };
 
 const PAGE_SIZE = 20;
