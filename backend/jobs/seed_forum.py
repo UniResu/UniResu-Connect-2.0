@@ -2,9 +2,9 @@
 Seed do fórum: perguntas frequentes da vida acadêmica, publicadas pelo
 usuário de sistema "Equipe UniResu" (@uniresu).
 
-Como o fórum não tem respostas (regra de negócio), cada pergunta traz no
-próprio corpo um texto que funciona como entrada de FAQ: o estudante que
-chega com a mesma dúvida já sai com a resposta.
+Cada pergunta traz no próprio corpo um texto que funciona como entrada de
+FAQ: o estudante que chega com a mesma dúvida já sai com a resposta, sem
+depender das respostas que a comunidade publicar depois.
 
 Idempotente: cada tópico leva `seed: "forum_v1"` e uma `seed_chave` estável;
 só entram os que ainda não existem. Tópicos já gravados nunca são
@@ -410,6 +410,7 @@ def montar_topico(pergunta: Dict[str, Any], autor_id: str, agora: datetime) -> D
         "visualizacoes": 0,
         "likes": [],
         "dislikes": [],
+        "total_respostas": 0,
         "seed": SEED_VERSAO,
         "seed_chave": pergunta["seed_chave"],
     }

@@ -1,4 +1,4 @@
-/* Fórum — lista de perguntas em estilo thread, ultraminimalista.
+/* Fórum: lista de perguntas em estilo thread, ultraminimalista.
    Sem cartões nem sombras: linhas separadas por filetes, tipografia legível,
    cores e espaçamentos vindos das variáveis de globals.css. */
 
@@ -332,7 +332,111 @@
 
 .acoesAutor {
   display: inline-flex;
+  align-items: center;
   gap: var(--space-md);
+}
+
+/* ── Respostas: um único nível abaixo da pergunta ── */
+
+.respostas {
+  max-width: 720px;
+  margin-top: var(--space-lg);
+}
+
+.respostasTitulo {
+  margin: 0 0 var(--space-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* O filete à esquerda marca o subnível; como não há resposta de resposta,
+   ele nunca se repete para dentro. */
+.listaRespostas {
+  list-style: none;
+  margin: 0 0 var(--space-md);
+  padding-left: var(--space-md);
+  border-left: 2px solid var(--border);
+}
+
+.resposta { padding: var(--space-xs) 0 var(--space-md); }
+.resposta + .resposta {
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--border-light);
+}
+
+.respostaCabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+.respostaMeta { margin-top: 0; }
+
+.respostaTexto {
+  margin-top: var(--space-xs);
+  font-size: var(--font-size-base);
+  line-height: 1.65;
+  color: var(--text-primary);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.verTodas {
+  display: inline-block;
+  margin-bottom: var(--space-md);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.respostasAviso {
+  margin: var(--space-sm) 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.formResposta {
+  display: grid;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+/* ── Página da pergunta (/forum/[id]) ── */
+
+.voltar {
+  display: inline-block;
+  margin-bottom: var(--space-lg);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.perguntaTitulo {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+/* Separa a lista de respostas da pergunta, que na página ocupa o topo. */
+.secaoRespostas {
+  margin-top: var(--space-xl);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--border);
+}
+
+.naoEncontrada {
+  padding: var(--space-2xl) 0;
+  text-align: center;
+  color: var(--text-secondary);
+}
+.naoEncontrada h1 {
+  margin-bottom: var(--space-sm);
+  font-size: var(--font-size-xl);
+  color: var(--text-primary);
 }
 
 /* ── Vazio e carregando ── */
@@ -369,5 +473,6 @@
   .page { padding-top: var(--space-xl); }
   .cabecalho { align-items: flex-start; }
   .linhaTitulo { font-size: var(--font-size-base); }
+  .perguntaTitulo { font-size: var(--font-size-xl); }
   .rodape { align-items: flex-start; flex-direction: column; }
 }

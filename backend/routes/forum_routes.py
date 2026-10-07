@@ -1,6 +1,10 @@
 """
-Rotas do fórum — tópicos (perguntas) com reações (Like/Dislike).
-Comentários/respostas foram removidos conforme nova regra de negócio.
+Rotas do fórum: tópicos (perguntas) com reações (Like/Dislike) e respostas.
+
+Respostas têm um único nível: respondem ao tópico, nunca a outra resposta.
+Ficam na collection `respostas_forum` ({topico_id, autor_id, conteudo,
+data_criacao, editado_em?}) e o tópico guarda o contador `total_respostas`,
+atualizado com `$inc` ao criar e ao excluir uma resposta.
 
 Privacidade: nenhuma resposta desta API contém e-mail. O autor aparece como
 `autor_username` + `autor_nome`, resolvidos a partir de `autor_id` com UMA
@@ -10,12 +14,21 @@ Rotas protegidas usam Depends(get_usuario_com_perfil_completo) para autenticaç�
 """
 
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from typing import List, Dict, Any, Optional
 from bson import ObjectId
 from pymongo import ReturnDocument
 from database.connection import Database
-from models.forum_model import TopicoCreate, TopicoUpdate, TopicoResponse
+from models.forum_model import (
+    RespostaCreate,
+    RespostaResponse,
+    RespostasPagina,
+    RespostaUpdate,
+    TopicoCreate,
+    TopicoDetalhe,
+    TopicoResponse,
+    TopicoUpdate,
+)
 from auth.autenticacao import get_usuario_com_perfil_completo
 
 router = APIRouter()
@@ -24,6 +37,11 @@ router = APIRouter()
 # (tópicos legados, só com e-mail, ou conta apagada).
 AUTOR_DESCONHECIDO_USERNAME = "usuario"
 AUTOR_DESCONHECIDO_NOME = "Usuário"
+
+# Respostas devolvidas junto com o tópico (a thread aberta em /forum mostra
+# até 10) e tamanho máximo de uma página de respostas (/forum/[id] carrega 50).
+RESPOSTAS_NA_THREAD = 10
+RESPOSTAS_POR_PAGINA_MAX = 50
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
@@ -49,6 +67,19 @@ def formatar_topico(doc: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     doc["dislikes"] = _lista_de_ids(doc.get("dislikes"))
     doc.setdefault("autor_username", AUTOR_DESCONHECIDO_USERNAME)
     doc.setdefault("autor_nome", AUTOR_DESCONHECIDO_NOME)
+    # Tópicos criados antes das respostas não têm o contador.
+    doc["total_respostas"] = max(int(doc.get("total_respostas") or 0), 0)
+    return doc
+
+
+def formatar_resposta(doc: Dict[str, Any]) -> Dict[str, Any]:
+    """Mesma ideia de `formatar_topico`: `_id` vira `id` e e-mail nunca sai."""
+    doc = dict(doc)
+    if "_id" in doc:
+        doc["id"] = str(doc.pop("_id"))
+    doc.pop("autor_email", None)
+    doc.setdefault("autor_username", AUTOR_DESCONHECIDO_USERNAME)
+    doc.setdefault("autor_nome", AUTOR_DESCONHECIDO_NOME)
     return doc
 
 
@@ -57,7 +88,7 @@ def nome_de_exibicao(usuario: Dict[str, Any]) -> str:
 
 
 async def anexar_autores(db, docs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Preenche `autor_username`/`autor_nome` em cada tópico, in place.
+    """Preenche `autor_username`/`autor_nome` em cada tópico ou resposta, in place.
 
     Uma única `find` com `$in` sobre os `autor_id` válidos (projeção mínima:
     username, nome, nome_social). Quem não for encontrado recebe os rótulos
@@ -95,6 +126,28 @@ async def responder_topico(db, doc: Dict[str, Any]) -> Dict[str, Any]:
     return formatar_topico(doc)
 
 
+async def responder_resposta(db, doc: Dict[str, Any]) -> Dict[str, Any]:
+    """Uma única resposta do fórum: resolve o autor e formata."""
+    await anexar_autores(db, [doc])
+    return formatar_resposta(doc)
+
+
+async def buscar_respostas(db, topico_id: str, limite: int, pular: int = 0) -> List[Dict[str, Any]]:
+    """Respostas de um tópico, da mais antiga para a mais nova.
+
+    O `_id` desempata respostas gravadas no mesmo milissegundo, para que a
+    paginação com `pular` não repita nem perca nenhuma.
+    """
+    if limite <= 0:
+        return []
+    cursor = (
+        db.respostas_forum.find({"topico_id": topico_id})
+        .sort([("data_criacao", 1), ("_id", 1)])
+        .skip(pular)
+        .limit(limite)
+    )
+    return await cursor.to_list(length=limite)
+
 def extrair_id_usuario(usuario_logado: Any) -> str:
     """Obtém o ID do usuário autenticado de forma segura.
 
@@ -128,13 +181,14 @@ def extrair_email_usuario(usuario_logado: Any) -> str:
     return getattr(usuario_logado, "email", "") or ""
 
 
-def eh_autor(topico: Dict[str, Any], usuario_logado: Any) -> bool:
-    """Autoria por `autor_id`; e-mail só como fallback de docs legados."""
+def eh_autor(doc: Dict[str, Any], usuario_logado: Any) -> bool:
+    """Autoria (de tópico ou resposta) por `autor_id`; e-mail só como fallback
+    de tópicos legados (respostas nunca gravam e-mail)."""
     id_logado = extrair_id_usuario(usuario_logado)
     email_logado = extrair_email_usuario(usuario_logado)
     return bool(
-        (id_logado and str(topico.get("autor_id", "")) == id_logado)
-        or (email_logado and topico.get("autor_email") == email_logado)
+        (id_logado and str(doc.get("autor_id", "")) == id_logado)
+        or (email_logado and doc.get("autor_email") == email_logado)
     )
 
 
@@ -143,6 +197,24 @@ def _object_id(topico_id: str) -> ObjectId:
         return ObjectId(topico_id)
     except Exception:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="ID inválido.")
+
+
+async def _exigir_topico(db, oid: ObjectId) -> None:
+    if not await db.topicos_forum.find_one({"_id": oid}, {"_id": 1}):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tópico não encontrado.")
+
+
+async def _resposta_do_autor(db, resposta_id: str, usuario_logado: Any, acao: str) -> Dict[str, Any]:
+    """Carrega a resposta e confere a autoria (404 se não existe, 403 se é de outra pessoa)."""
+    resposta = await db.respostas_forum.find_one({"_id": _object_id(resposta_id)})
+    if not resposta:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resposta não encontrada.")
+    if not eh_autor(resposta, usuario_logado):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Apenas o autor pode {acao} esta resposta.",
+        )
+    return resposta
 
 
 # ── Rotas ───────────────────────────────────────────────────────────────────
@@ -163,11 +235,16 @@ async def listar_topicos():
         )
 
 
-@router.get("/forum/topicos/{topico_id}", response_model=TopicoResponse)
-async def obter_topico(topico_id: str):
-    """Devolve um tópico e conta uma visualização (rota pública).
+@router.get("/forum/topicos/{topico_id}", response_model=TopicoDetalhe)
+async def obter_topico(
+    topico_id: str,
+    limite_respostas: int = Query(RESPOSTAS_NA_THREAD, ge=0, le=RESPOSTAS_POR_PAGINA_MAX),
+):
+    """Devolve um tópico com as primeiras respostas e conta uma visualização
+    (rota pública).
 
-    O `$inc` é atômico no servidor: duas aberturas simultâneas somam 2.
+    O `$inc` é atômico no servidor: duas aberturas simultâneas somam 2. Os
+    autores do tópico e das respostas saem da mesma consulta em lote.
     """
     db = Database.get_db()
     oid = _object_id(topico_id)
@@ -178,7 +255,11 @@ async def obter_topico(topico_id: str):
     )
     if not topico:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tópico não encontrado.")
-    return await responder_topico(db, topico)
+    respostas = await buscar_respostas(db, str(oid), limite_respostas)
+    await anexar_autores(db, [topico, *respostas])
+    detalhe = formatar_topico(topico)
+    detalhe["respostas"] = [formatar_resposta(r) for r in respostas]
+    return detalhe
 
 
 @router.post(
@@ -204,6 +285,7 @@ async def criar_topico(
         # Reações: listas de IDs de usuários para garantir 1 voto por usuário
         "likes": [],
         "dislikes": [],
+        "total_respostas": 0,
     }
 
     try:
@@ -264,7 +346,7 @@ async def excluir_topico(
     topico_id: str,
     usuario_logado: dict = Depends(get_usuario_com_perfil_completo),
 ):
-    """Exclui um tópico. Apenas o autor pode excluir."""
+    """Exclui um tópico e as respostas dele. Apenas o autor pode excluir."""
     db = Database.get_db()
     oid = _object_id(topico_id)
 
@@ -279,6 +361,7 @@ async def excluir_topico(
         )
 
     await db.topicos_forum.delete_one({"_id": oid})
+    await db.respostas_forum.delete_many({"topico_id": str(oid)})
 
 
 @router.post("/forum/topicos/{topico_id}/reagir", response_model=TopicoResponse)
@@ -334,3 +417,105 @@ async def reagir_topico(
 
     topico_atualizado = await db.topicos_forum.find_one({"_id": oid})
     return await responder_topico(db, topico_atualizado)
+
+
+# ── Respostas ───────────────────────────────────────────────────────────────
+
+@router.get("/forum/topicos/{topico_id}/respostas", response_model=RespostasPagina)
+async def listar_respostas(
+    topico_id: str,
+    limite: int = Query(RESPOSTAS_NA_THREAD, ge=1, le=RESPOSTAS_POR_PAGINA_MAX),
+    pular: int = Query(0, ge=0),
+):
+    """Uma página de respostas de um tópico, da mais antiga para a mais nova,
+    com o total do tópico (rota pública)."""
+    db = Database.get_db()
+    oid = _object_id(topico_id)
+    await _exigir_topico(db, oid)
+
+    total = await db.respostas_forum.count_documents({"topico_id": str(oid)})
+    respostas = await buscar_respostas(db, str(oid), limite, pular)
+    await anexar_autores(db, respostas)
+    return {"total": total, "respostas": [formatar_resposta(r) for r in respostas]}
+
+
+@router.post(
+    "/forum/topicos/{topico_id}/respostas",
+    response_model=RespostaResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def criar_resposta(
+    topico_id: str,
+    dados: RespostaCreate,
+    usuario_logado: dict = Depends(get_usuario_com_perfil_completo),
+):
+    """Responde a um tópico (requer perfil completo). O conteúdo chega sem os
+    espaços das pontas e com 1 a 5.000 caracteres (validado no modelo)."""
+    db = Database.get_db()
+    oid = _object_id(topico_id)
+
+    autor_id = extrair_id_usuario(usuario_logado)
+    if not autor_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Não foi possível identificar o usuário autenticado.",
+        )
+
+    await _exigir_topico(db, oid)
+
+    # Só `autor_id`, como nos tópicos: o e-mail não é gravado na resposta.
+    nova = {
+        "topico_id": str(oid),
+        "autor_id": autor_id,
+        "conteudo": dados.conteudo,
+        "data_criacao": datetime.now(timezone.utc),
+    }
+    resultado = await db.respostas_forum.insert_one(nova)
+    nova["_id"] = resultado.inserted_id
+
+    contado = await db.topicos_forum.update_one({"_id": oid}, {"$inc": {"total_respostas": 1}})
+    if contado.matched_count == 0:
+        # O tópico foi excluído entre a checagem e o insert: a resposta não fica órfã.
+        await db.respostas_forum.delete_one({"_id": resultado.inserted_id})
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tópico não encontrado.")
+
+    return await responder_resposta(db, nova)
+
+
+@router.patch("/forum/respostas/{resposta_id}", response_model=RespostaResponse)
+async def editar_resposta(
+    resposta_id: str,
+    dados: RespostaUpdate,
+    usuario_logado: dict = Depends(get_usuario_com_perfil_completo),
+):
+    """Substitui o texto de uma resposta. Apenas o autor pode editar."""
+    db = Database.get_db()
+    resposta = await _resposta_do_autor(db, resposta_id, usuario_logado, "editar")
+
+    atualizada = await db.respostas_forum.find_one_and_update(
+        {"_id": resposta["_id"]},
+        {"$set": {"conteudo": dados.conteudo, "editado_em": datetime.now(timezone.utc)}},
+        return_document=ReturnDocument.AFTER,
+    )
+    if not atualizada:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resposta não encontrada.")
+    return await responder_resposta(db, atualizada)
+
+
+@router.delete("/forum/respostas/{resposta_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def excluir_resposta(
+    resposta_id: str,
+    usuario_logado: dict = Depends(get_usuario_com_perfil_completo),
+):
+    """Exclui uma resposta e desconta do tópico. Apenas o autor pode excluir."""
+    db = Database.get_db()
+    resposta = await _resposta_do_autor(db, resposta_id, usuario_logado, "excluir")
+
+    removida = await db.respostas_forum.delete_one({"_id": resposta["_id"]})
+    # Só quem de fato removeu desconta: dois DELETEs simultâneos tiram 1, não 2.
+    topico_id = str(resposta.get("topico_id") or "")
+    if removida.deleted_count and ObjectId.is_valid(topico_id):
+        await db.topicos_forum.update_one(
+            {"_id": ObjectId(topico_id), "total_respostas": {"$gt": 0}},
+            {"$inc": {"total_respostas": -1}},
+        )
