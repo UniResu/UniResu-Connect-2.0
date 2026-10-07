@@ -56,6 +56,19 @@
 .btnPrimario:hover:not(:disabled) { background: var(--primary-dark); }
 .btnPrimario:disabled { opacity: 0.6; cursor: not-allowed; }
 
+.btnSecundario {
+  padding: 0.3rem var(--space-sm);
+  background: none;
+  color: var(--primary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  border: 1px solid var(--primary-200);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.btnSecundario:hover { background: var(--primary-50); }
+
 /* Ações discretas em texto (Editar, Excluir, Cancelar) */
 .acaoTexto {
   background: none;
@@ -202,6 +215,9 @@
   color: var(--primary);
   text-align: left;
   cursor: pointer;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .linhaCabecalho:hover .linhaTituloBtn { text-decoration: underline; }
 .linhaTituloBtn:focus-visible {
@@ -216,6 +232,7 @@
   font-size: var(--font-size-sm);
   line-height: 1.5;
   color: var(--text-secondary);
+  overflow-wrap: anywhere;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -223,16 +240,23 @@
 }
 
 /* Linha de meta: itens separados por um filete vertical fino */
+/* Separador vertical entre os itens. Todo item tem a borda à esquerda e o
+   container é deslocado para a esquerda com overflow: hidden: o filete do
+   primeiro item de cada linha fica fora da área visível, inclusive quando a
+   meta quebra em duas linhas no celular. */
 .meta {
   display: flex;
   flex-wrap: wrap;
+  column-gap: 0.6rem;
+  row-gap: 0.1rem;
   margin-top: var(--space-sm);
+  margin-left: calc(-0.6rem - 1px);
+  overflow: hidden;
   font-size: var(--font-size-xs);
   line-height: 1.6;
   color: var(--text-muted);
 }
-.metaItem + .metaItem {
-  margin-left: 0.6rem;
+.metaItem {
   padding-left: 0.6rem;
   border-left: 1px solid var(--border);
 }

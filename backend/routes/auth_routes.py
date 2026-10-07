@@ -122,8 +122,15 @@ async def sincronizar_orcid(
 @router.get("/auth/verificar-email")
 async def verificar_email(token: str = Query(..., min_length=1)):
     """Verifica o token recebido no e-mail e ativa a conta do usuário."""
-    await verificar_email_controller(token)
-    return {"message": "E-mail verificado com sucesso! Você já pode fazer login."}
+    resultado = await verificar_email_controller(token)
+    if resultado.get("mesclada"):
+        mensagem = ("E-mail confirmado! Esse e-mail já tinha uma conta na plataforma, e o seu ORCID foi "
+                    "vinculado a ela. Entre com o botão \"Entrar com ORCID\" ou com a sua senha.")
+    elif resultado.get("orcid"):
+        mensagem = "E-mail confirmado! Sua conta entra pelo botão \"Entrar com ORCID\"."
+    else:
+        mensagem = "E-mail verificado com sucesso! Você já pode fazer login."
+    return {"message": mensagem, **resultado}
 
 
 @router.post("/auth/reenviar-verificacao")

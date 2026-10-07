@@ -87,8 +87,10 @@ async def registrar_usuario_controller(user: UsuarioCreate) -> Dict[str, Any]:
     """
     db = Database.get_db()
 
-    # Verificar unicidade do email (sem distinção de maiúsculas)
-    usuario_existente = await db.usuarios.find_one(filtro_email(user.email))
+    # Verificar unicidade do email (sem distinção de maiúsculas), inclusive
+    # e-mails que uma conta do ORCID informou e ainda não confirmou.
+    usuario_existente = await db.usuarios.find_one(
+        {"$or": [filtro_email(user.email), filtro_email(user.email, "email_pendente")]})
     if usuario_existente:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -347,17 +349,24 @@ async def _enviar_email_verificacao(email: str, nome: str, token: str) -> None:
         )
 
 
-async def verificar_email_controller(token: str) -> bool:
+async def verificar_email_controller(token: str) -> Dict[str, Any]:
     """Valida o token de verificação e ativa a conta do usuário.
 
-    Args:
-        token: Token recebido via link no e-mail.
+    Três casos:
+      - registro por e-mail/senha: marca `email_verificado` e libera o login;
+      - conta do ORCID confirmando o e-mail institucional informado em
+        /perfil/completar: o e-mail pendente substitui o provisório;
+      - conta do ORCID cujo e-mail pendente pertence a uma conta por senha
+        já existente: clicar no link prova a posse da caixa postal, então o
+        ORCID é vinculado à conta existente e a provisória é desativada
+        (candidaturas e tópicos feitos pela provisória passam para ela).
 
     Returns:
-        True se a verificação foi bem-sucedida.
+        {"orcid": bool, "mesclada": bool} para a mensagem da página.
 
     Raises:
-        HTTPException 400: Se o token for inválido ou expirado.
+        HTTPException 400: token inválido/expirado, ou e-mail pendente que
+        já pertence a outra conta do ORCID.
     """
     db = Database.get_db()
     agora = datetime.now(timezone.utc)
@@ -373,14 +382,16 @@ async def verificar_email_controller(token: str) -> bool:
             detail="O link de confirmação é inválido ou expirou.",
         )
 
+    tem_orcid = bool((usuario.get("orcid") or {}).get("orcid_id"))
     campos = {"email_verificado": True, "atualizado_em": agora}
 
-    # Conta do ORCID confirmando o e-mail institucional informado em
-    # /perfil/completar: só agora ele substitui o provisório. Alguém pode ter
-    # registrado o mesmo e-mail nesse meio-tempo, por isso a checagem aqui.
     pendente = usuario.get("email_pendente")
     if pendente:
-        if await db.usuarios.find_one({**filtro_email(pendente), "_id": {"$ne": usuario["_id"]}}):
+        outra = await db.usuarios.find_one({**filtro_email(pendente), "_id": {"$ne": usuario["_id"]}})
+        if outra is not None:
+            if tem_orcid and not (outra.get("orcid") or {}).get("orcid_id"):
+                await _vincular_orcid_a_conta_existente(db, provisoria=usuario, destino=outra, agora=agora)
+                return {"orcid": True, "mesclada": True}
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Este e-mail já está cadastrado em outra conta.",
@@ -396,11 +407,45 @@ async def verificar_email_controller(token: str) -> bool:
                 "token_verificacao_email": "",
                 "token_verificacao_expira": "",
                 "email_pendente": "",
+                "email_pendente_vincula": "",
             },
         },
     )
 
-    return True
+    return {"orcid": tem_orcid, "mesclada": False}
+
+
+async def _vincular_orcid_a_conta_existente(db, provisoria: Dict[str, Any], destino: Dict[str, Any],
+                                            agora: datetime) -> None:
+    """Move o ORCID da conta provisória para a conta por senha dona do e-mail
+    e desativa a provisória. O que a provisória produziu (candidaturas,
+    tópicos do fórum) passa a pertencer à conta de destino."""
+    id_prov, id_dest = provisoria["_id"], destino["_id"]
+    campos_destino: Dict[str, Any] = {
+        "orcid": provisoria["orcid"],
+        # Clicar no link prova a posse do e-mail da conta de destino também.
+        "email_verificado": True,
+        "atualizado_em": agora,
+        "ultimo_login": agora,
+    }
+    # Dados que a conta de destino ainda não tinha e a provisória trouxe do ORCID.
+    for campo in ("instituicao", "avatar_url", "bio"):
+        if not destino.get(campo) and provisoria.get(campo):
+            campos_destino[campo] = provisoria[campo]
+    await db.usuarios.update_one({"_id": id_dest}, {"$set": campos_destino})
+
+    await db.candidaturas.update_many({"usuario_id": str(id_prov)}, {"$set": {"usuario_id": str(id_dest)}})
+    await db.topicos_forum.update_many({"autor_id": str(id_prov)}, {"$set": {"autor_id": str(id_dest)}})
+
+    await db.usuarios.update_one(
+        {"_id": id_prov},
+        {
+            "$set": {"ativo": False, "mesclada_em": id_dest, "atualizado_em": agora},
+            "$unset": {"orcid": "", "email_pendente": "", "email_pendente_vincula": "",
+                       "token_verificacao_email": "", "token_verificacao_expira": ""},
+        },
+    )
+    logger.info("ORCID vinculado à conta existente %s; conta provisória %s desativada.", id_dest, id_prov)
 
 
 async def reenviar_verificacao_controller(email: str) -> None:
@@ -413,15 +458,16 @@ async def reenviar_verificacao_controller(email: str) -> None:
     # e ainda não confirmado.
     usuario = await db.usuarios.find_one({"$or": [filtro_email(email), filtro_email(email, "email_pendente")]})
 
+    # Resposta sempre igual (a rota devolve 200 genérico): e-mail desconhecido,
+    # já verificado ou provisório do ORCID não geram envio nem erro distinto,
+    # para a rota não servir de oráculo de quais e-mails têm conta.
     if not usuario:
-        return  # Retorno silencioso (segurança)
+        return
 
     pendente = (usuario.get("email_pendente") or "").lower() == email.strip().lower()
     if usuario.get("email_verificado", True) and not pendente:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Este e-mail já foi verificado.",
-        )
+        logger.info("Reenvio de verificação ignorado: e-mail já verificado.")
+        return
 
     # Gerar novo token
     novo_token = secrets.token_urlsafe(48)

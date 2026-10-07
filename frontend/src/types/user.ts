@@ -61,6 +61,10 @@ export interface User {
   email: string;
   /** E-mail institucional informado por uma conta do ORCID e ainda não confirmado pelo link enviado. */
   email_pendente?: string | null;
+  /** O e-mail pendente já tem conta por senha: ao confirmar, o ORCID é vinculado a ela. */
+  email_pendente_vincula?: boolean;
+  aceite_regras?: boolean;
+  aceite_dados?: boolean;
   /** Identificador público (ex.: "matheus-gabriel"); é o que o fórum exibe no lugar do e-mail. */
   username?: string;
   nome: string;

@@ -14,13 +14,15 @@ const LINKS = [
 ];
 
 export default function Navbar() {
-  const { user, isAuthenticated, logout } = useAuth();
   const pathname = usePathname();
-  // O menu mobile guarda a rota em que foi aberto: ao navegar, fecha sozinho
-  // (derivado no render, sem efeito).
-  const [menuAbertoEm, setMenuAbertoEm] = useState<string | null>(null);
-  const menuOpen = menuAbertoEm === pathname;
-  const setMenuOpen = (aberto: boolean) => setMenuAbertoEm(aberto ? pathname : null);
+  // O menu mobile vive em um componente remontado a cada rota (key): ao
+  // navegar, por link, redirect ou botão voltar/avançar, ele nasce fechado.
+  return <NavbarConteudo key={pathname} />;
+}
+
+function NavbarConteudo() {
+  const { user, isAuthenticated, logout } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -40,17 +42,25 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Menu mobile: fecha com Esc e trava a rolagem enquanto aberto.
+  // Menu mobile: fecha com Esc, trava a rolagem enquanto aberto e fecha se a
+  // tela passar à largura de desktop (onde o menu e o hambúrguer somem pelo
+  // CSS; sem isto a trava de rolagem ficaria presa).
   useEffect(() => {
     if (!menuOpen) return;
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setMenuAbertoEm(null);
+      if (e.key === "Escape") setMenuOpen(false);
+    }
+    const desktop = window.matchMedia("(min-width: 769px)");
+    function handleDesktop(e: MediaQueryListEvent) {
+      if (e.matches) setMenuOpen(false);
     }
     document.addEventListener("keydown", handleKey);
+    desktop.addEventListener("change", handleDesktop);
     const overflowAnterior = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", handleKey);
+      desktop.removeEventListener("change", handleDesktop);
       document.body.style.overflow = overflowAnterior;
     };
   }, [menuOpen]);

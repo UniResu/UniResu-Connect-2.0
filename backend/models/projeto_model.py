@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Dict, List, Optional
 
 
@@ -7,7 +7,9 @@ class ProjetoCreate(BaseModel):
     titulo: str
     descricao: str
     modalidade: Optional[str] = "Presencial"
-    instituicao: Optional[str] = None
+    # Mesmo limite do filtro `instituicao` de /projetos/buscar: o que entra
+    # aqui aparece como opção de filtro e precisa ser aceito pela busca.
+    instituicao: Optional[str] = Field(None, max_length=200)
     local: Optional[str] = None
     area_estudo: Optional[str] = None
     tipo_projeto: Optional[str] = "voluntario_aberto"

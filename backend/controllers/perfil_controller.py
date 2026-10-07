@@ -123,14 +123,18 @@ async def atualizar_perfil_controller(
     update_fields: Dict[str, Any] = {}
     agora = datetime.now(timezone.utc)
 
-    dados_dict = dados.model_dump(exclude_none=True)
+    # `exclude_unset`: distingue "não enviado" (mantém) de "enviado como null"
+    # (limpa o campo). Antes os null eram descartados e apagar um campo no
+    # formulário não tinha efeito.
+    dados_dict = dados.model_dump(exclude_unset=True)
+    LIMPAVEIS = {"nome_social", "bio", "avatar_url", "instituicao", "curso", "departamento"}
+    dados_dict = {
+        k: v for k, v in dados_dict.items()
+        if v is not None or k in LIMPAVEIS or k in DADOS_POR_PAPEL.values()
+    }
 
-    # Campos simples (sobrescrevem direto)
-    campos_simples = [
-        "nome", "nome_social", "bio", "avatar_url",
-        "instituicao", "curso", "departamento",
-        "interesses", "habilidades",
-    ]
+    # Campos simples (sobrescrevem direto; null limpa os limpáveis)
+    campos_simples = ["nome", *LIMPAVEIS, "interesses", "habilidades"]
     for campo in campos_simples:
         if campo in dados_dict:
             update_fields[campo] = dados_dict[campo]
@@ -143,12 +147,10 @@ async def atualizar_perfil_controller(
         papel = papel.value if hasattr(papel, "value") else str(papel)
         update_fields["papel"] = papel
         campo_dados = DADOS_POR_PAPEL.get(papel)
-        if campo_dados and not atual.get(campo_dados) and campo_dados not in dados_dict:
-            update_fields[campo_dados] = {}
-        elif campo_dados and not atual.get(campo_dados) and campo_dados in dados_dict:
+        if campo_dados and not atual.get(campo_dados):
             # Sub-documento ainda não existe: gravar inteiro (o merge por
             # dot notation abaixo falharia se o valor atual fosse null).
-            update_fields[campo_dados] = dados_dict.pop(campo_dados)
+            update_fields[campo_dados] = dados_dict.pop(campo_dados, None) or {}
 
     # E-mail: só pode ser definido aqui enquanto for o provisório do ORCID.
     # Fica em `email_pendente` até a pessoa confirmar pelo link enviado (mesmo
@@ -166,10 +168,18 @@ async def atualizar_perfil_controller(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
         em_uso = await db.usuarios.find_one(
             {"$or": [filtro_email(novo_email), filtro_email(novo_email, "email_pendente")], "_id": {"$ne": oid}})
-        if em_uso:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Este email já está cadastrado.")
+        vincula = False
+        if em_uso is not None:
+            # Quem já tinha conta por e-mail/senha e entrou pelo ORCID: ao
+            # confirmar o link, o ORCID é vinculado à conta existente (ver
+            # verificar_email_controller). Qualquer outro caso é conflito.
+            dona_sem_orcid = not (em_uso.get("orcid") or {}).get("orcid_id") and not em_uso.get("email_pendente")
+            if not (dona_sem_orcid and (atual.get("orcid") or {}).get("orcid_id")):
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Este email já está cadastrado.")
+            vincula = True
         token = secrets.token_urlsafe(48)
         update_fields["email_pendente"] = novo_email
+        update_fields["email_pendente_vincula"] = vincula
         update_fields["token_verificacao_email"] = token
         update_fields["token_verificacao_expira"] = agora + timedelta(hours=24)
         enviar_verificacao = (novo_email, token)
@@ -202,8 +212,8 @@ async def atualizar_perfil_controller(
 
     # Campos complexos (dados por tipo de perfil) — merge com existente
     for campo_papel in DADOS_POR_PAPEL.values():
-        if campo_papel in dados_dict:
-            # Usar dot notation para merge parcial
+        if dados_dict.get(campo_papel) is not None:
+            # Usar dot notation para merge parcial (null limpa o campo)
             for key, value in dados_dict[campo_papel].items():
                 update_fields[f"{campo_papel}.{key}"] = value
 

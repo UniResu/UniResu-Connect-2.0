@@ -270,6 +270,12 @@ export default function ProjetosPage() {
       router.push("/login");
       return;
     }
+    if (user?.perfil_completo === false) {
+      // Conta do ORCID que ainda não escolheu o vínculo nem aceitou as regras:
+      // a API recusa a candidatura (403) até concluir o perfil.
+      router.push("/perfil/completar");
+      return;
+    }
     if (!selectedProjeto) return;
     if (carta.trim().length < CARTA_MIN) {
       setFormStatus("error");

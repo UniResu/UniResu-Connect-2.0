@@ -209,6 +209,11 @@ class UsuarioResponse(BaseModel):
     # E-mail institucional informado por uma conta do ORCID e ainda não
     # confirmado pelo link enviado; substitui `email` na confirmação.
     email_pendente: Optional[EmailStr] = None
+    # True quando esse e-mail já pertence a uma conta por senha: ao confirmar,
+    # o ORCID é vinculado a ela e esta conta provisória é desativada.
+    email_pendente_vincula: bool = False
+    aceite_regras: bool = False
+    aceite_dados: bool = False
     username: Optional[str] = None           # identificador público (fórum); gerado do nome
     nome: str
     nome_social: Optional[str] = None

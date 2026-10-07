@@ -103,7 +103,9 @@ async def get_usuario_atual(token: str = Depends(oauth2_scheme)) -> dict:
     if usuario is None:
         usuario = await db.usuarios.find_one({"email": email})
 
-    if usuario is None:
+    if usuario is None or usuario.get("ativo") is False:
+        # Conta inexistente ou desativada (ex.: conta provisória do ORCID
+        # mesclada a uma conta já existente).
         raise credentials_exception
 
     # Bloquear acesso de contas com e-mail não verificado
@@ -118,4 +120,22 @@ async def get_usuario_atual(token: str = Depends(oauth2_scheme)) -> dict:
     del usuario["_id"]
     usuario.pop("senha_hash", None)
 
+    return usuario
+
+
+MENSAGEM_PERFIL_INCOMPLETO = (
+    "Complete seu perfil (vínculo institucional, e-mail e aceites) antes de usar este recurso."
+)
+
+
+async def get_usuario_com_perfil_completo(usuario: dict = Depends(get_usuario_atual)) -> dict:
+    """Como `get_usuario_atual`, mas exige o perfil concluído.
+
+    Contas criadas pelo ORCID nascem com `perfil_completo: False` e sem os
+    aceites (regras e compartilhamento de dados). Candidatar-se, publicar no
+    fórum e cadastrar projetos compartilham dados com terceiros, então
+    dependem desses aceites; o frontend manda para /perfil/completar.
+    """
+    if usuario.get("perfil_completo") is False:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=MENSAGEM_PERFIL_INCOMPLETO)
     return usuario

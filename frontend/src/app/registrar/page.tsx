@@ -95,8 +95,9 @@ export default function RegistrarPage() {
         senha,
         papel,
         instituicao: instituicao || null,
-        curso: curso || null,
-        departamento: departamento || null,
+        // só os campos que o vínculo escolhido mostra no formulário
+        curso: papel === "aluno" || papel === "egresso" ? curso || null : null,
+        departamento: papel === "professor" || papel === "pesquisador" ? departamento || null : null,
         aceite_regras: aceiteRegras,
         aceite_dados: aceiteDados,
         ...dadosDoVinculo(),

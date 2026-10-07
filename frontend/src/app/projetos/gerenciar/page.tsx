@@ -86,15 +86,20 @@ export default function GerenciarProjetosPage() {
     }
   }, [token]);
 
+  const perfilIncompleto = user?.perfil_completo === false;
+
   useEffect(() => {
     if (!authLoading && !token) {
       router.push("/login"); // Route Guard Master
+    } else if (perfilIncompleto) {
+      // Conta do ORCID sem vínculo/aceites: a API recusa /projetos/meus (403).
+      router.push("/perfil/completar");
     } else if (token && podeCriar) {
       carregarMeusProjetos();
     } else if (!authLoading) {
       setIsLoading(false);
     }
-  }, [token, podeCriar, authLoading, carregarMeusProjetos, router]);
+  }, [token, podeCriar, perfilIncompleto, authLoading, carregarMeusProjetos, router]);
 
   function abrirFormNovo() {
     setForm(FORM_VAZIO);
@@ -238,6 +243,7 @@ export default function GerenciarProjetosPage() {
                   type="text"
                   className={styles.formInput}
                   value={form.instituicao}
+                  maxLength={200}
                   onChange={(e) => setForm({ ...form, instituicao: e.target.value })}
                 />
               </div>

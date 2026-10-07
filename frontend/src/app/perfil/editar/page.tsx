@@ -2,9 +2,10 @@
 
 import { useState, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
-import { PERFIS, NIVEIS, type TipoPerfil, type DadosTecnico, type DadosEgresso } from "@/lib/perfis";
+import { PERFIS, NIVEIS, type TipoPerfil, emailProvisorio } from "@/lib/perfis";
 import styles from "./editar.module.css";
 
 /**
@@ -26,18 +27,24 @@ export default function EditarPerfilPage() {
   const [interesses, setInteresses] = useState("");
   const [habilidades, setHabilidades] = useState("");
 
-  // Dados específicos por vínculo
+  // Dados específicos por vínculo. Cada sub-documento tem os seus próprios
+  // estados: campos homônimos (titulação, cargo, linhas de pesquisa) não
+  // podem ser compartilhados, senão trocar de vínculo e voltar sobrescreve
+  // os dados do vínculo anterior, que continuam gravados no banco.
   const [nivel, setNivel] = useState("graduacao");
   const [semestre, setSemestre] = useState("1");
   const [orientador, setOrientador] = useState("");
   const [linhaPesquisa, setLinhaPesquisa] = useState("");
-  const [linhasPesquisa, setLinhasPesquisa] = useState("");
+  const [tituloProf, setTituloProf] = useState("");
+  const [cargoProf, setCargoProf] = useState("");
+  const [linhasProf, setLinhasProf] = useState("");
   const [laboratorio, setLaboratorio] = useState("");
-  const [grupoPesquisa, setGrupoPesquisa] = useState("");
-  const [titulo, setTitulo] = useState("");
-  const [cargo, setCargo] = useState("");
+  const [tituloPesq, setTituloPesq] = useState("");
   const [vinculo, setVinculo] = useState("");
+  const [linhasPesq, setLinhasPesq] = useState("");
+  const [grupoPesquisa, setGrupoPesquisa] = useState("");
   const [setor, setSetor] = useState("");
+  const [cargoTec, setCargoTec] = useState("");
   const [anoConclusao, setAnoConclusao] = useState("");
   const [atuacao, setAtuacao] = useState("");
 
@@ -53,7 +60,6 @@ export default function EditarPerfilPage() {
 
   useEffect(() => {
     if (!user) return;
-    const extra = user as typeof user & { dados_tecnico?: DadosTecnico | null; dados_egresso?: DadosEgresso | null };
     setNome(user.nome || "");
     setNomeSocial(user.nome_social || "");
     setBio(user.bio || "");
@@ -71,24 +77,24 @@ export default function EditarPerfilPage() {
       setLinhaPesquisa(user.dados_aluno.linha_pesquisa || "");
     }
     if (user.dados_professor) {
-      setTitulo(user.dados_professor.titulo || "");
-      setCargo(user.dados_professor.cargo || "");
-      setLinhasPesquisa(user.dados_professor.linhas_pesquisa?.join(", ") || "");
+      setTituloProf(user.dados_professor.titulo || "");
+      setCargoProf(user.dados_professor.cargo || "");
+      setLinhasProf(user.dados_professor.linhas_pesquisa?.join(", ") || "");
       setLaboratorio(user.dados_professor.laboratorio || "");
     }
     if (user.dados_pesquisador) {
-      setTitulo(user.dados_pesquisador.titulo || "");
+      setTituloPesq(user.dados_pesquisador.titulo || "");
       setVinculo(user.dados_pesquisador.vinculo || "");
-      setLinhasPesquisa(user.dados_pesquisador.linhas_pesquisa?.join(", ") || "");
+      setLinhasPesq(user.dados_pesquisador.linhas_pesquisa?.join(", ") || "");
       setGrupoPesquisa(user.dados_pesquisador.grupo_pesquisa || "");
     }
-    if (extra.dados_tecnico) {
-      setSetor(extra.dados_tecnico.setor || "");
-      setCargo(extra.dados_tecnico.cargo || "");
+    if (user.dados_tecnico) {
+      setSetor(user.dados_tecnico.setor || "");
+      setCargoTec(user.dados_tecnico.cargo || "");
     }
-    if (extra.dados_egresso) {
-      setAnoConclusao(extra.dados_egresso.ano_conclusao ? String(extra.dados_egresso.ano_conclusao) : "");
-      setAtuacao(extra.dados_egresso.atuacao || "");
+    if (user.dados_egresso) {
+      setAnoConclusao(user.dados_egresso.ano_conclusao ? String(user.dados_egresso.ano_conclusao) : "");
+      setAtuacao(user.dados_egresso.atuacao || "");
     }
   }, [user]);
 
@@ -127,20 +133,20 @@ export default function EditarPerfilPage() {
         };
       } else if (papel === "professor") {
         payload.dados_professor = {
-          titulo: titulo || null,
-          cargo: cargo || null,
-          linhas_pesquisa: parseTagList(linhasPesquisa),
+          titulo: tituloProf || null,
+          cargo: cargoProf || null,
+          linhas_pesquisa: parseTagList(linhasProf),
           laboratorio: laboratorio || null,
         };
       } else if (papel === "pesquisador") {
         payload.dados_pesquisador = {
-          titulo: titulo || null,
+          titulo: tituloPesq || null,
           vinculo: vinculo || null,
-          linhas_pesquisa: parseTagList(linhasPesquisa),
+          linhas_pesquisa: parseTagList(linhasPesq),
           grupo_pesquisa: grupoPesquisa || null,
         };
       } else if (papel === "tecnico") {
-        payload.dados_tecnico = { setor: setor || null, cargo: cargo || null };
+        payload.dados_tecnico = { setor: setor || null, cargo: cargoTec || null };
       } else if (papel === "egresso") {
         payload.dados_egresso = {
           ano_conclusao: anoConclusao ? parseInt(anoConclusao) : null,
@@ -189,7 +195,7 @@ export default function EditarPerfilPage() {
           <div className={styles.fieldRow}>
             <div className={styles.field}>
               <label htmlFor="edit-nome">Nome</label>
-              <input id="edit-nome" type="text" value={nome} onChange={(e) => setNome(e.target.value)} required className={styles.input} />
+              <input id="edit-nome" type="text" value={nome} onChange={(e) => setNome(e.target.value)} required minLength={2} maxLength={200} className={styles.input} />
             </div>
             <div className={styles.field}>
               <label htmlFor="edit-nsocial">Nome Social</label>
@@ -200,9 +206,18 @@ export default function EditarPerfilPage() {
             <label htmlFor="edit-email">E-mail</label>
             <input id="edit-email" type="email" value={user.email} disabled className={styles.input} />
             <span className={styles.hint}>
-              {user.email_pendente
-                ? `Aguardando a confirmação de ${user.email_pendente} pelo link enviado.`
-                : "O e-mail da conta não muda por aqui."}
+              {user.email_pendente ? (
+                <>
+                  Aguardando a confirmação de {user.email_pendente} pelo link enviado.{" "}
+                  <Link href="/perfil/completar">Informar outro e-mail</Link>
+                </>
+              ) : emailProvisorio(user.email) ? (
+                <>
+                  E-mail provisório do ORCID. <Link href="/perfil/completar">Informar o e-mail institucional</Link>
+                </>
+              ) : (
+                "O e-mail da conta não muda por aqui."
+              )}
             </span>
           </div>
           <div className={styles.field}>
@@ -225,17 +240,17 @@ export default function EditarPerfilPage() {
             </div>
             <div className={styles.field}>
               <label htmlFor="edit-inst">Instituição</label>
-              <input id="edit-inst" type="text" value={instituicao} onChange={(e) => setInstituicao(e.target.value)} placeholder="Ex.: UNIR, UNIRIO" className={styles.input} />
+              <input id="edit-inst" type="text" value={instituicao} onChange={(e) => setInstituicao(e.target.value)} placeholder="Ex.: UNIR, UNIRIO" maxLength={200} className={styles.input} />
             </div>
           </div>
           <div className={styles.fieldRow}>
             <div className={styles.field}>
               <label htmlFor="edit-curso">Curso</label>
-              <input id="edit-curso" type="text" value={curso} onChange={(e) => setCurso(e.target.value)} placeholder="Ex.: Medicina" className={styles.input} />
+              <input id="edit-curso" type="text" value={curso} onChange={(e) => setCurso(e.target.value)} placeholder="Ex.: Medicina" maxLength={200} className={styles.input} />
             </div>
             <div className={styles.field}>
               <label htmlFor="edit-dep">Departamento / Setor</label>
-              <input id="edit-dep" type="text" value={departamento} onChange={(e) => setDepartamento(e.target.value)} placeholder="Ex.: Departamento de Medicina" className={styles.input} />
+              <input id="edit-dep" type="text" value={departamento} onChange={(e) => setDepartamento(e.target.value)} placeholder="Ex.: Departamento de Medicina" maxLength={200} className={styles.input} />
             </div>
           </div>
         </fieldset>
@@ -273,16 +288,16 @@ export default function EditarPerfilPage() {
             <div className={styles.fieldRow}>
               <div className={styles.field}>
                 <label htmlFor="edit-titulo">Titulação</label>
-                <input id="edit-titulo" type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Dr., Me., PhD" className={styles.input} />
+                <input id="edit-titulo" type="text" value={tituloProf} onChange={(e) => setTituloProf(e.target.value)} placeholder="Dr., Me., PhD" className={styles.input} />
               </div>
               <div className={styles.field}>
                 <label htmlFor="edit-cargo">Cargo</label>
-                <input id="edit-cargo" type="text" value={cargo} onChange={(e) => setCargo(e.target.value)} placeholder="Professor Associado" className={styles.input} />
+                <input id="edit-cargo" type="text" value={cargoProf} onChange={(e) => setCargoProf(e.target.value)} placeholder="Professor Associado" className={styles.input} />
               </div>
             </div>
             <div className={styles.field}>
               <label htmlFor="edit-linhas-prof">Linhas de Pesquisa</label>
-              <input id="edit-linhas-prof" type="text" value={linhasPesquisa} onChange={(e) => setLinhasPesquisa(e.target.value)} placeholder="Separar por vírgula" className={styles.input} />
+              <input id="edit-linhas-prof" type="text" value={linhasProf} onChange={(e) => setLinhasProf(e.target.value)} placeholder="Separar por vírgula" className={styles.input} />
             </div>
             <div className={styles.field}>
               <label htmlFor="edit-lab">Laboratório</label>
@@ -297,7 +312,7 @@ export default function EditarPerfilPage() {
             <div className={styles.fieldRow}>
               <div className={styles.field}>
                 <label htmlFor="edit-titulo-pesq">Titulação</label>
-                <input id="edit-titulo-pesq" type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Dr., PhD" className={styles.input} />
+                <input id="edit-titulo-pesq" type="text" value={tituloPesq} onChange={(e) => setTituloPesq(e.target.value)} placeholder="Dr., PhD" className={styles.input} />
               </div>
               <div className={styles.field}>
                 <label htmlFor="edit-vinculo">Vínculo</label>
@@ -306,7 +321,7 @@ export default function EditarPerfilPage() {
             </div>
             <div className={styles.field}>
               <label htmlFor="edit-linhas-pesq">Linhas de Pesquisa</label>
-              <input id="edit-linhas-pesq" type="text" value={linhasPesquisa} onChange={(e) => setLinhasPesquisa(e.target.value)} placeholder="Separar por vírgula" className={styles.input} />
+              <input id="edit-linhas-pesq" type="text" value={linhasPesq} onChange={(e) => setLinhasPesq(e.target.value)} placeholder="Separar por vírgula" className={styles.input} />
             </div>
             <div className={styles.field}>
               <label htmlFor="edit-grupo">Grupo de Pesquisa</label>
@@ -325,7 +340,7 @@ export default function EditarPerfilPage() {
               </div>
               <div className={styles.field}>
                 <label htmlFor="edit-cargo-tec">Cargo</label>
-                <input id="edit-cargo-tec" type="text" value={cargo} onChange={(e) => setCargo(e.target.value)} placeholder="Ex.: Técnico(a) de laboratório" className={styles.input} />
+                <input id="edit-cargo-tec" type="text" value={cargoTec} onChange={(e) => setCargoTec(e.target.value)} placeholder="Ex.: Técnico(a) de laboratório" className={styles.input} />
               </div>
             </div>
           </fieldset>

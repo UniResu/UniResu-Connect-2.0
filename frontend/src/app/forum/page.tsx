@@ -15,6 +15,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import type { User } from "@/types/user";
@@ -326,6 +327,7 @@ function LinhaPergunta({ topico, user, aberta, votando, onAbrir, onEditar, onExc
 
 export default function ForumPage() {
   const { token, user, isAuthenticated } = useAuth();
+  const router = useRouter();
 
   const [topicos, setTopicos] = useState<Topico[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -402,6 +404,11 @@ export default function ForumPage() {
   async function publicar(e: React.FormEvent) {
     e.preventDefault();
     if (!isAuthenticated || !novoTitulo.trim() || !novoConteudo.trim()) return;
+    if (user?.perfil_completo === false) {
+      // A API exige o perfil concluído (vínculo e aceites) para publicar.
+      router.push("/perfil/completar");
+      return;
+    }
     setPublicando(true);
     try {
       const criado = await api.post<Topico>(
@@ -579,7 +586,12 @@ export default function ForumPage() {
 
       {erro && (
         <p className={styles.erro} role="alert">
-          {erro}
+          {erro}{" "}
+          {topicos.length === 0 && !carregando && (
+            <button type="button" className={styles.btnSecundario} onClick={() => carregar()}>
+              Tentar novamente
+            </button>
+          )}
         </p>
       )}
 
@@ -589,7 +601,7 @@ export default function ForumPage() {
             <div key={i} className={styles.esqueleto} />
           ))}
         </div>
-      ) : (
+      ) : erro && topicos.length === 0 ? null : (
         <>
           <p className={styles.contagem}>{totalFiltrado}</p>
           {visiveis.length === 0 ? (

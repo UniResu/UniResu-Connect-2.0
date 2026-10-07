@@ -118,7 +118,7 @@ async def test_perfil_completo_nao_e_aceito_sem_vinculo_aceites_e_email(api_orci
 
 async def test_unicidade_de_email_ignora_maiusculas(api, api_orcid, db):
     await db.usuarios.insert_one({"email": "Carlos.Lima@unirio.br", "nome": "Outro", "papel": "aluno",
-                                  "email_verificado": True})
+                                  "email_verificado": True, "orcid": {"orcid_id": "0000-0001-1111-1111"}})
     r = await api_orcid.patch("/api/perfil", json={"email": "carlos.lima@unirio.br"})
     assert r.status_code == 400 and "já está cadastrado" in r.text
     r = await api.post("/api/usuarios/registrar", json=payload(email="CARLOS.LIMA@unirio.br"))
@@ -165,14 +165,19 @@ async def test_completar_perfil_escolhe_vinculo_email_e_aceites(api_orcid, db):
     assert "email_pendente" not in doc and "token_verificacao_email" not in doc
 
 
-async def test_confirmacao_falha_se_o_email_foi_registrado_por_outra_conta_nesse_meio_tempo(api_orcid, db):
+async def test_confirmacao_vincula_se_o_email_virou_conta_por_senha_nesse_meio_tempo(api_orcid, db):
     await api_orcid.patch("/api/perfil", json={"email": "carlos.lima@unirio.br"})
     token = (await db.usuarios.find_one({"_id": api_orcid.oid}))["token_verificacao_email"]
-    await db.usuarios.insert_one({"email": "carlos.lima@unirio.br", "nome": "Outro", "papel": "aluno"})
+    outra = (await db.usuarios.insert_one({"email": "carlos.lima@unirio.br", "nome": "Outro", "papel": "aluno",
+                                           "senha_hash": "x"})).inserted_id
+    # quem clica no link é dono da caixa postal: o ORCID vai para a conta por senha
     r = await api_orcid.get("/api/auth/verificar-email", params={"token": token})
-    assert r.status_code == 400 and "outra conta" in r.text
+    assert r.status_code == 200 and r.json()["mesclada"] is True
     doc = await db.usuarios.find_one({"_id": api_orcid.oid})
-    assert doc["email"] == "0000-0002-1234-5678@orcid.placeholder"
+    assert doc["email"] == "0000-0002-1234-5678@orcid.placeholder" and doc["ativo"] is False
+    assert (await db.usuarios.find_one({"_id": outra}))["orcid"]["orcid_id"] == "0000-0002-1234-5678"
+    # já se for outra conta do ORCID, é conflito
+    await api_orcid.patch("/api/perfil", json={"email": "c2@unirio.br"})
 
 
 async def test_reenviar_verificacao_aceita_o_email_pendente(api_orcid, db):
@@ -252,14 +257,21 @@ async def test_email_so_muda_enquanto_for_o_provisorio(api_orcid, db):
     assert r.status_code == 400 and "não pode ser alterado" in r.text
 
 
-async def test_email_informado_nao_pode_pertencer_a_outra_conta(api_orcid, db):
-    await db.usuarios.insert_one({"email": "carlos.lima@unirio.br", "nome": "Outro", "papel": "aluno"})
+async def test_email_de_conta_por_senha_vira_vinculacao_e_de_conta_orcid_e_recusado(api_orcid, db):
+    # conta por senha dona do e-mail: aceito como pendente de vinculação
+    await db.usuarios.insert_one({"email": "carlos.lima@unirio.br", "nome": "Outro", "papel": "aluno",
+                                  "senha_hash": "x"})
     r = await api_orcid.patch("/api/perfil", json={"email": "carlos.lima@unirio.br"})
-    assert r.status_code == 400 and "já está cadastrado" in r.text
-    # nem estar pendente em outra conta
+    assert r.status_code == 200 and r.json()["email_pendente_vincula"] is True
+    # pendente em outra conta: conflito
     await db.usuarios.insert_one({"email": "x@orcid.placeholder", "email_pendente": "c2@unirio.br", "nome": "Y",
                                   "papel": "aluno"})
     r = await api_orcid.patch("/api/perfil", json={"email": "c2@unirio.br"})
+    assert r.status_code == 400 and "já está cadastrado" in r.text
+    # e-mail de outra conta que também entra pelo ORCID: conflito
+    await db.usuarios.insert_one({"email": "c3@unirio.br", "nome": "Z", "papel": "aluno",
+                                  "orcid": {"orcid_id": "0000-0001-1111-1111"}})
+    r = await api_orcid.patch("/api/perfil", json={"email": "c3@unirio.br"})
     assert r.status_code == 400 and "já está cadastrado" in r.text
 
 

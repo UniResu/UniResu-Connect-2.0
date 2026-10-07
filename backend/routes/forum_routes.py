@@ -6,7 +6,7 @@ Privacidade: nenhuma resposta desta API contém e-mail. O autor aparece como
 `autor_username` + `autor_nome`, resolvidos a partir de `autor_id` com UMA
 consulta em lote na collection `usuarios` (ver `anexar_autores`).
 
-Rotas protegidas usam Depends(get_usuario_atual) para autenticação.
+Rotas protegidas usam Depends(get_usuario_com_perfil_completo) para autenticação.
 """
 
 from datetime import datetime, timezone
@@ -16,7 +16,7 @@ from bson import ObjectId
 from pymongo import ReturnDocument
 from database.connection import Database
 from models.forum_model import TopicoCreate, TopicoUpdate, TopicoResponse
-from auth.autenticacao import get_usuario_atual
+from auth.autenticacao import get_usuario_com_perfil_completo
 
 router = APIRouter()
 
@@ -188,7 +188,7 @@ async def obter_topico(topico_id: str):
 )
 async def criar_topico(
     topico: TopicoCreate,
-    usuario_logado: dict = Depends(get_usuario_atual),
+    usuario_logado: dict = Depends(get_usuario_com_perfil_completo),
 ):
     """Cria um novo tópico no fórum (requer autenticação)."""
     db = Database.get_db()
@@ -228,7 +228,7 @@ async def criar_topico(
 async def editar_topico(
     topico_id: str,
     dados: TopicoUpdate,
-    usuario_logado: dict = Depends(get_usuario_atual),
+    usuario_logado: dict = Depends(get_usuario_com_perfil_completo),
 ):
     """Edita título e/ou conteúdo de um tópico. Apenas o autor pode editar."""
     db = Database.get_db()
@@ -262,7 +262,7 @@ async def editar_topico(
 @router.delete("/forum/topicos/{topico_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def excluir_topico(
     topico_id: str,
-    usuario_logado: dict = Depends(get_usuario_atual),
+    usuario_logado: dict = Depends(get_usuario_com_perfil_completo),
 ):
     """Exclui um tópico. Apenas o autor pode excluir."""
     db = Database.get_db()
@@ -286,7 +286,7 @@ async def reagir_topico(
     topico_id: str,
     # Espera JSON: { "tipo": "like" } ou { "tipo": "dislike" }
     payload: dict,
-    usuario_logado: dict = Depends(get_usuario_atual),
+    usuario_logado: dict = Depends(get_usuario_com_perfil_completo),
 ):
     """
     Registra ou remove uma reação (like/dislike) de um tópico.

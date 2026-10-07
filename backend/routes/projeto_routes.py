@@ -22,7 +22,7 @@ from models.projeto_model import (
     FontesStatusResponse,
     FiltrosResponse,
 )
-from auth.autenticacao import get_usuario_atual
+from auth.autenticacao import get_usuario_atual, get_usuario_com_perfil_completo
 
 router = APIRouter()
 
@@ -109,21 +109,21 @@ async def status_fontes_route(usuario: dict = Depends(get_usuario_atual)):
 # ── CRUD protegido ──
 
 @router.get("/projetos/meus", response_model=List[ProjetoResponse])
-async def meus_projetos(usuario: dict = Depends(get_usuario_atual)):
+async def meus_projetos(usuario: dict = Depends(get_usuario_com_perfil_completo)):
     """Lista os projetos do professor/pesquisador logado."""
     verificar_papel(usuario)
     return await listar_meus_projetos(usuario)
 
 
 @router.post("/projetos", response_model=ProjetoResponse, status_code=status.HTTP_201_CREATED)
-async def criar_projeto(dados: ProjetoCreate, usuario: dict = Depends(get_usuario_atual)):
+async def criar_projeto(dados: ProjetoCreate, usuario: dict = Depends(get_usuario_com_perfil_completo)):
     """Cria um novo projeto acadêmico."""
     verificar_papel(usuario)
     return await criar_projeto_controller(dados.model_dump(), usuario)
 
 
 @router.put("/projetos/{projeto_id}", response_model=ProjetoResponse)
-async def editar_projeto(projeto_id: str, dados: ProjetoCreate, usuario: dict = Depends(get_usuario_atual)):
+async def editar_projeto(projeto_id: str, dados: ProjetoCreate, usuario: dict = Depends(get_usuario_com_perfil_completo)):
     """Edita um projeto existente (somente o autor)."""
     verificar_papel(usuario)
     try:
@@ -137,7 +137,7 @@ async def editar_projeto(projeto_id: str, dados: ProjetoCreate, usuario: dict = 
 
 
 @router.delete("/projetos/{projeto_id}")
-async def deletar_projeto(projeto_id: str, usuario: dict = Depends(get_usuario_atual)):
+async def deletar_projeto(projeto_id: str, usuario: dict = Depends(get_usuario_com_perfil_completo)):
     """Exclui um projeto (somente o autor)."""
     verificar_papel(usuario)
     try:

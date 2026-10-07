@@ -7,7 +7,7 @@ from controllers.candidatura_controller import (
     listar_candidaturas_do_aluno,
 )
 from models.candidatura_model import CandidaturaCreate, CandidaturaResponse
-from auth.autenticacao import get_usuario_atual
+from auth.autenticacao import get_usuario_atual, get_usuario_com_perfil_completo
 
 router = APIRouter()
 
@@ -16,7 +16,7 @@ router = APIRouter()
 async def candidatar_projeto(
     id: str,
     dados: CandidaturaCreate,
-    usuario_atual: dict = Depends(get_usuario_atual),
+    usuario_atual: dict = Depends(get_usuario_com_perfil_completo),
 ):
     """
     Recebe a candidatura com carta de intenção (JSON), persiste no MongoDB

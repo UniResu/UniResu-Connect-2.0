@@ -18,6 +18,28 @@ interface ApiError {
   detail: string;
 }
 
+/**
+ * `detail` do FastAPI é uma string nos erros de negócio e uma lista de
+ * objetos `{loc, msg, ...}` nos erros de validação (422). Sempre devolvemos
+ * uma string: renderizar a lista direto no JSX derruba a página.
+ */
+function normalizarDetail(detail: unknown): string {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map((d) => {
+        const msg = typeof d === "string" ? d : (d as { msg?: string })?.msg || "";
+        return msg.replace(/^Value error, /, "");
+      })
+      .filter(Boolean)
+      .join(" ");
+  }
+  if (detail && typeof detail === "object" && "msg" in (detail as object)) {
+    return String((detail as { msg?: string }).msg || "");
+  }
+  return "";
+}
+
 async function request<T>(
   endpoint: string,
   options: ApiOptions = {}
@@ -42,7 +64,7 @@ async function request<T>(
     let detail = "Erro desconhecido";
     try {
       const errorData = await res.json();
-      detail = errorData.detail || detail;
+      detail = normalizarDetail(errorData.detail) || detail;
     } catch {
       detail = res.statusText;
     }

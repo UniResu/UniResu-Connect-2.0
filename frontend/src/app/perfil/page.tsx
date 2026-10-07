@@ -105,8 +105,11 @@ export default function PerfilPage() {
 
       {emailPendente && (
         <div className={styles.noticeCard}>
-          Enviamos um link de confirmação para <strong>{emailPendente}</strong>. Até você confirmar, a conta
-          continua com o e-mail provisório do ORCID.{" "}
+          Enviamos um link de confirmação para <strong>{emailPendente}</strong>.{" "}
+          {user.email_pendente_vincula
+            ? "Esse e-mail já tem uma conta na plataforma: ao confirmar, o seu ORCID passa a entrar nela."
+            : "Até você confirmar, a conta continua com o e-mail provisório do ORCID."}{" "}
+          <Link href="/perfil/completar">Informar outro e-mail</Link>.{" "}
           {reenvio === "enviado" ? (
             <span>Novo link enviado.</span>
           ) : reenvio === "erro" ? (

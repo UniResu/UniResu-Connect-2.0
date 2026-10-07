@@ -41,12 +41,20 @@ export default function CompletarPerfilPage() {
     if (!isLoading && !isAuthenticated) router.push("/login");
   }, [isLoading, isAuthenticated, router]);
 
-  // Pré-preenche uma vez com o que o ORCID já trouxe (instituição de afiliação).
+  // Pré-preenche uma vez com o que o ORCID já trouxe (instituição de afiliação)
+  // e, para quem já concluiu o perfil e só veio corrigir o e-mail, com o
+  // vínculo e os aceites já registrados.
   useEffect(() => {
     if (user && !preenchido) {
       setInstituicao(user.instituicao || "");
       setCurso(user.curso || "");
       setDepartamento(user.departamento || "");
+      if (user.perfil_completo !== false) {
+        setPapel(user.papel);
+        setAceiteRegras(!!user.aceite_regras);
+        setAceiteDados(!!user.aceite_dados);
+        setEmail(user.email_pendente || "");
+      }
       setPreenchido(true);
     }
   }, [user, preenchido]);
@@ -101,8 +109,9 @@ export default function CompletarPerfilPage() {
         {
           papel,
           instituicao: instituicao || null,
-          curso: curso || null,
-          departamento: departamento || null,
+          // só os campos que o vínculo escolhido mostra no formulário
+          curso: papel === "aluno" || papel === "egresso" ? curso || null : null,
+          departamento: papel === "professor" || papel === "pesquisador" ? departamento || null : null,
           ...(precisaEmail ? { email } : {}),
           aceite_regras: aceiteRegras,
           aceite_dados: aceiteDados,
