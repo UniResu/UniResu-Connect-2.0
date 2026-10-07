@@ -22,6 +22,8 @@ interface Projeto {
   e_remoto?: boolean;
   modalidade?: string;
   nome_professor?: string;
+  /** Extensão no SIGAA: quem assina como responsável pela ação (pode ser discente). */
+  responsavel_acao?: string;
   tem_contato: boolean;
   // Projetos importados de fontes externas (SIGAA/UNIR, portais da UNIRIO, dados abertos da UFV)
   origem?: "sigaa" | "unirio" | "ufv" | string;
@@ -647,6 +649,12 @@ export default function ProjetosPage() {
                   {selectedProjeto.nome_professor}
                 </div>
               )}
+              {selectedProjeto.responsavel_acao &&
+                selectedProjeto.responsavel_acao !== selectedProjeto.nome_professor && (
+                  <div className={modalStyles.infoLine}>
+                    <strong>Responsável pela ação:</strong> {selectedProjeto.responsavel_acao}
+                  </div>
+                )}
               {selectedProjeto.instituicao && (
                 <div className={modalStyles.infoLine}><strong>Instituição:</strong> {selectedProjeto.instituicao}</div>
               )}
