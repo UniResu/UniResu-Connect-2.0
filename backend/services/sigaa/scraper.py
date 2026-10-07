@@ -52,12 +52,17 @@ def _urls(client) -> dict[str, str]:
     return urls_consulta(_base_url(client))
 
 
+def _nome(client) -> str:
+    cfg = getattr(client, "cfg", None)
+    return getattr(client, "nome", None) or f"SIGAA/{getattr(cfg, 'instituicao', 'UNIR')}"
+
+
 def _limitar(client, itens: list[dict]) -> list[dict]:
     """Aplica o teto SIGAA_MAX_ITENS (0 = sem teto), para testes e dry-run."""
     teto = int(getattr(getattr(client, "cfg", None), "max_itens", 0) or 0)
     if teto and len(itens) > teto:
         logger.info("%s: só os %d primeiros de %d itens serão abertos (SIGAA_MAX_ITENS)",
-                    getattr(client, "nome", "SIGAA"), teto, len(itens))
+                    _nome(client), teto, len(itens))
         return itens[:teto]
     return itens
 
@@ -126,7 +131,7 @@ def coletar_pesquisa(client: SigaaClient, ano: str) -> ResultadoColeta:
     res = ResultadoColeta("pesquisa")
     html = _buscar(client, "pesquisa", ano)
     itens = _limitar(client, parser.parse_listagem_pesquisa(html))
-    logger.info("%s pesquisa %s: %d projetos na listagem", client.nome, ano, len(itens))
+    logger.info("%s pesquisa %s: %d projetos na listagem", _nome(client), ano, len(itens))
 
     for item in itens:
         detalhe = None
@@ -159,7 +164,7 @@ def coletar_extensao(client: SigaaClient, ano: str) -> ResultadoColeta:
     tipos = {parser.normalizar(t) for t in client.cfg.extensao_tipos}
     itens = _limitar(client, [i for i in todos if parser.normalizar(i.get("categoria")) in tipos])
     logger.info("%s extensão %s: %d ações na listagem, %d nos tipos %s",
-                client.nome, ano, len(todos), len(itens), sorted(tipos))
+                _nome(client), ano, len(todos), len(itens), sorted(tipos))
 
     for item in itens:
         detalhe = None
