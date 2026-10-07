@@ -10,6 +10,7 @@ from datetime import timezone
 from typing import List, Optional, Dict, Any
 from bson import ObjectId
 from database.connection import Database
+from services.areas import AREAS_CONHECIMENTO, classificar_area
 from services.fontes import FONTES, SIGAA
 from services.sigaa.parser import SITUACAO_EM_EXECUCAO, normalizar
 
@@ -68,7 +69,7 @@ def formatar_projeto_publico(doc: Dict[str, Any]) -> Dict[str, Any]:
     return doc
 
 
-async def buscar_projetos_controller(
+def montar_filtro_busca(
     q: Optional[str] = None,
     local: Optional[str] = None,
     area: Optional[str] = None,
@@ -78,33 +79,23 @@ async def buscar_projetos_controller(
     unidade: Optional[str] = None,
     instituicao: Optional[str] = None,
     incluir_inativos: bool = False,
-    last_id: Optional[str] = None,
-    page_size: int = 20,
-) -> List[Dict[str, Any]]:
-    """Busca projetos com filtros e paginação baseada em cursor.
+) -> Dict[str, Any]:
+    """Filtro do MongoDB para a busca pública. Também é usado pelas opções de
+    filtro (`/projetos/filtros`), para que a contagem por área reflita o mesmo
+    recorte que a busca devolve.
 
     Args:
         q: Texto para busca em título, descrição e professor/coordenador.
         local: Filtro por localidade.
-        area: Filtro por área de estudo.
+        area: Grande área do CNPq (valor exato de AREAS_CONHECIMENTO).
         remoto: Filtro para projetos remotos.
         tipos: Lista de tipos separados por vírgula.
         modulo: "pesquisa" ou "extensao" (projetos importados do SIGAA/UNIR ou da UNIRIO).
         unidade: Unidade/departamento (valor exato, vindo de /projetos/unidades).
         instituicao: Sigla da instituição (ex.: "UNIR", "UNIRIO").
         incluir_inativos: Se False (padrão), mostra só projetos ativos e em
-            execução — projetos manuais, sem situação, contam como ativos.
-        last_id: ID do último item da página anterior (paginação por cursor).
-        page_size: Número de itens por página (máx. 50).
-
-    Returns:
-        Lista de projetos formatados (sem e-mails de contato).
+            execução; projetos manuais, sem situação, contam como ativos.
     """
-    db = Database.get_db()
-
-    # Limitar page_size
-    page_size = min(page_size, 50)
-
     query_filter: Dict[str, Any] = {}
     and_clauses = []
 
@@ -128,7 +119,7 @@ async def buscar_projetos_controller(
     if local:
         query_filter["local"] = {"$regex": local, "$options": "i"}
     if area:
-        query_filter["area_estudo"] = {"$regex": area, "$options": "i"}
+        query_filter["area_conhecimento"] = area
     if remoto:
         and_clauses.append({
             "$or": [
@@ -143,6 +134,39 @@ async def buscar_projetos_controller(
 
     if and_clauses:
         query_filter["$and"] = and_clauses
+    return query_filter
+
+
+async def buscar_projetos_controller(
+    q: Optional[str] = None,
+    local: Optional[str] = None,
+    area: Optional[str] = None,
+    remoto: bool = False,
+    tipos: Optional[str] = None,
+    modulo: Optional[str] = None,
+    unidade: Optional[str] = None,
+    instituicao: Optional[str] = None,
+    incluir_inativos: bool = False,
+    last_id: Optional[str] = None,
+    page_size: int = 20,
+) -> List[Dict[str, Any]]:
+    """Busca projetos com filtros (ver `montar_filtro_busca`) e paginação
+    baseada em cursor.
+
+    Args:
+        last_id: ID do último item da página anterior (paginação por cursor).
+        page_size: Número de itens por página (máx. 50).
+
+    Returns:
+        Lista de projetos formatados (sem e-mails de contato).
+    """
+    db = Database.get_db()
+
+    # Limitar page_size
+    page_size = min(page_size, 50)
+
+    query_filter = montar_filtro_busca(q=q, local=local, area=area, remoto=remoto, tipos=tipos, modulo=modulo,
+                                       unidade=unidade, instituicao=instituicao, incluir_inativos=incluir_inativos)
 
     # Paginação por cursor (mais eficiente que skip/limit para grandes volumes)
     if last_id:
@@ -187,16 +211,42 @@ async def listar_instituicoes_controller() -> List[str]:
     return sorted(await db.projetos.distinct("instituicao", filtro), key=normalizar)
 
 
-async def listar_filtros_controller() -> Dict[str, Any]:
-    """Opções de filtro agrupadas por instituição: para cada sigla das fontes
-    externas (UNIR, UNIRIO), as unidades/departamentos com projetos visíveis e
-    a contagem por módulo; projetos manuais entram como instituições à parte
-    (texto livre do professor), sem unidades.
+async def contar_por_area(db, filtro: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Quantos projetos do recorte há em cada grande área do CNPq, na ordem
+    fixa da tabela e só com as áreas que têm ao menos um projeto."""
+    pipeline = [
+        {"$match": filtro},
+        {"$group": {"_id": "$area_conhecimento", "total": {"$sum": 1}}},
+    ]
+    totais = {g["_id"]: g["total"] async for g in db.projetos.aggregate(pipeline)}
+    return [{"nome": area, "total": totais[area]} for area in AREAS_CONHECIMENTO if totais.get(area)]
 
-    Permite ao front mostrar categorias (instituição > unidade) em vez de uma
-    lista única de unidades em que tudo parece ser da mesma universidade.
+
+async def listar_filtros_controller(
+    q: Optional[str] = None,
+    modulo: Optional[str] = None,
+    instituicao: Optional[str] = None,
+    unidade: Optional[str] = None,
+    remoto: bool = False,
+) -> Dict[str, Any]:
+    """Opções de filtro da busca.
+
+    `instituicoes`: para cada sigla das fontes externas (UNIR, UNIRIO, UFV),
+    as unidades/departamentos com projetos visíveis e a contagem por módulo;
+    projetos manuais entram como instituições à parte (texto livre do
+    professor), sem unidades. Permite ao front mostrar categorias
+    (instituição > unidade) em vez de uma lista única de unidades em que tudo
+    parece ser da mesma universidade. Não depende dos parâmetros: a quebra
+    por módulo já permite ao front estreitar a lista.
+
+    `areas`: contagem por grande área do CNPq dentro do recorte atual (texto,
+    módulo, instituição, unidade e remoto, os mesmos filtros da busca, exceto
+    a própria área), para o seletor "Área do conhecimento" só oferecer áreas
+    com projetos no que o usuário está vendo.
     """
     db = Database.get_db()
+    areas = await contar_por_area(db, montar_filtro_busca(q=q, modulo=modulo, instituicao=instituicao,
+                                                          unidade=unidade, remoto=remoto))
     siglas = [f.instituicao for f in FONTES.values()]
     rotulos = {f.instituicao: f.rotulo for f in FONTES.values()}
 
@@ -244,7 +294,7 @@ async def listar_filtros_controller() -> Dict[str, Any]:
             "unidades": [{"nome": u, **dados} for u, dados in sorted(g["unidades"].items(),
                                                                       key=lambda kv: normalizar(kv[0]))],
         })
-    return {"instituicoes": instituicoes}
+    return {"instituicoes": instituicoes, "areas": areas}
 
 
 def _iso_utc(dt) -> str:
@@ -300,6 +350,9 @@ async def criar_projeto_controller(dados: Dict[str, Any], usuario: Dict[str, Any
         "data_publicacao": datetime.now(timezone.utc).isoformat(),
         "e_remoto": dados.get("modalidade", "").lower() in ("remoto", "online", "a distância"),
     }
+    # Grande área do CNPq: a informada pelo autor ou, na falta dela, a derivada
+    # do título, da descrição e da área de estudo.
+    projeto_doc["area_conhecimento"] = dados.get("area_conhecimento") or classificar_area(projeto_doc)
 
     resultado = await db.projetos.insert_one(projeto_doc)
     projeto_doc["_id"] = resultado.inserted_id
@@ -338,6 +391,8 @@ async def editar_projeto_controller(
 
     # Atualiza o campo e_remoto com base na modalidade
     dados["e_remoto"] = dados.get("modalidade", "").lower() in ("remoto", "online", "a distância")
+    # Sem área informada, reclassifica com os dados editados (o título pode ter mudado).
+    dados["area_conhecimento"] = dados.get("area_conhecimento") or classificar_area(dados)
 
     await db.projetos.update_one({"_id": oid}, {"$set": dados})
 

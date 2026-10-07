@@ -9,8 +9,10 @@ import { NIVEL_LABELS } from "@/lib/constants";
 import { PERFIL_LABELS, emailProvisorio } from "@/lib/perfis";
 import styles from "./perfil.module.css";
 
-/** Linha abaixo do nome: o que a pessoa é, no vocabulário do seu vínculo. */
-export function subtituloDoPerfil(user: {
+/** Linha abaixo do nome: o que a pessoa é, no vocabulário do seu vínculo.
+ * Não é exportada: uma página do App Router só pode exportar o componente e
+ * os campos que o Next reconhece, e o `next build` recusa qualquer outro. */
+function subtituloDoPerfil(user: {
   papel: string;
   dados_aluno?: { nivel?: string; semestre?: number } | null;
   dados_professor?: { titulo?: string | null; cargo?: string | null } | null;

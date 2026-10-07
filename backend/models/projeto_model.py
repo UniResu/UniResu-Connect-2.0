@@ -1,5 +1,7 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import Dict, List, Optional
+
+from services.areas import AREAS_CONHECIMENTO, area_valida
 
 
 class ProjetoCreate(BaseModel):
@@ -12,9 +14,23 @@ class ProjetoCreate(BaseModel):
     instituicao: Optional[str] = Field(None, max_length=200)
     local: Optional[str] = None
     area_estudo: Optional[str] = None
+    # Grande área do CNPq (uma das AREAS_CONHECIMENTO). Opcional: quando não
+    # vem, a API classifica o projeto pelo título, pela descrição e pela área
+    # de estudo.
+    area_conhecimento: Optional[str] = None
     tipo_projeto: Optional[str] = "voluntario_aberto"
     nome_professor: Optional[str] = None
     email_professor: Optional[str] = None
+
+    @field_validator("area_conhecimento", mode="before")
+    @classmethod
+    def validar_area(cls, valor):
+        if valor is None or (isinstance(valor, str) and not valor.strip()):
+            return None
+        area = area_valida(valor)
+        if area is None:
+            raise ValueError("Área do conhecimento desconhecida. Use uma destas: " + "; ".join(AREAS_CONHECIMENTO))
+        return area
 
 
 class ProjetoPublicoResponse(BaseModel):
@@ -34,6 +50,8 @@ class ProjetoPublicoResponse(BaseModel):
     local: Optional[str] = None
     modalidade: Optional[str] = None
     area_estudo: Optional[str] = None
+    # Grande área do CNPq em que o projeto foi classificado (filtro "Área do conhecimento").
+    area_conhecimento: Optional[str] = None
     e_remoto: Optional[bool] = None
     nome_professor: Optional[str] = None
     autor_id: Optional[str] = None
@@ -51,8 +69,9 @@ class ProjetoPublicoResponse(BaseModel):
     link_detalhe: Optional[str] = None
     periodo_inicio: Optional[str] = None
     periodo_fim: Optional[str] = None
-    # Extras dos portais da UNIRIO.
+    # Extras dos portais da UNIRIO e dos dados abertos da UFV.
     area_tematica: Optional[str] = None
+    area_cnpq: Optional[str] = None
     palavras_chave: Optional[List[str]] = None
     linhas_extensao: Optional[List[str]] = None
     grupo_pesquisa: Optional[str] = None
@@ -82,8 +101,16 @@ class InstituicaoFiltro(BaseModel):
     unidades: List[UnidadeFiltro] = []
 
 
+class AreaFiltro(BaseModel):
+    """Uma grande área do CNPq com projetos visíveis no recorte pedido."""
+    nome: str
+    total: int
+
+
 class FiltrosResponse(BaseModel):
     instituicoes: List[InstituicaoFiltro] = []
+    # Na ordem fixa da tabela do CNPq, só as áreas com projetos no recorte.
+    areas: List[AreaFiltro] = []
 
 
 class FonteStatus(BaseModel):

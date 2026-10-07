@@ -584,6 +584,7 @@ async def test_sucesso_grava_com_origem_unirio_e_desativa_ausentes(db):
     doc = await db.projetos.find_one({"unirio_id": "1"})
     assert doc["origem"] == "unirio" and doc["instituicao"] == "UNIRIO" and doc["modulo"] == "pesquisa"
     assert doc["tipo"] == "Pesquisa" and doc["palavras_chave"] == ["a", "b"]
+    assert doc["area_conhecimento"] == "Multidisciplinar"  # título e palavras-chave do dublê não dizem a área
     assert "tipo_sigaa" not in doc and "chave_sigaa" not in doc
     assert (await db.projetos.find_one({"unirio_id": "2"}))["ativo"] is False
     salvo = await db.sigaa_sync_runs.find_one({"_id": run["_id"]})
