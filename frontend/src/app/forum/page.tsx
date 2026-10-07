@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * ForumPage — v4 (threads, estilo "Stack Overflow ultraminimalista")
+ * ForumPage, v4 (threads, estilo "Stack Overflow ultraminimalista")
  *
  * O fórum é uma lista de perguntas; o objetivo é expor conteúdo, não
  * interatividade. Regras de negócio:
