@@ -47,7 +47,7 @@ A presente plataforma web, **UniResu Connect**, propõe-se a ser um ecossistema 
 
 ### **Projetos coletados (SIGAA de dezenas de instituições, portais da UNIRIO, dados abertos da UFV) e candidatura com carta de intenção**
 
-A aba **Projetos Acadêmicos** lista, além dos projetos cadastrados pelos professores, os projetos de **pesquisa** e **extensão** coletados semanalmente de duas fontes públicas: as consultas do **SIGAA/UNIR** e os **portais da UNIRIO** (Portal da Pesquisa e Portal da Extensão). Os filtros permitem escolher módulo (pesquisa/extensão), instituição (UNIR, UNIRIO) e unidade. O aluno se candidata escrevendo uma **carta de intenção**, que chega no corpo do e-mail do(a) coordenador(a) — com *reply-to* no e-mail do aluno e o Lattes como link no final.
+A aba **Projetos Acadêmicos** lista, além dos projetos cadastrados pelos professores, os projetos de **pesquisa** e **extensão** coletados semanalmente de duas fontes públicas: as consultas do **SIGAA/UNIR** e os **portais da UNIRIO** (Portal da Pesquisa e Portal da Extensão). Os filtros permitem escolher módulo (pesquisa/extensão), área do conhecimento (grandes áreas do CNPq, classificadas pelo backend), instituição, campus e unidade/departamento (campi e unidades aceitam várias escolhas ao mesmo tempo). O campus é deduzido do nome da unidade publicado pela fonte (`backend/services/campi.py`): a cidade embutida no nome do centro no SIGAA, a sigla de campus no fim do nome das unidades da UNIR, o prefixo "C-" dos institutos federais e a sede conhecida da UNIRIO e da UFV. O aluno se candidata escrevendo uma **carta de intenção**, que chega no corpo do e-mail do(a) coordenador(a) — com *reply-to* no e-mail do aluno e o Lattes como link no final.
 
 **Como funciona o sync**
 
