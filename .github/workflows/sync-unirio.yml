@@ -40,9 +40,16 @@ on:
         type: choice
         options: [incremental, completo]
         default: incremental
+      pesquisa_ano_minimo:
+        description: "Pesquisa: ignorar projetos com ano de referência anterior a este (vazio = todos)"
+        required: false
+        default: ""
 
+# Um grupo por conjunto de módulos: uma execução só de extensão pode rodar em
+# paralelo com uma de pesquisa (portais e servidores diferentes); duas do
+# mesmo conjunto ficam em fila.
 concurrency:
-  group: sync-unirio
+  group: sync-unirio-${{ inputs.modulos || 'todos' }}
   cancel-in-progress: false
 
 permissions:
@@ -92,7 +99,7 @@ jobs:
           UNIRIO_EXTENSAO_STATUS: ${{ vars.UNIRIO_EXTENSAO_STATUS }}
           UNIRIO_PESQUISA_DETALHE_PREFIXO: ${{ vars.UNIRIO_PESQUISA_DETALHE_PREFIXO }}
           UNIRIO_PESQUISA_ANOS: ${{ vars.UNIRIO_PESQUISA_ANOS }}
-          UNIRIO_PESQUISA_ANO_MINIMO: ${{ vars.UNIRIO_PESQUISA_ANO_MINIMO }}
+          UNIRIO_PESQUISA_ANO_MINIMO: ${{ inputs.pesquisa_ano_minimo || vars.UNIRIO_PESQUISA_ANO_MINIMO }}
           UNIRIO_CAPTURA_DIR: captura
 
       - name: Publicar HTML capturado
