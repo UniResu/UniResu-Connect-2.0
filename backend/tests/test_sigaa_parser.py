@@ -68,7 +68,12 @@ class TestDetalhes:
 
     def test_detalhe_extensao(self):
         d = parser.parse_detalhe_extensao(ler_fixture("sigaa_extensao_detalhe.html"))
-        assert d["coordenador"] == "ANA PAULA SOUZA"
+        # A coordenação vem da equipe (docente com função de coordenação); o
+        # "Responsável pela Ação" fica à parte, porque pode ser um discente.
+        assert d["coordenador"] == "MEMBRO DA EQUIPE"
+        assert d["responsavel_acao"] == "ANA PAULA SOUZA"
+        assert [m["categoria"] for m in d["equipe"]] == ["DISCENTE", "DOCENTE", "DISCENTE"]
+        assert d["equipe"][1]["funcao"] == "COORDENADOR(A)"
         assert d["email"] == "coordenador@unir.br"
         assert d["unidade"] == "COORDENAÇÃO DO CURSO DE PEDAGOGIA"
         assert (d["periodo_inicio"], d["periodo_fim"]) == ("2026-09-21", "2027-09-20")
@@ -118,3 +123,19 @@ class TestFormularioJSF:
         assert parser.params_link_jsf(onclick) == {
             "form:j_id_1": "form:j_id_1", "idAtividadeExtensaoSelecionada": "4695", "acao": "2",
         }
+
+
+class TestEquipe:
+    def test_coordenacao_prefere_docente_e_cai_no_responsavel(self):
+        equipe = [{"nome": "JOAO", "categoria": "DISCENTE", "funcao": "COORDENADOR(A)"},
+                  {"nome": "JANDRA", "categoria": "DOCENTE", "funcao": "COORDENADOR(A)"}]
+        assert parser.coordenacao_da_equipe(equipe) == "JANDRA"
+        assert parser.coordenacao_da_equipe(equipe[:1]) == "JOAO"
+        assert parser.coordenacao_da_equipe([{"nome": "X", "categoria": "DOCENTE", "funcao": "MEMBRO"}]) is None
+        assert parser.coordenacao_da_equipe([]) is None
+
+    def test_sem_equipe_publicada_usa_o_responsavel(self):
+        html = """<html><body><table><tr><th>Responsável pela Ação:</th><td>MARIA</td></tr>
+        <tr><th>E-mail do Responsável:</th><td>m@unir.br</td></tr></table></body></html>"""
+        d = parser.parse_detalhe_extensao(html)
+        assert d["coordenador"] == "MARIA" and d["responsavel_acao"] == "MARIA" and d["equipe"] == []

@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import styles from "./Navbar.module.css";
 
 const LINKS = [
-  { href: "/", label: "Home" },
+  { href: "/", label: "Início" },
   { href: "/#quem-somos", label: "Quem somos" },
   { href: "/projetos", label: "Projetos acadêmicos" },
   { href: "/forum", label: "Fórum" },

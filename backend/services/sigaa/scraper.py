@@ -132,6 +132,8 @@ def coletar_pesquisa(client: SigaaClient, ano: str) -> ResultadoColeta:
     html = _buscar(client, "pesquisa", ano)
     itens = _limitar(client, parser.parse_listagem_pesquisa(html))
     logger.info("%s pesquisa %s: %d projetos na listagem", _nome(client), ano, len(itens))
+    if not itens:
+        logger.warning("%s pesquisa %s: nenhum item reconhecido.\n%s", _nome(client), ano, parser.diagnostico_pagina(html))
 
     for item in itens:
         detalhe = None
@@ -165,6 +167,8 @@ def coletar_extensao(client: SigaaClient, ano: str) -> ResultadoColeta:
     itens = _limitar(client, [i for i in todos if parser.normalizar(i.get("categoria")) in tipos])
     logger.info("%s extensão %s: %d ações na listagem, %d nos tipos %s",
                 _nome(client), ano, len(todos), len(itens), sorted(tipos))
+    if not todos:
+        logger.warning("%s extensão %s: nenhum item reconhecido.\n%s", _nome(client), ano, parser.diagnostico_pagina(html))
 
     for item in itens:
         detalhe = None
@@ -203,13 +207,19 @@ def _registro(modulo: str, item: dict, detalhe: Optional[dict]) -> dict:
         "periodo_inicio": d.get("periodo_inicio"),
         "periodo_fim": d.get("periodo_fim"),
         "detalhe_ok": detalhe is not None,
+        # Extensão: quem assina como responsável pela ação (pode ser discente) e a equipe.
+        "extras": {k: d[k] for k in ("responsavel_acao", "equipe") if d.get(k)},
     }
 
 
 def _erro(modulo: str, item: dict, e: Exception) -> dict:
     logger.warning("SIGAA %s: falha no detalhe de '%s' (id=%s): %s",
                    modulo, item.get("titulo"), item.get("sigaa_id"), e)
-    return {"modulo": modulo, "sigaa_id": item.get("sigaa_id"), "titulo": item.get("titulo"), "erro": str(e)}
+    erro = {"modulo": modulo, "sigaa_id": item.get("sigaa_id"), "titulo": item.get("titulo"), "erro": str(e)}
+    if item.get("onclick") and not item.get("sigaa_id"):
+        # Sem id reconhecido: guarda o onclick cru para adaptar o parser.
+        erro["onclick"] = item["onclick"]
+    return erro
 
 
 COLETORES = {"pesquisa": coletar_pesquisa, "extensao": coletar_extensao}

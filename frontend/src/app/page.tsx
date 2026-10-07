@@ -223,7 +223,7 @@ export default function HomePage() {
           <img src="/ufo.png" alt="Nave Espacial Flutuante" className={styles.ufoImage} />
         </div>
 
-        <h2 className={`${styles.sectionTitle} ${styles.forumTitle}`}>Forum</h2>
+        <h2 className={`${styles.sectionTitle} ${styles.forumTitle}`}>Fórum</h2>
         <p className={styles.forumSubtitle}>Embarque na nossa rede de conhecimento e descubra um universo de novas oportunidades de integração!</p>
 
         <div className={styles.cardsContainer}>

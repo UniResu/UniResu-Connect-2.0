@@ -155,6 +155,29 @@ def params_link_jsf(onclick: str) -> dict:
 
 
 # ─────────────────────────────────────────────
+#  Diagnóstico (dry-run em instituições novas)
+# ─────────────────────────────────────────────
+
+def diagnostico_pagina(html: str, limite_texto: int = 1500) -> str:
+    """Resumo da estrutura de uma página do SIGAA que não rendeu itens: tabelas,
+    formulários, botões e o começo do texto visível. Serve para adaptar o
+    parser a versões diferentes do SIGAA sem precisar baixar o HTML inteiro."""
+    soup = _soup(html)
+    tabelas = [f"table(class={t.get('class')}, id={t.get('id')}, linhas={len(t.find_all('tr'))})"
+               for t in soup.find_all("table")][:12]
+    forms = [f"form(id={f.get('id')}, action={f.get('action')})" for f in soup.find_all("form")][:6]
+    botoes = [f"{b.get('type')}:{b.get('name')}={b.get('value')}"
+              for b in soup.find_all("input", {"type": ["submit", "button"]})][:10]
+    selects = [f"select({s.get('name')}, {len(s.find_all('option'))} opções)" for s in soup.find_all("select")][:10]
+    for t in soup(["script", "style"]):
+        t.decompose()
+    texto = limpar(soup.get_text(" "))[:limite_texto]
+    return ("DIAGNÓSTICO DA PÁGINA\n  tabelas: " + "; ".join(tabelas) + "\n  forms: " + "; ".join(forms)
+            + "\n  botões: " + "; ".join(botoes) + "\n  selects: " + "; ".join(selects)
+            + "\n  texto: " + texto)
+
+
+# ─────────────────────────────────────────────
 #  Listagens
 # ─────────────────────────────────────────────
 
@@ -226,11 +249,12 @@ def parse_listagem_extensao(html: str, base_url: str = BASE_URL) -> list[dict]:
         texto = limpar(tds[0].get_text())
         m = re.match(r"^(\d{4})\s*-\s*(.+)$", texto)
         ano, titulo = (m.group(1), m.group(2)) if m else (None, texto)
-        link = tds[0].find("a", onclick=True)
+        link = tds[0].find("a", onclick=True) or tr.find("a", onclick=True)
         params = params_link_jsf(link["onclick"]) if link else {}
-        sigaa_id = params.get("idAtividadeExtensaoSelecionada")
+        sigaa_id = params.get("idAtividadeExtensaoSelecionada") or params.get("id")
         itens.append({
             "sigaa_id": sigaa_id,
+            "onclick": (link["onclick"][:300] if link else None),
             "titulo": titulo,
             "ano": ano,
             "categoria": limpar(tds[1].get_text()) or None,
@@ -293,14 +317,57 @@ def parse_detalhe_pesquisa(html: str) -> dict:
     }
 
 
+_RE_CATEGORIA = re.compile(r"CATEGORIA\s*:\s*(.*?)\s*(?:FUNCAO\s*:|$)")
+_RE_FUNCAO = re.compile(r"FUNCAO\s*:\s*(.*)$")
+
+
+def parse_equipe(soup: BeautifulSoup) -> list[dict]:
+    """Membros da equipe da ação de extensão (tabelas `equipeProjeto`): nome,
+    categoria (DOCENTE, DISCENTE, TECNICO...) e função (COORDENADOR(A),
+    MEMBRO...), como o SIGAA publica."""
+    equipe: list[dict] = []
+    for tabela in soup.find_all("table", class_="equipeProjeto"):
+        span = tabela.find("span", class_="nome")
+        if span is None:
+            continue
+        # O nome vem antes de "Categoria:"; função e categoria podem estar
+        # quebradas em várias linhas e dentro de <font>, por isso a leitura é
+        # feita sobre o texto corrido normalizado.
+        linhas = [limpar(linha) for linha in span.get_text("\n").split("\n") if limpar(linha)]
+        nome = next((linha for linha in linhas if not normalizar(linha).startswith(("CATEGORIA", "FUNCAO"))), None)
+        texto = normalizar(span.get_text(" "))
+        m_cat, m_fun = _RE_CATEGORIA.search(texto), _RE_FUNCAO.search(texto)
+        if nome:
+            equipe.append({
+                "nome": nome,
+                "categoria": (m_cat.group(1).strip() or None) if m_cat else None,
+                "funcao": (m_fun.group(1).strip() or None) if m_fun else None,
+            })
+    return equipe
+
+
+def coordenacao_da_equipe(equipe: list[dict]) -> Optional[str]:
+    """Quem coordena de fato: membro com função de coordenação, de preferência
+    docente. O campo "Responsável pela Ação" do SIGAA pode trazer um discente."""
+    coordenadores = [m for m in equipe if "COORDENADOR" in normalizar(m.get("funcao"))]
+    docentes = [m for m in coordenadores if "DOCENTE" in normalizar(m.get("categoria"))]
+    escolhido = (docentes or coordenadores or [None])[0]
+    return escolhido["nome"] if escolhido else None
+
+
 def parse_detalhe_extensao(html: str) -> dict:
     soup = _soup(html)
     c = _campos_th_td(soup)
     if "RESPONSAVEL PELA ACAO" not in c and "TITULO" not in c:
         raise ValueError("Página de detalhe de extensão inesperada.")
     inicio, fim = _periodo(c.get("PERIODO DE REALIZACAO"))
+    responsavel = c.get("RESPONSAVEL PELA ACAO") or None
+    equipe = parse_equipe(soup)
     return {
-        "coordenador": c.get("RESPONSAVEL PELA ACAO") or None,
+        # Coordenação docente da equipe; sem equipe publicada, fica o responsável.
+        "coordenador": coordenacao_da_equipe(equipe) or responsavel,
+        "responsavel_acao": responsavel,
+        "equipe": equipe,
         "email": _email(c.get("E-MAIL DO RESPONSAVEL")),
         "unidade": c.get("UNIDADE PROPONENTE") or None,
         "periodo_inicio": inicio,
