@@ -11,6 +11,16 @@ from bson import ObjectId
 from fastapi import HTTPException, status
 from database.connection import Database
 from models.usuario_model import PerfilUpdate
+from services.emails_institucionais import email_provisorio, validar_email_institucional
+
+# Sub-documento de cada tipo de perfil (vínculo institucional).
+DADOS_POR_PAPEL = {
+    "aluno": "dados_aluno",
+    "professor": "dados_professor",
+    "pesquisador": "dados_pesquisador",
+    "tecnico": "dados_tecnico",
+    "egresso": "dados_egresso",
+}
 
 
 def formatar_perfil(doc: Dict[str, Any]) -> Dict[str, Any]:
@@ -48,6 +58,10 @@ def formatar_perfil_publico(doc: Dict[str, Any]) -> Dict[str, Any]:
         "dados_aluno": doc.get("dados_aluno"),
         "dados_professor": doc.get("dados_professor"),
         "dados_pesquisador": doc.get("dados_pesquisador"),
+        "dados_tecnico": doc.get("dados_tecnico"),
+        "dados_egresso": doc.get("dados_egresso"),
+        "username": doc.get("username"),
+        "departamento": doc.get("departamento"),
         "orcid_id": doc.get("orcid", {}).get("orcid_id") if doc.get("orcid") else None,
         "publicacoes": doc.get("orcid", {}).get("publicacoes", []) if doc.get("orcid") else [],
     }
@@ -103,8 +117,17 @@ async def atualizar_perfil_controller(
     """
     db = Database.get_db()
 
+    try:
+        oid = ObjectId(user_id)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="ID de usuário inválido.")
+    atual = await db.usuarios.find_one({"_id": oid})
+    if atual is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuário não encontrado.")
+
     # Construir query de update apenas com campos não-None
     update_fields: Dict[str, Any] = {}
+    agora = datetime.now(timezone.utc)
 
     dados_dict = dados.model_dump(exclude_none=True)
 
@@ -118,8 +141,45 @@ async def atualizar_perfil_controller(
         if campo in dados_dict:
             update_fields[campo] = dados_dict[campo]
 
-    # Campos complexos (dados por papel) — merge com existente
-    for campo_papel in ["dados_aluno", "dados_professor", "dados_pesquisador"]:
+    # Vínculo institucional (tipo de perfil): pode ser escolhido/alterado pela
+    # própria pessoa — o login via ORCID não sabe se ela é discente, docente ou
+    # pesquisador(a). Garante o sub-documento do novo tipo.
+    papel = dados_dict.get("papel")
+    if papel:
+        papel = papel.value if hasattr(papel, "value") else str(papel)
+        update_fields["papel"] = papel
+        campo_dados = DADOS_POR_PAPEL.get(papel)
+        if campo_dados and not atual.get(campo_dados) and campo_dados not in dados_dict:
+            update_fields[campo_dados] = {}
+
+    # E-mail: só pode ser definido aqui enquanto for o provisório do ORCID.
+    if "email" in dados_dict:
+        novo_email = str(dados_dict["email"]).strip().lower()
+        if not email_provisorio(atual.get("email")):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="O e-mail da conta não pode ser alterado por aqui.")
+        try:
+            validar_email_institucional(novo_email)
+        except ValueError as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        if await db.usuarios.find_one({"email": novo_email, "_id": {"$ne": oid}}):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Este email já está cadastrado.")
+        update_fields["email"] = novo_email
+        update_fields["email_verificado"] = False
+
+    # Aceites (regras da plataforma e compartilhamento de dados)
+    if dados_dict.get("aceite_regras") or dados_dict.get("aceite_dados"):
+        if dados_dict.get("aceite_regras"):
+            update_fields["aceite_regras"] = True
+        if dados_dict.get("aceite_dados"):
+            update_fields["aceite_dados"] = True
+        update_fields["aceites_em"] = agora
+
+    if dados_dict.get("perfil_completo"):
+        update_fields["perfil_completo"] = True
+
+    # Campos complexos (dados por tipo de perfil) — merge com existente
+    for campo_papel in DADOS_POR_PAPEL.values():
         if campo_papel in dados_dict:
             # Usar dot notation para merge parcial
             for key, value in dados_dict[campo_papel].items():
@@ -131,24 +191,9 @@ async def atualizar_perfil_controller(
             detail="Nenhum campo válido para atualizar.",
         )
 
-    update_fields["atualizado_em"] = datetime.now(timezone.utc)
+    update_fields["atualizado_em"] = agora
 
-    try:
-        result = await db.usuarios.update_one(
-            {"_id": ObjectId(user_id)},
-            {"$set": update_fields},
-        )
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="ID de usuário inválido.",
-        )
-
-    if result.matched_count == 0:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Usuário não encontrado.",
-        )
+    await db.usuarios.update_one({"_id": oid}, {"$set": update_fields})
 
     # Retorna perfil atualizado
     return await obter_perfil_controller(user_id)

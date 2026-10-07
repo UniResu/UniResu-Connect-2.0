@@ -40,12 +40,6 @@ interface Projeto {
   financiamento?: string;
 }
 
-interface FonteStatus {
-  instituicao: string;
-  rotulo: string;
-  ultima_atualizacao: string | null;
-}
-
 interface UnidadeFiltro {
   nome: string;
   total: number;
@@ -64,11 +58,6 @@ interface InstituicaoFiltro {
 /** Unidades de uma instituição que têm projetos no módulo escolhido (ou em qualquer um). */
 function unidadesVisiveis(inst: InstituicaoFiltro, modulo: string) {
   return inst.unidades.filter((u) => !modulo || (u.modulos[modulo] || 0) > 0);
-}
-
-interface FontesStatusResponse {
-  ultima_atualizacao: string | null;
-  fontes: Record<string, FonteStatus>;
 }
 
 /** Nome da fonte externa, para rótulos como "Ver no SIGAA". */
@@ -151,7 +140,6 @@ export default function ProjetosPage() {
   const [areaFiltro, setAreaFiltro] = useState("");
   const [remotoFiltro, setRemotoFiltro] = useState(false);
   const [filtros, setFiltros] = useState<InstituicaoFiltro[]>([]);
-  const [fontes, setFontes] = useState<FonteStatus[]>([]);
 
   // Categorias: instituição > unidade/departamento. As unidades oferecidas
   // dependem da instituição e do módulo escolhidos; a lista toda vem de uma
@@ -229,10 +217,6 @@ export default function ProjetosPage() {
       .get<{ instituicoes: InstituicaoFiltro[] }>("/api/projetos/filtros")
       .then((f) => setFiltros(f.instituicoes || []))
       .catch(() => setFiltros([]));
-    api
-      .get<FontesStatusResponse>("/api/projetos/fontes/status")
-      .then((s) => setFontes(Object.values(s.fontes || {}).filter((f) => f.ultima_atualizacao)))
-      .catch(() => setFontes([]));
   }, []);
 
   async function carregarMais() {
@@ -328,14 +312,8 @@ export default function ProjetosPage() {
         <p className={styles.subtitle}>
           Descubra oportunidades de pesquisa e extensão
         </p>
-        {fontes.length > 0 && (
-          <p className={styles.updatedAt}>
-            {fontes.length > 1 ? "Últimas coletas: " : "Última coleta: "}
-            {new Intl.ListFormat("pt-BR", { type: "conjunction" }).format(
-              fontes.map((f) => `${f.rotulo} em ${formatarData(f.ultima_atualizacao || undefined)}`)
-            )}
-          </p>
-        )}
+        {/* A data da última coleta não é exibida: o momento em que a base foi
+            atualizada é informação interna da equipe. */}
       </div>
 
       {/* ── Filtros ── */}

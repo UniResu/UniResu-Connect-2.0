@@ -113,6 +113,27 @@
   margin-bottom: var(--space-md);
 }
 
+.profileHandle {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  margin: calc(-1 * var(--space-sm)) 0 var(--space-md);
+}
+
+.noticeCard {
+  margin-bottom: var(--space-lg);
+  padding: var(--space-md) var(--space-lg);
+  background: #fffbeb;
+  color: #92400e;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.noticeCard a {
+  color: var(--primary);
+  font-weight: 600;
+}
+
 .orcidBadge {
   display: inline-flex;
   align-items: center;

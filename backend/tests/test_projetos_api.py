@@ -147,14 +147,33 @@ async def test_filtros_incluem_instituicao_livre_dos_projetos_manuais(api, base)
     assert titulos(r) == ["Manual com instituição"]
 
 
-async def test_status_sem_runs(api, db):
+async def test_status_exige_professor_ou_pesquisador(api, db):
+    # a fixture `api` loga um aluno: a data da coleta é interna da equipe
+    assert (await api.get("/api/projetos/fontes/status")).status_code == 403
+
+
+@pytest.fixture
+async def api_professor(db):
+    from auth.autenticacao import get_usuario_atual
+    from main import app
+    from httpx import ASGITransport, AsyncClient
+    app.dependency_overrides[get_usuario_atual] = lambda: {"id": "prof-1", "email": "prof@unir.br",
+                                                             "papel": "professor", "nome": "Prof."}
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        yield client
+    app.dependency_overrides.clear()
+
+
+async def test_status_sem_runs(api_professor, db):
+    api = api_professor
     r = (await api.get("/api/projetos/fontes/status")).json()
     assert r["ultima_atualizacao"] is None
     assert r["fontes"]["sigaa"] == {"instituicao": "UNIR", "rotulo": "SIGAA/UNIR", "ultima_atualizacao": None}
     assert r["fontes"]["unirio"]["ultima_atualizacao"] is None
 
 
-async def test_status_por_fonte_ignora_falhas_e_dry_runs(api, db):
+async def test_status_por_fonte_ignora_falhas_e_dry_runs(api_professor, db):
+    api = api_professor
     await db.sigaa_sync_runs.insert_many([
         # runs antigas do SIGAA, sem o campo `fonte`
         {"status": "sucesso", "finalizada_em": datetime(2026, 9, 20, 6, 0, tzinfo=timezone.utc)},

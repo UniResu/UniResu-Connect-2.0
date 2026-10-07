@@ -56,7 +56,7 @@ A aba **Projetos Acadêmicos** lista, além dos projetos cadastrados pelos profe
 * Grava na collection `projetos` com `origem: "sigaa"` (upsert pela chave natural tipo + ano + título + coordenador). **Projetos cadastrados manualmente nunca são alterados.** Projetos que somem da fonte ficam `ativo: false` — nada é apagado.
 * Se um módulo retornar **0 resultados** (ou a busca falhar), nada daquele módulo é desativado: a run é marcada como falha, a equipe recebe alerta por e-mail e o processo sai com código 1.
 * Se o detalhe de um item falhar, o item é salvo com os dados da listagem (sem contato → botão "Candidatar-se" desabilitado) e o erro vai para o log da run.
-* Cada execução fica registrada em `sigaa_sync_runs` (coletados, novos, atualizados, desativados, erros). A data da última execução bem-sucedida aparece na aba de projetos.
+* Cada execução fica registrada em `sigaa_sync_runs` (coletados, novos, atualizados, desativados, erros). A data da última execução bem-sucedida fica disponível em `GET /api/projetos/fontes/status` só para professores e pesquisadores logados (não aparece na aba pública).
 * Agendamento: GitHub Actions, toda segunda às 09:00 UTC (`.github/workflows/sync-sigaa.yml`).
 
 **Rodar o job manualmente**
@@ -78,7 +78,7 @@ A aba **Projetos Acadêmicos** lista, além dos projetos cadastrados pelos profe
 * Grava na collection `projetos` com `origem: "unirio"`, `instituicao: "UNIRIO"` e `modulo` (`pesquisa`/`extensao`), com chave natural em `chave_unirio`. As regras são as mesmas do SIGAA: projetos manuais nunca são tocados, uma fonte nunca encosta nos documentos da outra, e o que some da fonte fica `ativo: false`.
 * Uma listagem que parou antes da última página (teto `UNIRIO_MAX_PAGINAS` ou paginação não reconhecida) é tratada como falha: o que foi lido é gravado, mas **nada é desativado** e o alerta é enviado. Se o processo for morto pelo timeout do Actions, a run fica `abortada`.
 * As fixtures `backend/tests/fixtures/unirio_*.html` são o HTML real dos dois portais (anonimizado: nomes e e-mails trocados, resumos encurtados). Se o layout mudar, rode o modo `captura`, baixe o artifact `captura-unirio` e atualize parser e fixtures.
-* As execuções ficam em `sigaa_sync_runs` com `fonte: "unirio"` (mesma collection do SIGAA, para reaproveitar o usuário restrito do Atlas). A rota `GET /api/projetos/fontes/status` devolve a última coleta de cada fonte.
+* As execuções ficam em `sigaa_sync_runs` com `fonte: "unirio"` (mesma collection do SIGAA, para reaproveitar o usuário restrito do Atlas). A rota `GET /api/projetos/fontes/status` (professores e pesquisadores logados) devolve a última coleta de cada fonte.
 * Agendamento: GitHub Actions, toda segunda às 10:00 UTC (`.github/workflows/sync-unirio.yml`). **Está comentado no workflow** até o parser ser validado com o HTML real; até lá, só execução manual.
 * Execução manual (**Actions → Sync UNIRIO → Run workflow**) com três modos:
   * `sync`: coleta e grava (o que o agendamento roda);

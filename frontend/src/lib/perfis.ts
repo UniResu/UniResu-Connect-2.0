@@ -32,6 +32,16 @@ export const NIVEIS = [
   { value: "doutorado", label: "Doutorado" },
 ];
 
+export interface DadosTecnico {
+  setor?: string | null;
+  cargo?: string | null;
+}
+
+export interface DadosEgresso {
+  ano_conclusao?: number | null;
+  atuacao?: string | null;
+}
+
 /** Perfis que coordenam projetos (cadastram vagas e recebem candidaturas). */
 export const PERFIS_COORDENADORES: TipoPerfil[] = ["professor", "pesquisador"];
 

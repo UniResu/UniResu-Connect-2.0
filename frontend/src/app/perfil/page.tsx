@@ -5,7 +5,44 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import Link from "next/link";
 import { NIVEL_LABELS } from "@/lib/constants";
+import { PERFIL_LABELS, emailProvisorio } from "@/lib/perfis";
 import styles from "./perfil.module.css";
+
+/** Linha abaixo do nome: o que a pessoa é, no vocabulário do seu vínculo. */
+export function subtituloDoPerfil(user: {
+  papel: string;
+  dados_aluno?: { nivel?: string; semestre?: number } | null;
+  dados_professor?: { titulo?: string | null; cargo?: string | null } | null;
+  dados_pesquisador?: { titulo?: string | null; vinculo?: string | null } | null;
+  dados_tecnico?: { setor?: string | null; cargo?: string | null } | null;
+  dados_egresso?: { ano_conclusao?: number | null; atuacao?: string | null } | null;
+  curso?: string | null;
+}) {
+  switch (user.papel) {
+    case "aluno": {
+      const nivel = user.dados_aluno?.nivel ? NIVEL_LABELS[user.dados_aluno.nivel] || user.dados_aluno.nivel : "Discente";
+      const semestre = user.dados_aluno?.semestre;
+      return semestre ? `${nivel} - ${semestre}º Semestre` : nivel;
+    }
+    case "professor":
+      return `${user.dados_professor?.titulo || ""} ${user.dados_professor?.cargo || "Docente"}`.trim();
+    case "pesquisador":
+      return `${user.dados_pesquisador?.titulo || ""} ${user.dados_pesquisador?.vinculo || "Pesquisador(a)"}`.trim();
+    case "tecnico":
+      return [user.dados_tecnico?.cargo || "Técnico(a)-administrativo(a)", user.dados_tecnico?.setor]
+        .filter(Boolean)
+        .join(" - ");
+    case "egresso":
+      return [
+        user.curso ? `Egresso(a) de ${user.curso}` : "Egresso(a)",
+        user.dados_egresso?.ano_conclusao ? `turma de ${user.dados_egresso.ano_conclusao}` : null,
+      ]
+        .filter(Boolean)
+        .join(", ");
+    default:
+      return PERFIL_LABELS[user.papel] || user.papel;
+  }
+}
 
 export default function PerfilPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -27,19 +64,13 @@ export default function PerfilPage() {
 
   if (!user) return null;
 
-  const nivelLabel =
-    user.dados_aluno?.nivel
-      ? NIVEL_LABELS[user.dados_aluno.nivel] || user.dados_aluno.nivel
-      : null;
-
-  const subtitulo =
-    user.papel === "aluno" && user.dados_aluno
-      ? `${nivelLabel} - ${user.dados_aluno.semestre}º Semestre`
-      : user.papel === "professor" && user.dados_professor
-        ? `${user.dados_professor.titulo || ""} ${user.dados_professor.cargo || "Professor"}`.trim()
-        : user.papel === "pesquisador" && user.dados_pesquisador
-          ? `${user.dados_pesquisador.titulo || ""} ${user.dados_pesquisador.vinculo || "Pesquisador"}`.trim()
-          : user.papel;
+  const extra = user as typeof user & {
+    username?: string;
+    perfil_completo?: boolean;
+    dados_tecnico?: { setor?: string | null; cargo?: string | null } | null;
+    dados_egresso?: { ano_conclusao?: number | null; atuacao?: string | null } | null;
+  };
+  const perfilIncompleto = extra.perfil_completo === false || emailProvisorio(user.email);
 
   return (
     <div className={styles.container}>
@@ -53,6 +84,14 @@ export default function PerfilPage() {
         </Link>
       </div>
 
+      {perfilIncompleto && (
+        <div className={styles.noticeCard}>
+          Seu perfil ainda não está completo: falta escolher o vínculo institucional
+          {emailProvisorio(user.email) ? " e informar o e-mail institucional" : ""}.{" "}
+          <Link href="/perfil/completar">Completar agora</Link>
+        </div>
+      )}
+
       <div className={styles.profileWrapper}>
         {/* ── Avatar & Nome ── */}
         <div className={styles.profileHeader}>
@@ -60,11 +99,12 @@ export default function PerfilPage() {
             {user.avatar_url ? (
               <img src={user.avatar_url} alt={user.nome} />
             ) : (
-              <span>{user.nome.charAt(0).toUpperCase()}</span>
+              <span>{(user.nome_social || user.nome).charAt(0).toUpperCase()}</span>
             )}
           </div>
           <h2 className={styles.profileName}>{user.nome_social || user.nome}</h2>
-          <p className={styles.profileSubtitle}>{subtitulo}</p>
+          <p className={styles.profileSubtitle}>{subtituloDoPerfil(extra)}</p>
+          {extra.username && <p className={styles.profileHandle}>@{extra.username}</p>}
           {user.orcid?.orcid_id && (
             <a
               href={`https://orcid.org/${user.orcid.orcid_id}`}
@@ -85,45 +125,11 @@ export default function PerfilPage() {
 
         {/* ── Info Cards ── */}
         <div className={styles.cardsGrid}>
-          {/* Linha de Pesquisa (aluno) */}
-          {user.dados_aluno?.linha_pesquisa && (
-            <div className={styles.infoCard}>
-              <span className={styles.cardLabel}>Linha de Pesquisa</span>
-              <span className={styles.cardValue}>
-                {user.dados_aluno.linha_pesquisa}
-              </span>
-            </div>
-          )}
+          <div className={styles.infoCard}>
+            <span className={styles.cardLabel}>Vínculo institucional</span>
+            <span className={styles.cardValue}>{PERFIL_LABELS[user.papel] || user.papel}</span>
+          </div>
 
-          {/* Linhas de Pesquisa (professor/pesquisador) */}
-          {(user.dados_professor?.linhas_pesquisa?.length ?? 0) > 0 && (
-            <div className={styles.infoCard}>
-              <span className={styles.cardLabel}>Linhas de Pesquisa</span>
-              <span className={styles.cardValue}>
-                {user.dados_professor!.linhas_pesquisa.join(", ")}
-              </span>
-            </div>
-          )}
-          {(user.dados_pesquisador?.linhas_pesquisa?.length ?? 0) > 0 && (
-            <div className={styles.infoCard}>
-              <span className={styles.cardLabel}>Linhas de Pesquisa</span>
-              <span className={styles.cardValue}>
-                {user.dados_pesquisador!.linhas_pesquisa.join(", ")}
-              </span>
-            </div>
-          )}
-
-          {/* Orientador */}
-          {user.dados_aluno?.orientador && (
-            <div className={styles.infoCard}>
-              <span className={styles.cardLabel}>Orientador(a)</span>
-              <span className={styles.cardValue}>
-                {user.dados_aluno.orientador}
-              </span>
-            </div>
-          )}
-
-          {/* Instituição */}
           {user.instituicao && (
             <div className={styles.infoCard}>
               <span className={styles.cardLabel}>Instituição</span>
@@ -131,13 +137,55 @@ export default function PerfilPage() {
             </div>
           )}
 
+          {user.curso && (
+            <div className={styles.infoCard}>
+              <span className={styles.cardLabel}>Curso</span>
+              <span className={styles.cardValue}>{user.curso}</span>
+            </div>
+          )}
+
+          {user.departamento && (
+            <div className={styles.infoCard}>
+              <span className={styles.cardLabel}>Departamento</span>
+              <span className={styles.cardValue}>{user.departamento}</span>
+            </div>
+          )}
+
+          {/* Linha de Pesquisa (discente) */}
+          {user.dados_aluno?.linha_pesquisa && (
+            <div className={styles.infoCard}>
+              <span className={styles.cardLabel}>Linha de Pesquisa</span>
+              <span className={styles.cardValue}>{user.dados_aluno.linha_pesquisa}</span>
+            </div>
+          )}
+
+          {/* Linhas de Pesquisa (docente/pesquisador) */}
+          {(user.dados_professor?.linhas_pesquisa?.length ?? 0) > 0 && (
+            <div className={styles.infoCard}>
+              <span className={styles.cardLabel}>Linhas de Pesquisa</span>
+              <span className={styles.cardValue}>{user.dados_professor!.linhas_pesquisa.join(", ")}</span>
+            </div>
+          )}
+          {(user.dados_pesquisador?.linhas_pesquisa?.length ?? 0) > 0 && (
+            <div className={styles.infoCard}>
+              <span className={styles.cardLabel}>Linhas de Pesquisa</span>
+              <span className={styles.cardValue}>{user.dados_pesquisador!.linhas_pesquisa.join(", ")}</span>
+            </div>
+          )}
+
+          {/* Orientador(a) */}
+          {user.dados_aluno?.orientador && (
+            <div className={styles.infoCard}>
+              <span className={styles.cardLabel}>Orientador(a)</span>
+              <span className={styles.cardValue}>{user.dados_aluno.orientador}</span>
+            </div>
+          )}
+
           {/* Laboratório */}
           {user.dados_professor?.laboratorio && (
             <div className={styles.infoCard}>
               <span className={styles.cardLabel}>Laboratório</span>
-              <span className={styles.cardValue}>
-                {user.dados_professor.laboratorio}
-              </span>
+              <span className={styles.cardValue}>{user.dados_professor.laboratorio}</span>
             </div>
           )}
 
@@ -145,9 +193,23 @@ export default function PerfilPage() {
           {user.dados_pesquisador?.grupo_pesquisa && (
             <div className={styles.infoCard}>
               <span className={styles.cardLabel}>Grupo de Pesquisa</span>
-              <span className={styles.cardValue}>
-                {user.dados_pesquisador.grupo_pesquisa}
-              </span>
+              <span className={styles.cardValue}>{user.dados_pesquisador.grupo_pesquisa}</span>
+            </div>
+          )}
+
+          {/* Técnico(a): setor */}
+          {extra.dados_tecnico?.setor && (
+            <div className={styles.infoCard}>
+              <span className={styles.cardLabel}>Setor</span>
+              <span className={styles.cardValue}>{extra.dados_tecnico.setor}</span>
+            </div>
+          )}
+
+          {/* Egresso(a): atuação */}
+          {extra.dados_egresso?.atuacao && (
+            <div className={styles.infoCard}>
+              <span className={styles.cardLabel}>Atuação atual</span>
+              <span className={styles.cardValue}>{extra.dados_egresso.atuacao}</span>
             </div>
           )}
 
@@ -157,9 +219,7 @@ export default function PerfilPage() {
               <span className={styles.cardLabel}>Interesses</span>
               <div className={styles.tagList}>
                 {user.interesses.map((tag) => (
-                  <span key={tag} className={styles.tag}>
-                    {tag}
-                  </span>
+                  <span key={tag} className={styles.tag}>{tag}</span>
                 ))}
               </div>
             </div>
@@ -171,9 +231,7 @@ export default function PerfilPage() {
               <span className={styles.cardLabel}>Habilidades</span>
               <div className={styles.tagList}>
                 {user.habilidades.map((tag) => (
-                  <span key={tag} className={styles.tag}>
-                    {tag}
-                  </span>
+                  <span key={tag} className={styles.tag}>{tag}</span>
                 ))}
               </div>
             </div>
@@ -191,9 +249,7 @@ export default function PerfilPage() {
         {/* ── Publicações ORCID ── */}
         {user.orcid?.publicacoes && user.orcid.publicacoes.length > 0 && (
           <div className={styles.publicacoesSection}>
-            <h3 className={styles.sectionTitle}>
-              📄 Publicações (via ORCID)
-            </h3>
+            <h3 className={styles.sectionTitle}>📄 Publicações (via ORCID)</h3>
             <div className={styles.publicacoesList}>
               {user.orcid.publicacoes.map((pub, i) => (
                 <div key={i} className={styles.publicacaoItem}>
@@ -202,11 +258,7 @@ export default function PerfilPage() {
                     {pub.ano && <span>{pub.ano}</span>}
                     {pub.tipo && <span>{pub.tipo}</span>}
                     {pub.doi && (
-                      <a
-                        href={`https://doi.org/${pub.doi}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
+                      <a href={`https://doi.org/${pub.doi}`} target="_blank" rel="noopener noreferrer">
                         DOI ↗
                       </a>
                     )}

@@ -96,8 +96,13 @@ async def listar_filtros_route():
 
 @router.get("/projetos/fontes/status", response_model=FontesStatusResponse)
 @router.get("/projetos/sigaa/status", response_model=FontesStatusResponse, deprecated=True)
-async def status_fontes_route():
-    """Data da última atualização dos dados de cada fonte externa (SIGAA/UNIR, UNIRIO)."""
+async def status_fontes_route(usuario: dict = Depends(get_usuario_atual)):
+    """Data da última atualização dos dados de cada fonte externa (SIGAA/UNIR, UNIRIO).
+
+    Só para professores e pesquisadores logados: quando a base foi atualizada
+    é informação interna da equipe, não aparece na aba pública.
+    """
+    verificar_papel(usuario)
     return await status_fontes_controller()
 
 

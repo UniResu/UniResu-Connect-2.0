@@ -184,7 +184,10 @@ export default function HomePage() {
       {/* ── Projetos ── */}
       <section className={styles.projetosSection} id="projetos">
         <h2 className={styles.sectionTitle}>Projetos Acadêmicos</h2>
-        <p className={styles.sectionSubtitle}>Descubra, contribua e candidate-se.</p>
+        <p className={styles.sectionSubtitle}>
+          Esses são os exemplos de projetos que você vai encontrar aqui. Descubra, contribua e candidate-se.
+          Clique em &quot;Explorar Projetos&quot; para ver tudo.
+        </p>
         <div className={styles.cardsContainerCol}>
           <div className={styles.projetoCard}>
             <div className={styles.projetoInfo}>
@@ -194,7 +197,6 @@ export default function HomePage() {
             <div className={styles.projetoDetalhes}>
               <span>UERJ</span>
               <span className={styles.tipo}>Projeto Institucional <strong>(Exclusivo)</strong></span>
-              <span>Publicado 3 semanas atrás</span>
             </div>
           </div>
           <div className={styles.projetoCard}>
@@ -205,18 +207,6 @@ export default function HomePage() {
             <div className={styles.projetoDetalhes}>
               <span>Belém, Pará</span>
               <span className={styles.tipo}>Projeto Institucional <strong>(Exclusivo)</strong></span>
-              <span>Publicado 2 meses atrás</span>
-            </div>
-          </div>
-          <div className={styles.projetoCard}>
-            <div className={styles.projetoInfo}>
-              <h3>[PROJETO FICTÍCIO] Cytogen: Rede Colaborativa em Bioinformática Aplicada à Oncologia</h3>
-              <p>Departamento de genética (UFMG)</p>
-            </div>
-            <div className={styles.projetoDetalhes}>
-              <span>Universidade Federal de Minas Gerais (UFMG) <em>(Remoto)</em></span>
-              <span className={styles.tipo}>Projeto Institucional <strong>(Aberto)</strong></span>
-              <span>Publicado 2 meses atrás</span>
             </div>
           </div>
         </div>
