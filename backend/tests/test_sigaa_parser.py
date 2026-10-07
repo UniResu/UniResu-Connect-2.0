@@ -139,3 +139,35 @@ class TestEquipe:
         <tr><th>E-mail do Responsável:</th><td>m@unir.br</td></tr></table></body></html>"""
         d = parser.parse_detalhe_extensao(html)
         assert d["coordenador"] == "MARIA" and d["responsavel_acao"] == "MARIA" and d["equipe"] == []
+
+
+class TestEquipeComEmail:
+    HTML = """<html><body><table><tr><th>Título:</th><td>Ação X</td></tr>
+    <tr><th>Responsável pela Ação:</th><td>JOAO DISCENTE</td></tr></table>
+    <table class="equipeProjeto"><tr><td class="descricao"><span class="nome">
+    <a href="#">MARIA DOCENTE</a><br/>Categoria: DOCENTE<br/>Função : COORDENADOR(A) MARIA.DOCENTE@ACADEMICO.UFPB.BR
+    </span></td></tr></table>
+    <table class="equipeProjeto"><tr><td class="descricao"><span class="nome">
+    JOAO DISCENTE<br/>Categoria: DISCENTE<br/>Função : ALUNO(A) VOLUNTARIO(A) JOAO@GMAIL.COM
+    </span></td></tr></table></body></html>"""
+
+    def test_funcao_separada_do_email_e_email_da_coordenacao(self):
+        d = parser.parse_detalhe_extensao(self.HTML)
+        assert d["equipe"][0] == {"nome": "MARIA DOCENTE", "categoria": "DOCENTE", "funcao": "COORDENADOR(A)",
+                                  "email": "maria.docente@academico.ufpb.br"}
+        assert d["coordenador"] == "MARIA DOCENTE" and d["responsavel_acao"] == "JOAO DISCENTE"
+        # sem "E-mail do Responsável", vale o e-mail da coordenação publicado na equipe
+        assert d["email"] == "maria.docente@academico.ufpb.br"
+        assert d["periodo_inicio"] is None
+
+    def test_coordenacao_adjunta_nao_vence_a_titular(self):
+        equipe = [{"nome": "ADJ", "categoria": "DOCENTE", "funcao": "COORDENADOR(A) ADJUNTO(A)"},
+                  {"nome": "TIT", "categoria": "DOCENTE", "funcao": "COORDENADOR(A)"}]
+        assert parser.coordenacao_da_equipe(equipe) == "TIT"
+
+    def test_periodo_em_outros_rotulos(self):
+        html = """<html><body><table><tr><th>Título:</th><td>Ação</td></tr>
+        <tr><th>Data de Início:</th><td>01/03/2026</td></tr><tr><th>Data de Término:</th><td>30/11/2026</td></tr>
+        </table></body></html>"""
+        d = parser.parse_detalhe_extensao(html)
+        assert (d["periodo_inicio"], d["periodo_fim"]) == ("2026-03-01", "2026-11-30")

@@ -16,6 +16,7 @@ mantido com os dados da listagem e o erro é registrado.
 
 import logging
 from dataclasses import dataclass, field
+from datetime import date
 from typing import Optional
 
 from bs4 import BeautifulSoup
@@ -213,10 +214,13 @@ def buscar_paginas(client: SigaaClient, modulo: str, ano: str) -> list[PaginaLis
 
 
 def _detalhe_por_postback(client: SigaaClient, modulo: str, pagina: PaginaListagem, item: dict, ano: str,
-                          parse) -> dict:
+                          parse, diagnosticar: bool = False) -> dict:
     """Detalhe aberto por postback do form da listagem (a página de detalhe
-    não tem URL própria). Se o ViewState expirou, refaz a busca e tenta de novo."""
+    não tem URL própria). Se o ViewState expirou, refaz a busca e tenta de novo.
+    Com `diagnosticar`, a página que o parser não reconheceu vai para o log,
+    para adaptar o parser a essa versão do SIGAA."""
     html = pagina.html
+    resposta = ""
     for tentativa in range(2):
         try:
             if tentativa == 1:
@@ -224,9 +228,13 @@ def _detalhe_por_postback(client: SigaaClient, modulo: str, pagina: PaginaListag
             form = parser.achar_form(BeautifulSoup(html, "html.parser"), "formConsulta")
             dados = parser.payload_base(form)
             dados.update(item.get("detalhe_params") or {})
-            return parse(client.post(_urls(client)[modulo], dados))
+            resposta = client.post(_urls(client)[modulo], dados)
+            return parse(resposta)
         except (ErroColeta, ValueError):
             if tentativa == 1:
+                if diagnosticar and resposta:
+                    logger.warning("%s %s: detalhe por postback não reconhecido.\n%s", _nome(client), modulo,
+                                   parser.diagnostico_pagina(resposta))
                 raise
     raise SigaaErro("detalhe indisponível")
 
@@ -256,11 +264,14 @@ def coletar_pesquisa(client: SigaaClient, ano: str) -> ResultadoColeta:
         logger.warning("%s pesquisa %s: nenhum item reconhecido.\n%s", _nome(client), ano,
                        parser.diagnostico_pagina(paginas[0].html))
 
+    diagnosticado = False
     for item, pagina in itens:
         detalhe = None
         try:
-            detalhe = _detalhe_por_postback(client, "pesquisa", pagina, item, ano, parser.parse_detalhe_pesquisa)
+            detalhe = _detalhe_por_postback(client, "pesquisa", pagina, item, ano, parser.parse_detalhe_pesquisa,
+                                            diagnosticar=not diagnosticado)
         except (ErroColeta, ValueError) as e:
+            diagnosticado = True
             res.erros.append(_erro("pesquisa", item, e))
         res.itens.append(_registro("pesquisa", item, detalhe))
     return res
@@ -292,27 +303,39 @@ def coletar_extensao(client: SigaaClient, ano: str) -> ResultadoColeta:
         logger.warning("%s extensão %s: nenhum item reconhecido.\n%s", _nome(client), ano,
                        parser.diagnostico_pagina(paginas[0].html))
 
+    link_publico_quebrado = False  # neste SIGAA o link público do detalhe não existe (404)
+    diagnosticado = False
     for item, pagina in itens:
         detalhe = None
         try:
             if not item.get("link_detalhe") and not item.get("detalhe_params"):
                 raise SigaaErro("Item sem link de detalhe.")
             erro_link = None
-            try:
-                # Link público estável (GET): não depende de ViewState.
-                detalhe = parser.parse_detalhe_extensao(client.get(item["link_detalhe"])) if item.get("link_detalhe") else None
-            except (ErroColeta, ValueError) as e:
-                if not item.get("detalhe_params"):
-                    raise
-                logger.info("%s extensão: link público falhou (%s); tentando o detalhe por postback", _nome(client), e)
-                erro_link = e
+            if item.get("link_detalhe") and not link_publico_quebrado:
+                try:
+                    # Link público estável (GET): não depende de ViewState.
+                    detalhe = parser.parse_detalhe_extensao(client.get(item["link_detalhe"]))
+                except (ErroColeta, ValueError) as e:
+                    if not item.get("detalhe_params"):
+                        raise
+                    if "HTTP 404" in str(e):
+                        link_publico_quebrado = True
+                        logger.info("%s extensão: o link público do detalhe não existe; os demais abrem por postback",
+                                    _nome(client))
+                    erro_link = e
             if detalhe is None:
                 try:
-                    detalhe = _detalhe_por_postback(client, "extensao", pagina, item, ano, parser.parse_detalhe_extensao)
+                    detalhe = _detalhe_por_postback(client, "extensao", pagina, item, ano, parser.parse_detalhe_extensao,
+                                                    diagnosticar=not diagnosticado)
                 except (ErroColeta, ValueError) as e:
+                    diagnosticado = True
                     # O erro registrado é o do link público, que é o caminho principal.
                     raise erro_link or e
             detalhe["situacao"] = parser.situacao_por_periodo(detalhe["periodo_inicio"], detalhe["periodo_fim"])
+            if detalhe["situacao"] is None and item.get("ano") == str(date.today().year):
+                # Sem período publicado: a ação foi encontrada na consulta do ano
+                # corrente, então conta como em execução até a fonte dizer o contrário.
+                detalhe["situacao"] = parser.SITUACAO_EM_EXECUCAO
         except (ErroColeta, ValueError) as e:
             res.erros.append(_erro("extensao", item, e))
         res.itens.append(_registro("extensao", item, detalhe))
@@ -326,6 +349,10 @@ def coletar_extensao(client: SigaaClient, ano: str) -> ResultadoColeta:
 def _registro(modulo: str, item: dict, detalhe: Optional[dict]) -> dict:
     """Registro final: dados da listagem, enriquecidos pelo detalhe se houver."""
     d = detalhe or {}
+    situacao = d.get("situacao") or item.get("situacao")
+    if parser.situacao_vigente(situacao):
+        # Vocabulários diferentes (EM ANDAMENTO, RENOVADO) viram o valor que a plataforma exibe.
+        situacao = parser.SITUACAO_EM_EXECUCAO
     return {
         "modulo": modulo,
         "sigaa_id": item.get("sigaa_id"),
@@ -334,7 +361,7 @@ def _registro(modulo: str, item: dict, detalhe: Optional[dict]) -> dict:
         "coordenador": d.get("coordenador") or item.get("coordenador"),
         "email": d.get("email"),
         "unidade": d.get("unidade") or item.get("unidade"),
-        "situacao": d.get("situacao") or item.get("situacao"),
+        "situacao": situacao,
         "ano": item.get("ano"),
         "categoria": item.get("categoria"),
         "link_detalhe": item.get("link_detalhe"),

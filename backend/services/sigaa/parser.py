@@ -398,22 +398,48 @@ def parse_equipe(soup: BeautifulSoup) -> list[dict]:
         nome = next((linha for linha in linhas if not normalizar(linha).startswith(("CATEGORIA", "FUNCAO"))), None)
         texto = normalizar(span.get_text(" "))
         m_cat, m_fun = _RE_CATEGORIA.search(texto), _RE_FUNCAO.search(texto)
+        funcao = (m_fun.group(1).strip() or None) if m_fun else None
+        # Alguns SIGAAs publicam o e-mail do membro logo depois da função.
+        email = _email(funcao) or _email(span.get_text(" "))
+        if funcao and email:
+            funcao = re.sub(r"\s*" + re.escape(email), "", funcao, flags=re.I).strip() or None
         if nome:
-            equipe.append({
+            membro = {
                 "nome": nome,
                 "categoria": (m_cat.group(1).strip() or None) if m_cat else None,
-                "funcao": (m_fun.group(1).strip() or None) if m_fun else None,
-            })
+                "funcao": funcao,
+            }
+            if email:
+                membro["email"] = email
+            equipe.append(membro)
     return equipe
 
 
-def coordenacao_da_equipe(equipe: list[dict]) -> Optional[str]:
-    """Quem coordena de fato: membro com função de coordenação, de preferência
-    docente. O campo "Responsável pela Ação" do SIGAA pode trazer um discente."""
+def membro_coordenador(equipe: list[dict]) -> Optional[dict]:
+    """Membro que coordena de fato: função de coordenação (não adjunta), de
+    preferência docente. O campo "Responsável pela Ação" do SIGAA pode trazer
+    um discente."""
     coordenadores = [m for m in equipe if "COORDENADOR" in normalizar(m.get("funcao"))]
-    docentes = [m for m in coordenadores if "DOCENTE" in normalizar(m.get("categoria"))]
-    escolhido = (docentes or coordenadores or [None])[0]
-    return escolhido["nome"] if escolhido else None
+    titulares = [m for m in coordenadores if "ADJUNT" not in normalizar(m.get("funcao"))] or coordenadores
+    docentes = [m for m in titulares if "DOCENTE" in normalizar(m.get("categoria"))]
+    return (docentes or titulares or [None])[0]
+
+
+def coordenacao_da_equipe(equipe: list[dict]) -> Optional[str]:
+    membro = membro_coordenador(equipe)
+    return membro["nome"] if membro else None
+
+
+def _periodo_tolerante(c: dict) -> tuple[Optional[str], Optional[str]]:
+    """Período em qualquer rótulo com PERIODO, ou em pares de início e fim."""
+    for rotulo, valor in c.items():
+        if "PERIODO" in rotulo:
+            inicio, fim = _periodo(valor)
+            if inicio:
+                return inicio, fim
+    inicio = next((v for k, v in c.items() if "INICIO" in k), None)
+    fim = next((v for k, v in c.items() if "FIM" in k or "TERMINO" in k), None)
+    return _periodo(inicio)[0], _periodo(fim)[0]
 
 
 def parse_detalhe_extensao(html: str) -> dict:
@@ -421,15 +447,17 @@ def parse_detalhe_extensao(html: str) -> dict:
     c = _campos_th_td(soup)
     if "RESPONSAVEL PELA ACAO" not in c and "TITULO" not in c:
         raise ValueError("Página de detalhe de extensão inesperada.")
-    inicio, fim = _periodo(c.get("PERIODO DE REALIZACAO"))
+    inicio, fim = _periodo_tolerante(c)
     responsavel = c.get("RESPONSAVEL PELA ACAO") or None
     equipe = parse_equipe(soup)
+    coordenador = membro_coordenador(equipe)
     return {
         # Coordenação docente da equipe; sem equipe publicada, fica o responsável.
-        "coordenador": coordenacao_da_equipe(equipe) or responsavel,
+        "coordenador": (coordenador["nome"] if coordenador else None) or responsavel,
         "responsavel_acao": responsavel,
         "equipe": equipe,
-        "email": _email(c.get("E-MAIL DO RESPONSAVEL")),
+        # E-mail do responsável; sem ele, o da coordenação publicado na equipe.
+        "email": _email(c.get("E-MAIL DO RESPONSAVEL")) or (coordenador or {}).get("email"),
         "unidade": c.get("UNIDADE PROPONENTE") or None,
         "periodo_inicio": inicio,
         "periodo_fim": fim,

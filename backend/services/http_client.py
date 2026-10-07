@@ -21,6 +21,10 @@ class ErroColeta(Exception):
     """Falha de rede/HTTP após esgotar as tentativas, ou página inesperada."""
 
 
+class ErroDefinitivo(ErroColeta):
+    """Resposta 4xx (menos 429): repetir não ajuda, então não há nova tentativa."""
+
+
 def _retry_after(resp) -> float:
     """Segundos pedidos pelo cabeçalho Retry-After (só a forma numérica)."""
     valor = (getattr(resp, "headers", None) or {}).get("Retry-After") or ""
@@ -94,12 +98,16 @@ class ClienteHttp:
                 if resp.status_code >= 500 or resp.status_code == 429:
                     retry_after = _retry_after(resp)
                     raise self.erro(f"HTTP {resp.status_code} em {url}")
+                if resp.status_code >= 400:
+                    raise ErroDefinitivo(f"HTTP {resp.status_code} em {url}")
                 resp.raise_for_status()
                 self._ajustar_encoding(resp)
                 return resp
             except (requests.RequestException, ErroColeta) as e:
                 self._ultima = self._clock()
                 self._ultima_duracao = self._ultima - inicio
+                if isinstance(e, ErroDefinitivo):
+                    raise
                 ultimo_erro = e
                 if tentativa < self.cfg.max_tentativas:
                     # Respeita o Retry-After do servidor quando ele pede mais.

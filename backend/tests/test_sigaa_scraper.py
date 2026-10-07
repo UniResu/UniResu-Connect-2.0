@@ -243,3 +243,39 @@ def test_helpers_de_opcoes_e_situacao():
     assert parser.resultados_excessivos(EXCESSIVO) and not parser.resultados_excessivos("<p>ok</p>")
     assert parser.situacao_vigente("EM EXECUÇÃO") and parser.situacao_vigente("Em Andamento")
     assert not parser.situacao_vigente("FINALIZADO") and not parser.situacao_vigente(None)
+
+
+def test_situacao_equivalente_vira_em_execucao_e_extensao_sem_periodo_conta_como_vigente():
+    from datetime import date
+
+    item = {"sigaa_id": "1", "titulo": "P", "situacao": "EM ANDAMENTO", "ano": str(date.today().year)}
+    assert scraper._registro("pesquisa", item, None)["situacao"] == "EM EXECUÇÃO"
+    assert scraper._registro("pesquisa", {**item, "situacao": "FINALIZADO"}, None)["situacao"] == "FINALIZADO"
+
+
+def test_erro_4xx_nao_e_repetido():
+    from services.http_client import ClienteHttp, ErroDefinitivo
+
+    class Resp:
+        status_code = 404
+        headers = {}
+        content = b""
+        text = ""
+
+        def raise_for_status(self):
+            raise AssertionError("não deveria chegar aqui")
+
+    class Sessao:
+        chamadas = 0
+        headers = {}
+
+        def request(self, *a, **kw):
+            self.chamadas += 1
+            return Resp()
+
+    cfg = SigaaConfig(max_tentativas=3, pausa_segundos=1.0)
+    sessao = Sessao()
+    cliente = ClienteHttp(cfg, session=sessao, sleep=lambda s: None)
+    with pytest.raises(ErroDefinitivo):
+        cliente.get("https://x/y")
+    assert sessao.chamadas == 1
