@@ -164,13 +164,34 @@ O envio de e-mail continua usando `RESEND_API_KEY`, `EMAIL_REMETENTE` e `EMAIL_S
 ```bash
 cd backend
 pip install -r requirements-dev.txt
-pytest          # parser do SIGAA (HTML real salvo), parser da UNIRIO (fixtures sintéticas até a captura),
-                # upsert, jobs, listagem, candidatura, fórum (privacidade, seed, usernames)
+pytest          # parsers do SIGAA e da UNIRIO (HTML real salvo e anonimizado), upsert, jobs,
+                # listagem e filtros, candidatura, registro/perfil por vínculo, fórum
+                # (privacidade, seed, usernames)
 ruff check .
 
 cd ../frontend
 npm run lint
 ```
+
+---
+
+### **Perfis e registro**
+
+O perfil tem um **vínculo institucional** (`papel` no banco), escolhido pela própria pessoa no registro e alterável depois em **Editar perfil**:
+
+| Valor no banco | Rótulo na interface | Sub-documento | Campos próprios |
+| --- | --- | --- | --- |
+| `aluno` | Discente | `dados_aluno` | nível (graduação, mestrado, doutorado), semestre, orientador(a), linha de pesquisa |
+| `professor` | Docente | `dados_professor` | titulação, cargo, linhas de pesquisa, laboratório |
+| `pesquisador` | Pesquisador(a) | `dados_pesquisador` | titulação, vínculo (pós-doc, colaborador(a), visitante), linhas e grupo de pesquisa |
+| `tecnico` | Técnico(a)-administrativo(a) | `dados_tecnico` | setor, cargo |
+| `egresso` | Egresso(a) | `dados_egresso` | ano de conclusão, atuação atual |
+
+Os três primeiros valores existem desde a primeira versão e mantêm o nome interno antigo. Só docentes e pesquisadores(as) cadastram projetos e recebem candidaturas (`PAPEIS_PERMITIDOS` em `backend/routes/projeto_routes.py`). Os rótulos e as opções da interface ficam em `frontend/src/lib/perfis.ts`.
+
+**Registro por e-mail** (`POST /api/usuarios/registrar`, página `/registrar`, baseada no protótipo do Figma): nome, e-mail institucional, vínculo, campos do vínculo escolhido, senha e os dois aceites (`aceite_regras`, `aceite_dados`), ambos obrigatórios. O backend grava `aceites_em` e cria apenas o sub-documento do vínculo escolhido. A lista de domínios aceitos é compartilhada entre `backend/services/emails_institucionais.py` e o frontend.
+
+**Login via ORCID**: o ORCID não informa se a pessoa é discente, docente ou pesquisador(a), então a conta nasce com `perfil_completo: false` e e-mail provisório (`<orcid>@orcid.placeholder`). O frontend redireciona para `/perfil/completar`, onde a pessoa escolhe o vínculo, informa o e-mail institucional (aceito pelo `PATCH /api/perfil` só enquanto o atual for o provisório, e sujeito à mesma validação e à mesma verificação por e-mail do registro) e marca os aceites. A página de perfil mostra um aviso enquanto o perfil estiver incompleto.
 
 ---
 

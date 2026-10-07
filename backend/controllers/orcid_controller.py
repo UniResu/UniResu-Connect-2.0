@@ -164,14 +164,19 @@ async def processar_callback_orcid(
         )
         usuario = await db.usuarios.find_one({"_id": usuario_existente["_id"]})
     else:
-        # Criar novo usuário
+        # Criar novo usuário. O ORCID não diz se a pessoa é discente, docente
+        # ou pesquisador(a): o papel abaixo é só um valor provisório e
+        # `perfil_completo: False` manda o frontend para /perfil/completar,
+        # onde ela escolhe o vínculo, informa o e-mail institucional e aceita
+        # as regras.
         nome = name or "Usuário ORCID"
         novo_usuario = {
             "email": f"{orcid_id}@orcid.placeholder",  # Placeholder até o usuário informar
             # Username público (fórum): do nome do ORCID, nunca do e-mail/ORCID iD.
             "username": await gerar_username_unico(db, nome),
             "nome": nome,
-            "papel": "pesquisador",  # Padrão para login via ORCID
+            "papel": "pesquisador",  # provisório até completar o perfil
+            "perfil_completo": False,
             "orcid": orcid_data,
             "instituicao": perfil_orcid.get("afiliacao"),
             "interesses": [],

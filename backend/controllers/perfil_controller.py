@@ -10,17 +10,8 @@ from datetime import datetime, timezone
 from bson import ObjectId
 from fastapi import HTTPException, status
 from database.connection import Database
-from models.usuario_model import PerfilUpdate
+from models.usuario_model import DADOS_POR_PAPEL, PerfilUpdate
 from services.emails_institucionais import email_provisorio, validar_email_institucional
-
-# Sub-documento de cada tipo de perfil (vínculo institucional).
-DADOS_POR_PAPEL = {
-    "aluno": "dados_aluno",
-    "professor": "dados_professor",
-    "pesquisador": "dados_pesquisador",
-    "tecnico": "dados_tecnico",
-    "egresso": "dados_egresso",
-}
 
 
 def formatar_perfil(doc: Dict[str, Any]) -> Dict[str, Any]:
@@ -46,6 +37,7 @@ def formatar_perfil_publico(doc: Dict[str, Any]) -> Dict[str, Any]:
         return None
     formatado = {
         "id": str(doc["_id"]) if "_id" in doc else doc.get("id"),
+        "username": doc.get("username"),
         "nome": doc.get("nome", ""),
         "nome_social": doc.get("nome_social"),
         "avatar_url": doc.get("avatar_url"),
@@ -60,7 +52,6 @@ def formatar_perfil_publico(doc: Dict[str, Any]) -> Dict[str, Any]:
         "dados_pesquisador": doc.get("dados_pesquisador"),
         "dados_tecnico": doc.get("dados_tecnico"),
         "dados_egresso": doc.get("dados_egresso"),
-        "username": doc.get("username"),
         "departamento": doc.get("departamento"),
         "orcid_id": doc.get("orcid", {}).get("orcid_id") if doc.get("orcid") else None,
         "publicacoes": doc.get("orcid", {}).get("publicacoes", []) if doc.get("orcid") else [],
@@ -151,6 +142,10 @@ async def atualizar_perfil_controller(
         campo_dados = DADOS_POR_PAPEL.get(papel)
         if campo_dados and not atual.get(campo_dados) and campo_dados not in dados_dict:
             update_fields[campo_dados] = {}
+        elif campo_dados and not atual.get(campo_dados) and campo_dados in dados_dict:
+            # Sub-documento ainda não existe: gravar inteiro (o merge por
+            # dot notation abaixo falharia se o valor atual fosse null).
+            update_fields[campo_dados] = dados_dict.pop(campo_dados)
 
     # E-mail: só pode ser definido aqui enquanto for o provisório do ORCID.
     if "email" in dados_dict:

@@ -3,7 +3,12 @@
  * Espelham os Pydantic models do backend.
  */
 
-export type PapelUsuario = "aluno" | "professor" | "pesquisador";
+import type { DadosEgresso, DadosTecnico, TipoPerfil } from "@/lib/perfis";
+
+export type { DadosEgresso, DadosTecnico } from "@/lib/perfis";
+
+/** Vínculo institucional (ver `lib/perfis.ts` para os rótulos). */
+export type PapelUsuario = TipoPerfil;
 export type NivelAcademico = "graduacao" | "mestrado" | "doutorado";
 
 export interface DadosAluno {
@@ -69,7 +74,11 @@ export interface User {
   dados_aluno?: DadosAluno;
   dados_professor?: DadosProfessor;
   dados_pesquisador?: DadosPesquisador;
+  dados_tecnico?: DadosTecnico;
+  dados_egresso?: DadosEgresso;
   orcid?: OrcidData;
+  /** False só para contas criadas pelo ORCID que ainda não passaram por /perfil/completar. */
+  perfil_completo?: boolean;
   criado_em?: string;
 }
 

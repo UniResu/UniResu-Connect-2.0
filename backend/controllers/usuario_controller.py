@@ -16,12 +16,21 @@ import resend
 from fastapi import HTTPException, status
 from passlib.context import CryptContext
 from database.connection import Database
-from models.usuario_model import UsuarioCreate
+from models.usuario_model import DADOS_POR_PAPEL, PapelUsuario, UsuarioCreate
 from services.usernames import gerar_username_unico
 
 logger = logging.getLogger(__name__)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Sub-documento mínimo quando o registro não traz os dados do vínculo.
+DADOS_PADRAO = {
+    PapelUsuario.ALUNO: {"nivel": "graduacao", "semestre": 1},
+    PapelUsuario.PROFESSOR: {"linhas_pesquisa": []},
+    PapelUsuario.PESQUISADOR: {"linhas_pesquisa": []},
+    PapelUsuario.TECNICO: {},
+    PapelUsuario.EGRESSO: {},
+}
 
 # Envio de e-mail agora é feito via API do Resend (domínio uniresu.org
 # verificado). EMAIL_REMETENTE é o "from" exibido; EMAIL_SUPORTE recebe
@@ -94,6 +103,7 @@ async def registrar_usuario_controller(user: UsuarioCreate) -> Dict[str, Any]:
     username = await gerar_username_unico(db, user.nome)
 
     # Construir documento do usuário
+    agora = datetime.now(timezone.utc)
     novo_usuario_doc: Dict[str, Any] = {
         "email": user.email,
         "username": username,
@@ -101,10 +111,16 @@ async def registrar_usuario_controller(user: UsuarioCreate) -> Dict[str, Any]:
         "papel": user.papel.value,
         "instituicao": user.instituicao,
         "curso": user.curso,
+        "departamento": user.departamento,
         "interesses": [],
         "habilidades": [],
-        "criado_em": datetime.now(timezone.utc),
-        "atualizado_em": datetime.now(timezone.utc),
+        # Aceites marcados no formulário de registro (ambos obrigatórios no schema).
+        "aceite_regras": True,
+        "aceite_dados": True,
+        "aceites_em": agora,
+        "perfil_completo": True,
+        "criado_em": agora,
+        "atualizado_em": agora,
         "ativo": True,
         "email_verificado": False,
         "token_verificacao_email": token_verificacao,
@@ -115,20 +131,14 @@ async def registrar_usuario_controller(user: UsuarioCreate) -> Dict[str, Any]:
     if user.senha:
         novo_usuario_doc["senha_hash"] = hash_password(user.senha)
 
-    # Inicializar sub-documento por papel
-    if user.papel.value == "aluno":
-        novo_usuario_doc["dados_aluno"] = {
-            "nivel": "graduacao",
-            "semestre": 1,
-        }
-    elif user.papel.value == "professor":
-        novo_usuario_doc["dados_professor"] = {
-            "linhas_pesquisa": [],
-        }
-    elif user.papel.value == "pesquisador":
-        novo_usuario_doc["dados_pesquisador"] = {
-            "linhas_pesquisa": [],
-        }
+    # Sub-documento do vínculo escolhido: o que veio no formulário, ou o
+    # mínimo padrão do tipo (os sub-docs dos outros tipos são ignorados).
+    campo_dados = DADOS_POR_PAPEL[user.papel]
+    enviado = getattr(user, campo_dados, None)
+    if enviado is not None:
+        novo_usuario_doc[campo_dados] = enviado.model_dump(exclude_none=True)
+    else:
+        novo_usuario_doc[campo_dados] = dict(DADOS_PADRAO.get(user.papel, {}))
 
     try:
         result = await db.usuarios.insert_one(novo_usuario_doc)

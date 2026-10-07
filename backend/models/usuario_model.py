@@ -1,8 +1,9 @@
 """
 Modelos Pydantic para Usuário / Perfil.
 
-Suporta polimorfismo por papel: aluno, professor, pesquisador.
-Integração com dados do ORCID.
+Suporta polimorfismo por papel (vínculo institucional): aluno (discente),
+professor (docente), pesquisador(a), tecnico (técnico-administrativo) e
+egresso. Integração com dados do ORCID.
 """
 
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
@@ -10,15 +11,22 @@ from typing import Optional, List
 from datetime import datetime
 from enum import Enum
 
+from services.emails_institucionais import validar_email_institucional
+
 
 # ═══════════════════════════════════════════
 #  Enums
 # ═══════════════════════════════════════════
 
 class PapelUsuario(str, Enum):
+    """Vínculo institucional. Os três primeiros valores existem desde a
+    primeira versão e continuam com o nome interno antigo (a interface mostra
+    "Discente", "Docente", "Pesquisador(a)")."""
     ALUNO = "aluno"
     PROFESSOR = "professor"
     PESQUISADOR = "pesquisador"
+    TECNICO = "tecnico"
+    EGRESSO = "egresso"
 
 
 class NivelAcademico(str, Enum):
@@ -53,6 +61,28 @@ class DadosPesquisador(BaseModel):
     vinculo: Optional[str] = None            # Pós-Doc, Colaborador, Visitante
     linhas_pesquisa: List[str] = []
     grupo_pesquisa: Optional[str] = None
+
+
+class DadosTecnico(BaseModel):
+    """Campos exclusivos de técnicos(as)-administrativos(as)."""
+    setor: Optional[str] = None              # laboratório, secretaria, biblioteca...
+    cargo: Optional[str] = None
+
+
+class DadosEgresso(BaseModel):
+    """Campos exclusivos de egressos(as)."""
+    ano_conclusao: Optional[int] = Field(None, ge=1900, le=2100)
+    atuacao: Optional[str] = None            # onde atua hoje (empresa, pós em outra IES...)
+
+
+# Sub-documento de cada vínculo (nome do campo no banco).
+DADOS_POR_PAPEL = {
+    PapelUsuario.ALUNO: "dados_aluno",
+    PapelUsuario.PROFESSOR: "dados_professor",
+    PapelUsuario.PESQUISADOR: "dados_pesquisador",
+    PapelUsuario.TECNICO: "dados_tecnico",
+    PapelUsuario.EGRESSO: "dados_egresso",
+}
 
 
 # ═══════════════════════════════════════════
@@ -91,56 +121,38 @@ class OrcidData(BaseModel):
 # ═══════════════════════════════════════════
 
 class UsuarioCreate(BaseModel):
-    """Schema para criação de usuário (registro)."""
+    """Schema para criação de usuário (registro).
+
+    A pessoa escolhe o vínculo (`papel`) e pode já preencher o sub-documento
+    correspondente; os dois aceites são obrigatórios.
+    """
     email: EmailStr
-    senha: Optional[str] = None              # Opcional se login via ORCID
+    senha: Optional[str] = Field(None, min_length=6)   # Opcional se login via ORCID
     nome: str = Field(min_length=2, max_length=200)
     papel: PapelUsuario
-    instituicao: Optional[str] = None
-    curso: Optional[str] = None
+    instituicao: Optional[str] = Field(None, max_length=200)
+    curso: Optional[str] = Field(None, max_length=200)
+    departamento: Optional[str] = Field(None, max_length=200)
+    aceite_regras: bool = Field(..., description="Li e aceito as regras da plataforma")
+    aceite_dados: bool = Field(..., description="Aceito o compartilhamento dos dados do perfil")
+    dados_aluno: Optional[DadosAluno] = None
+    dados_professor: Optional[DadosProfessor] = None
+    dados_pesquisador: Optional[DadosPesquisador] = None
+    dados_tecnico: Optional[DadosTecnico] = None
+    dados_egresso: Optional[DadosEgresso] = None
 
     @field_validator('email')
     @classmethod
     def email_deve_ser_institucional(cls, email: str) -> str:
-        """Valida por whitelist de domínios acadêmicos (aceita subdomínios).
+        """Whitelist de domínios acadêmicos (ver services.emails_institucionais)."""
+        return validar_email_institucional(email)
 
-        Regra:
-          - Aceita qualquer domínio terminado em '.edu.br' ou '.edu'.
-          - Aceita domínios listados em `dominios_permitidos`, inclusive
-            quaisquer subdomínios (ex.: 'sga.pucminas.br' → OK porque
-            termina em '.pucminas.br').
-        """
-        dominio = email.split('@')[-1].lower().strip()
-        if not dominio:
-            raise ValueError('E-mail inválido.')
-
-        # Regra geral: qualquer instituição acadêmica (.edu.br / .edu)
-        if dominio.endswith('.edu.br') or dominio == 'edu.br' \
-                or dominio.endswith('.edu') or dominio == 'edu':
-            return email
-
-        dominios_permitidos = {
-            # Federais
-            'ufrj.br', 'ufmg.br', 'unb.br', 'ufrgs.br', 'ufsc.br',
-            'ufpr.br', 'ufpe.br', 'ufba.br', 'ufg.br', 'ufrn.br',
-            'ufv.br', 'ufscar.br', 'unifesp.br', 'ufc.br', 'ufu.br',
-            # Estaduais
-            'usp.br', 'unicamp.br', 'unesp.br', 'uerj.br', 'udesc.br',
-            'uems.br', 'unemat.br', 'uenp.br',
-            # PUCs
-            'pucminas.br', 'puc-rio.br', 'pucsp.br', 'pucpr.br',
-            'pucrs.br', 'puccampinas.edu.br',
-            # Privadas e institutos
-            'fgv.br', 'insper.edu.br', 'mackenzie.br', 'einstein.br',
-            'fia.com.br', 'senai.br', 'itajuba.edu.br', 'ita.br',
-            'ime.eb.mil.br',
-        }
-
-        for alvo in dominios_permitidos:
-            if dominio == alvo or dominio.endswith('.' + alvo):
-                return email
-
-        raise ValueError('Apenas e-mails institucionais acadêmicos são permitidos.')
+    @field_validator('aceite_regras', 'aceite_dados')
+    @classmethod
+    def aceites_obrigatorios(cls, valor: bool) -> bool:
+        if not valor:
+            raise ValueError('É preciso aceitar as regras da plataforma e o compartilhamento de dados.')
+        return valor
 
 
 class PerfilUpdate(BaseModel):
@@ -149,14 +161,21 @@ class PerfilUpdate(BaseModel):
     nome_social: Optional[str] = None
     bio: Optional[str] = Field(None, max_length=2000)
     avatar_url: Optional[str] = None
-    instituicao: Optional[str] = None
-    curso: Optional[str] = None
-    departamento: Optional[str] = None
+    papel: Optional[PapelUsuario] = None     # vínculo pode ser escolhido/alterado pela pessoa
+    email: Optional[EmailStr] = None         # só aceito enquanto for o provisório do ORCID
+    instituicao: Optional[str] = Field(None, max_length=200)
+    curso: Optional[str] = Field(None, max_length=200)
+    departamento: Optional[str] = Field(None, max_length=200)
     interesses: Optional[List[str]] = None
     habilidades: Optional[List[str]] = None
+    aceite_regras: Optional[bool] = None
+    aceite_dados: Optional[bool] = None
+    perfil_completo: Optional[bool] = None   # marcado ao concluir /perfil/completar
     dados_aluno: Optional[DadosAluno] = None
     dados_professor: Optional[DadosProfessor] = None
     dados_pesquisador: Optional[DadosPesquisador] = None
+    dados_tecnico: Optional[DadosTecnico] = None
+    dados_egresso: Optional[DadosEgresso] = None
 
 
 class LoginRequest(BaseModel):
@@ -201,7 +220,12 @@ class UsuarioResponse(BaseModel):
     dados_aluno: Optional[DadosAluno] = None
     dados_professor: Optional[DadosProfessor] = None
     dados_pesquisador: Optional[DadosPesquisador] = None
+    dados_tecnico: Optional[DadosTecnico] = None
+    dados_egresso: Optional[DadosEgresso] = None
     orcid: Optional[OrcidData] = None
+    # False só para contas criadas pelo ORCID que ainda não escolheram o
+    # vínculo nem informaram o e-mail institucional (/perfil/completar).
+    perfil_completo: bool = True
     criado_em: Optional[datetime] = None
 
     @model_validator(mode='before')
@@ -229,11 +253,14 @@ class PerfilPublicoResponse(BaseModel):
     papel: PapelUsuario
     instituicao: Optional[str] = None
     curso: Optional[str] = None
+    departamento: Optional[str] = None
     interesses: List[str] = []
     habilidades: List[str] = []
     dados_aluno: Optional[DadosAluno] = None
     dados_professor: Optional[DadosProfessor] = None
     dados_pesquisador: Optional[DadosPesquisador] = None
+    dados_tecnico: Optional[DadosTecnico] = None
+    dados_egresso: Optional[DadosEgresso] = None
     orcid_id: Optional[str] = None
     publicacoes: List[OrcidPublicacao] = []
 

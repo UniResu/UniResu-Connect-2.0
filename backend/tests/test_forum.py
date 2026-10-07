@@ -235,7 +235,8 @@ async def test_gerar_username_unico_e_disponivel(db):
 
 
 def _registro(email, nome="Ana Souza"):
-    return UsuarioCreate(email=email, senha="segredo1", nome=nome, papel="aluno")
+    return UsuarioCreate(email=email, senha="segredo1", nome=nome, papel="aluno",
+                         aceite_regras=True, aceite_dados=True)
 
 
 async def test_registro_gera_username_do_nome_e_nunca_do_email(db):

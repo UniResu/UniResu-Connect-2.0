@@ -40,7 +40,7 @@ function OrcidCallbackContent() {
         localStorage.setItem(TOKEN_KEY, response.access_token);
         // Quem acabou de entrar pelo ORCID ainda não escolheu o vínculo nem
         // informou o e-mail institucional: segue para completar o perfil.
-        const completo = (response.usuario as { perfil_completo?: boolean })?.perfil_completo !== false;
+        const completo = response.usuario?.perfil_completo !== false;
         window.location.href = completo ? "/perfil" : "/perfil/completar";
       } catch (err: unknown) {
         const apiErr = err as { detail?: string };
