@@ -52,6 +52,16 @@ def _urls(client) -> dict[str, str]:
     return urls_consulta(_base_url(client))
 
 
+def _limitar(client, itens: list[dict]) -> list[dict]:
+    """Aplica o teto SIGAA_MAX_ITENS (0 = sem teto), para testes e dry-run."""
+    teto = int(getattr(getattr(client, "cfg", None), "max_itens", 0) or 0)
+    if teto and len(itens) > teto:
+        logger.info("%s: só os %d primeiros de %d itens serão abertos (SIGAA_MAX_ITENS)",
+                    getattr(client, "nome", "SIGAA"), teto, len(itens))
+        return itens[:teto]
+    return itens
+
+
 class SigaaErro(ErroColeta):
     """Falha de rede/HTTP após esgotar as tentativas, ou página inesperada."""
 
@@ -115,8 +125,8 @@ def _buscar(client: SigaaClient, modulo: str, ano: str) -> str:
 def coletar_pesquisa(client: SigaaClient, ano: str) -> ResultadoColeta:
     res = ResultadoColeta("pesquisa")
     html = _buscar(client, "pesquisa", ano)
-    itens = parser.parse_listagem_pesquisa(html)
-    logger.info("SIGAA pesquisa %s: %d projetos na listagem", ano, len(itens))
+    itens = _limitar(client, parser.parse_listagem_pesquisa(html))
+    logger.info("%s pesquisa %s: %d projetos na listagem", client.nome, ano, len(itens))
 
     for item in itens:
         detalhe = None
@@ -147,9 +157,9 @@ def coletar_extensao(client: SigaaClient, ano: str) -> ResultadoColeta:
     html = _buscar(client, "extensao", ano)
     todos = parser.parse_listagem_extensao(html, _base_url(client))
     tipos = {parser.normalizar(t) for t in client.cfg.extensao_tipos}
-    itens = [i for i in todos if parser.normalizar(i.get("categoria")) in tipos]
-    logger.info("SIGAA extensão %s: %d ações na listagem, %d nos tipos %s",
-                ano, len(todos), len(itens), sorted(tipos))
+    itens = _limitar(client, [i for i in todos if parser.normalizar(i.get("categoria")) in tipos])
+    logger.info("%s extensão %s: %d ações na listagem, %d nos tipos %s",
+                client.nome, ano, len(todos), len(itens), sorted(tipos))
 
     for item in itens:
         detalhe = None

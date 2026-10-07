@@ -36,6 +36,10 @@ on:
         description: "Módulos: pesquisa,extensao (vazio = ambos)"
         required: false
         default: ""
+      max_itens:
+        description: "Teto de itens por módulo cujo detalhe é aberto (0 = todos; útil no dry-run)"
+        required: false
+        default: "0"
 
 permissions:
   contents: read
@@ -118,5 +122,6 @@ jobs:
           # Filtros (inputs da execução manual > variáveis do repositório > padrão do código).
           SIGAA_ANOS: ${{ inputs.anos || vars.SIGAA_ANOS }}
           SIGAA_MODULOS: ${{ inputs.modulos || vars.SIGAA_MODULOS }}
+          SIGAA_MAX_ITENS: ${{ inputs.max_itens }}
           SIGAA_PESQUISA_SITUACAO: ${{ vars.SIGAA_PESQUISA_SITUACAO || 'EM EXECUÇÃO' }}
           SIGAA_EXTENSAO_TIPOS: ${{ vars.SIGAA_EXTENSAO_TIPOS }}
