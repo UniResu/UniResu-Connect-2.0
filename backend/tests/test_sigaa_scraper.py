@@ -175,3 +175,71 @@ class TestColetaPesquisa:
         assert all(i["email"] == "coordenador@unir.br" for i in res.itens)
         assert res.itens[0]["codigo"] == "PVC2148-2026"
         assert res.erros == []
+
+
+# ── Portais que limitam resultados e vocabulários de situação diferentes ───
+
+FORM_PESQUISA_LIMITADO = """
+<html><body><form id="formConsulta" action="/sigaa/public/pesquisa/consulta_projetos.jsf">
+<input type="hidden" name="javax.faces.ViewState" value="vs1"/>
+<table class="formulario">
+<tr><td><input type="checkbox" name="formConsulta:chkSituacao"/></td><td>Situação do Projeto:</td>
+<td><select name="formConsulta:situacaoProjeto"><option value="0">-- SELECIONE --</option>
+<option value="2">Em Andamento</option><option value="5">Finalizado</option></select></td></tr>
+<tr><td><input type="checkbox" name="formConsulta:chkAno"/></td><td>Ano:</td>
+<td><input type="text" name="formConsulta:ano" value=""/></td></tr>
+<tr><td><input type="checkbox" name="formConsulta:chkCentro"/></td><td>Centro:</td>
+<td><select name="formConsulta:centro"><option value="0">-- SELECIONE UM CENTRO --</option>
+<option value="15">CENTRO DE CIÊNCIAS DA SAÚDE</option><option value="17">CENTRO DE BIOCIÊNCIAS</option></select></td></tr>
+</table>
+<input type="submit" name="formConsulta:buscar" value="Buscar"/>
+</form></body></html>
+"""
+
+EXCESSIVO = "<html><body>A consulta retornou 599 resultados. Por favor, restrinja mais a busca.</body></html>"
+
+
+class ClientePortalLimitado:
+    """Recusa a busca geral e só responde quando a busca vem restrita por centro."""
+
+    def __init__(self, listagem_html):
+        self.cfg = SigaaConfig(pesquisa_situacao="EM EXECUÇÃO", modulos=["pesquisa"])
+        self.listagem_html = listagem_html
+        self.posts = []
+        self.total_requisicoes = 0
+
+    def get(self, url, **kw):
+        self.total_requisicoes += 1
+        return FORM_PESQUISA_LIMITADO
+
+    def post(self, url, data):
+        self.total_requisicoes += 1
+        self.posts.append(dict(data))
+        if data.get("formConsulta:centro") in ("15", "17"):
+            return self.listagem_html
+        return EXCESSIVO
+
+
+def test_busca_dividida_por_centro_e_situacao_equivalente():
+    listagem = ler_fixture("sigaa_pesquisa_listagem.html")
+    cliente = ClientePortalLimitado(listagem)
+    paginas = scraper.buscar_paginas(cliente, "pesquisa", "2026")
+    assert len(paginas) == 2 and [p.extra for p in paginas] == [("centro", "15"), ("centro", "17")]
+    # "EM EXECUÇÃO" não existe no form, mas "Em Andamento" sim: o filtro é aplicado
+    assert all(p.situacao_filtrada for p in paginas)
+    assert cliente.posts[0]["formConsulta:situacaoProjeto"] == "2" and cliente.posts[0]["formConsulta:ano"] == "2026"
+    assert cliente.posts[1]["formConsulta:centro"] == "15" and cliente.posts[1]["formConsulta:chkCentro"] == "on"
+
+
+def test_helpers_de_opcoes_e_situacao():
+    from bs4 import BeautifulSoup
+
+    from services.sigaa import parser
+    form = parser.achar_form(BeautifulSoup(FORM_PESQUISA_LIMITADO, "html.parser"))
+    assert parser.opcoes_select(form, "centro") == [("15", "CENTRO DE CIÊNCIAS DA SAÚDE"), ("17", "CENTRO DE BIOCIÊNCIAS")]
+    assert parser.opcoes_select(form, "unidade") == []
+    assert parser.opcoes_de_situacao(form) == ["Em Andamento", "Finalizado"]
+    assert parser.opcao_disponivel(form, ["EM EXECUÇÃO", "EM ANDAMENTO"]) == "EM ANDAMENTO"
+    assert parser.resultados_excessivos(EXCESSIVO) and not parser.resultados_excessivos("<p>ok</p>")
+    assert parser.situacao_vigente("EM EXECUÇÃO") and parser.situacao_vigente("Em Andamento")
+    assert not parser.situacao_vigente("FINALIZADO") and not parser.situacao_vigente(None)

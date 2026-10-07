@@ -103,24 +103,132 @@ class SigaaClient(ClienteHttp):
 #  Busca (listagem)
 # ─────────────────────────────────────────────
 
-def montar_payload_busca(html_form: str, modulo: str, ano: str, situacao: Optional[str]) -> dict:
-    """Monta o POST da busca a partir do HTML da página de consulta."""
+# Variações de "em execução" nos formulários de pesquisa dos SIGAAs.
+SITUACOES_EM_EXECUCAO = ("EM EXECUÇÃO", "EM ANDAMENTO", "EM EXECUCAO")
+
+# Select usado para dividir uma busca que o portal recusa por excesso de
+# resultados, por módulo, em ordem de tentativa.
+DIVISOES = {"pesquisa": ["centro", "unidade"], "extensao": ["TipoAcao", "unidade"]}
+
+
+def montar_payload_busca(html_form: str, modulo: str, ano: str, situacao: Optional[str],
+                         extra: Optional[tuple[str, str]] = None) -> dict:
+    """Monta o POST da busca a partir do HTML da página de consulta.
+
+    `extra` = (trecho do name do select, valor) restringe a busca por mais um
+    campo (centro, unidade, tipo de ação), usado quando o portal limita o
+    número de resultados. Se a opção de situação pedida não existe no
+    formulário (cada SIGAA tem seu vocabulário), a busca segue sem esse
+    filtro e o chamador filtra pela situação da listagem.
+    """
     form = parser.achar_form(BeautifulSoup(html_form, "html.parser"))
     dados = parser.payload_base(form)
     if modulo == "pesquisa" and situacao:
-        if not parser.aplicar_filtro_select(form, dados, situacao):
-            raise SigaaErro(f"Opção de situação '{situacao}' não encontrada no formulário.")
+        opcao = parser.opcao_disponivel(form, [situacao, *SITUACOES_EM_EXECUCAO])
+        if opcao:
+            parser.aplicar_filtro_select(form, dados, opcao)
+        else:
+            logger.warning("Situação '%s' não existe no formulário (opções: %s); buscando sem esse filtro.",
+                           situacao, ", ".join(parser.opcoes_de_situacao(form)) or "nenhuma")
     if not parser.aplicar_filtro_texto(form, dados, ["ANO"], ano):
         raise SigaaErro("Campo Ano não encontrado no formulário.")
+    if extra and not parser.aplicar_select_por_nome(form, dados, extra[0], extra[1]):
+        raise SigaaErro(f"Select '{extra[0]}' não encontrado no formulário.")
     parser.aplicar_botao_buscar(form, dados)
     return dados
 
 
-def _buscar(client: SigaaClient, modulo: str, ano: str) -> str:
+def situacao_filtrada(html_form: str, situacao: Optional[str]) -> bool:
+    """O formulário tem a opção de situação pedida (ou uma equivalente)?"""
+    if not situacao:
+        return False
+    form = parser.achar_form(BeautifulSoup(html_form, "html.parser"))
+    return parser.opcao_disponivel(form, [situacao, *SITUACOES_EM_EXECUCAO]) is not None
+
+
+@dataclass
+class PaginaListagem:
+    """Uma página de resultados e como ela foi obtida (para refazer o POST)."""
+    html: str
+    extra: Optional[tuple[str, str]] = None
+    situacao_filtrada: bool = True
+
+
+def _buscar(client: SigaaClient, modulo: str, ano: str, extra: Optional[tuple[str, str]] = None) -> PaginaListagem:
     url = _urls(client)[modulo]
     html_form = client.get(url)
-    dados = montar_payload_busca(html_form, modulo, ano, client.cfg.pesquisa_situacao)
-    return client.post(url, dados)
+    situacao = client.cfg.pesquisa_situacao if modulo == "pesquisa" else None
+    dados = montar_payload_busca(html_form, modulo, ano, situacao, extra)
+    return PaginaListagem(client.post(url, dados), extra, situacao_filtrada(html_form, situacao))
+
+
+def _opcoes_divisao(client: SigaaClient, modulo: str, nome_select: str, apenas: Optional[set[str]] = None) -> list[tuple[str, str]]:
+    form = parser.achar_form(BeautifulSoup(client.get(_urls(client)[modulo]), "html.parser"))
+    opcoes = parser.opcoes_select(form, nome_select)
+    if apenas is not None:
+        opcoes = [(v, t) for v, t in opcoes if parser.normalizar(t) in apenas]
+    return opcoes
+
+
+def buscar_paginas(client: SigaaClient, modulo: str, ano: str) -> list[PaginaListagem]:
+    """Todas as páginas de resultado de um módulo/ano. Quando o portal recusa a
+    busca por excesso de resultados, divide por centro/unidade (pesquisa) ou
+    por tipo de ação e depois unidade (extensão) e junta tudo."""
+    primeira = _buscar(client, modulo, ano)
+    if not parser.resultados_excessivos(primeira.html):
+        return [primeira]
+    paginas: list[PaginaListagem] = []
+    divisoes = DIVISOES[modulo]
+    apenas = {parser.normalizar(t) for t in client.cfg.extensao_tipos} if modulo == "extensao" else None
+    primeiro_nivel = _opcoes_divisao(client, modulo, divisoes[0], apenas)
+    logger.info("%s %s %s: portal limita resultados; dividindo por %s (%d opções)",
+                _nome(client), modulo, ano, divisoes[0], len(primeiro_nivel))
+    for valor, texto in primeiro_nivel:
+        pagina = _buscar(client, modulo, ano, (divisoes[0], valor))
+        if not parser.resultados_excessivos(pagina.html):
+            paginas.append(pagina)
+            continue
+        if len(divisoes) < 2:
+            logger.warning("%s %s %s: ainda excessivo em %s=%s; sem outro nível de divisão", _nome(client), modulo, ano, divisoes[0], texto)
+            continue
+        segundo_nivel = _opcoes_divisao(client, modulo, divisoes[1])
+        logger.info("%s %s %s: %s=%s ainda excessivo; dividindo por %s (%d opções)",
+                    _nome(client), modulo, ano, divisoes[0], texto, divisoes[1], len(segundo_nivel))
+        for valor2, texto2 in segundo_nivel:
+            # Dois filtros ao mesmo tempo: o do primeiro nível fica no payload
+            # base e o do segundo entra como extra.
+            url = _urls(client)[modulo]
+            html_form = client.get(url)
+            situacao = client.cfg.pesquisa_situacao if modulo == "pesquisa" else None
+            dados = montar_payload_busca(html_form, modulo, ano, situacao, (divisoes[0], valor))
+            form = parser.achar_form(BeautifulSoup(html_form, "html.parser"))
+            parser.aplicar_select_por_nome(form, dados, divisoes[1], valor2)
+            html = client.post(url, dados)
+            if parser.resultados_excessivos(html):
+                logger.warning("%s %s %s: ainda excessivo em %s=%s / %s=%s", _nome(client), modulo, ano,
+                               divisoes[0], texto, divisoes[1], texto2)
+                continue
+            paginas.append(PaginaListagem(html, (divisoes[1], valor2), situacao_filtrada(html_form, situacao)))
+    return paginas
+
+
+def _detalhe_por_postback(client: SigaaClient, modulo: str, pagina: PaginaListagem, item: dict, ano: str,
+                          parse) -> dict:
+    """Detalhe aberto por postback do form da listagem (a página de detalhe
+    não tem URL própria). Se o ViewState expirou, refaz a busca e tenta de novo."""
+    html = pagina.html
+    for tentativa in range(2):
+        try:
+            if tentativa == 1:
+                html = _buscar(client, modulo, ano, pagina.extra).html
+            form = parser.achar_form(BeautifulSoup(html, "html.parser"), "formConsulta")
+            dados = parser.payload_base(form)
+            dados.update(item.get("detalhe_params") or {})
+            return parse(client.post(_urls(client)[modulo], dados))
+        except (ErroColeta, ValueError):
+            if tentativa == 1:
+                raise
+    raise SigaaErro("detalhe indisponível")
 
 
 # ─────────────────────────────────────────────
@@ -129,28 +237,31 @@ def _buscar(client: SigaaClient, modulo: str, ano: str) -> str:
 
 def coletar_pesquisa(client: SigaaClient, ano: str) -> ResultadoColeta:
     res = ResultadoColeta("pesquisa")
-    html = _buscar(client, "pesquisa", ano)
-    itens = _limitar(client, parser.parse_listagem_pesquisa(html))
-    logger.info("%s pesquisa %s: %d projetos na listagem", _nome(client), ano, len(itens))
-    if not itens:
-        logger.warning("%s pesquisa %s: nenhum item reconhecido.\n%s", _nome(client), ano, parser.diagnostico_pagina(html))
+    paginas = buscar_paginas(client, "pesquisa", ano)
+    itens: list[tuple[dict, PaginaListagem]] = []
+    vistos: set = set()
+    for pagina in paginas:
+        for item in parser.parse_listagem_pesquisa(pagina.html):
+            chave = item.get("sigaa_id") or (item.get("codigo"), item.get("titulo"))
+            if chave in vistos:
+                continue
+            vistos.add(chave)
+            if not pagina.situacao_filtrada and client.cfg.pesquisa_situacao \
+                    and not parser.situacao_vigente(item.get("situacao")):
+                continue  # o portal não filtrou por situação: filtramos pela listagem
+            itens.append((item, pagina))
+    itens = itens[: client.cfg.max_itens] if getattr(client.cfg, "max_itens", 0) else itens
+    logger.info("%s pesquisa %s: %d projetos na listagem (%d página(s))", _nome(client), ano, len(itens), len(paginas))
+    if not itens and paginas:
+        logger.warning("%s pesquisa %s: nenhum item reconhecido.\n%s", _nome(client), ano,
+                       parser.diagnostico_pagina(paginas[0].html))
 
-    for item in itens:
+    for item, pagina in itens:
         detalhe = None
-        for tentativa in range(2):
-            try:
-                if tentativa == 1:
-                    # O detalhe é um postback do form da listagem; se o
-                    # ViewState expirou, refazemos a busca e tentamos de novo.
-                    html = _buscar(client, "pesquisa", ano)
-                form = parser.achar_form(BeautifulSoup(html, "html.parser"), "formConsulta")
-                dados = parser.payload_base(form)
-                dados.update(item.get("detalhe_params") or {})
-                detalhe = parser.parse_detalhe_pesquisa(client.post(_urls(client)["pesquisa"], dados))
-                break
-            except (ErroColeta, ValueError) as e:
-                if tentativa == 1:
-                    res.erros.append(_erro("pesquisa", item, e))
+        try:
+            detalhe = _detalhe_por_postback(client, "pesquisa", pagina, item, ano, parser.parse_detalhe_pesquisa)
+        except (ErroColeta, ValueError) as e:
+            res.erros.append(_erro("pesquisa", item, e))
         res.itens.append(_registro("pesquisa", item, detalhe))
     return res
 
@@ -161,22 +272,46 @@ def coletar_pesquisa(client: SigaaClient, ano: str) -> ResultadoColeta:
 
 def coletar_extensao(client: SigaaClient, ano: str) -> ResultadoColeta:
     res = ResultadoColeta("extensao")
-    html = _buscar(client, "extensao", ano)
-    todos = parser.parse_listagem_extensao(html, _base_url(client))
+    paginas = buscar_paginas(client, "extensao", ano)
     tipos = {parser.normalizar(t) for t in client.cfg.extensao_tipos}
-    itens = _limitar(client, [i for i in todos if parser.normalizar(i.get("categoria")) in tipos])
-    logger.info("%s extensão %s: %d ações na listagem, %d nos tipos %s",
-                _nome(client), ano, len(todos), len(itens), sorted(tipos))
-    if not todos:
-        logger.warning("%s extensão %s: nenhum item reconhecido.\n%s", _nome(client), ano, parser.diagnostico_pagina(html))
+    todos = 0
+    itens: list[tuple[dict, PaginaListagem]] = []
+    vistos: set = set()
+    for pagina in paginas:
+        for item in parser.parse_listagem_extensao(pagina.html, _base_url(client)):
+            todos += 1
+            chave = item.get("sigaa_id") or (item.get("ano"), item.get("titulo"))
+            if chave in vistos or parser.normalizar(item.get("categoria")) not in tipos:
+                continue
+            vistos.add(chave)
+            itens.append((item, pagina))
+    itens = itens[: client.cfg.max_itens] if getattr(client.cfg, "max_itens", 0) else itens
+    logger.info("%s extensão %s: %d ações na listagem, %d nos tipos %s (%d página(s))",
+                _nome(client), ano, todos, len(itens), sorted(tipos), len(paginas))
+    if not todos and paginas:
+        logger.warning("%s extensão %s: nenhum item reconhecido.\n%s", _nome(client), ano,
+                       parser.diagnostico_pagina(paginas[0].html))
 
-    for item in itens:
+    for item, pagina in itens:
         detalhe = None
         try:
-            if not item.get("link_detalhe"):
+            if not item.get("link_detalhe") and not item.get("detalhe_params"):
                 raise SigaaErro("Item sem link de detalhe.")
-            # Link público estável (GET) — não depende de ViewState.
-            detalhe = parser.parse_detalhe_extensao(client.get(item["link_detalhe"]))
+            erro_link = None
+            try:
+                # Link público estável (GET): não depende de ViewState.
+                detalhe = parser.parse_detalhe_extensao(client.get(item["link_detalhe"])) if item.get("link_detalhe") else None
+            except (ErroColeta, ValueError) as e:
+                if not item.get("detalhe_params"):
+                    raise
+                logger.info("%s extensão: link público falhou (%s); tentando o detalhe por postback", _nome(client), e)
+                erro_link = e
+            if detalhe is None:
+                try:
+                    detalhe = _detalhe_por_postback(client, "extensao", pagina, item, ano, parser.parse_detalhe_extensao)
+                except (ErroColeta, ValueError) as e:
+                    # O erro registrado é o do link público, que é o caminho principal.
+                    raise erro_link or e
             detalhe["situacao"] = parser.situacao_por_periodo(detalhe["periodo_inicio"], detalhe["periodo_fim"])
         except (ErroColeta, ValueError) as e:
             res.erros.append(_erro("extensao", item, e))

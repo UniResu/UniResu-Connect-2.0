@@ -138,6 +138,66 @@ def aplicar_filtro_texto(form, dados: dict, palavras_rotulo: list[str], valor: s
     return False
 
 
+_PLACEHOLDER_OPCAO = ("", "0")
+
+
+def opcoes_select(form, nome_contem: str) -> list[tuple[str, str]]:
+    """Opções (valor, texto) do <select> cujo name contém `nome_contem`, sem a
+    opção vazia "-- SELECIONE --". Lista vazia se o select não existe."""
+    alvo = normalizar(nome_contem)
+    for sel in form.find_all("select"):
+        if alvo in normalizar(sel.get("name")):
+            opcoes = []
+            for opt in sel.find_all("option"):
+                valor, texto = opt.get("value", ""), limpar(opt.get_text())
+                if valor in _PLACEHOLDER_OPCAO or texto.startswith("--") or "SELECIONE" in normalizar(texto):
+                    continue
+                opcoes.append((valor, texto))
+            return opcoes
+    return []
+
+
+def aplicar_select_por_nome(form, dados: dict, nome_contem: str, valor: str) -> bool:
+    """Seleciona, no <select> cujo name contém `nome_contem`, a opção de valor `valor`."""
+    alvo = normalizar(nome_contem)
+    for sel in form.find_all("select"):
+        if alvo in normalizar(sel.get("name")):
+            dados[sel["name"]] = valor
+            _marcar_checkbox_da_linha(sel, dados)
+            return True
+    return False
+
+
+def opcao_disponivel(form, textos: list[str]) -> Optional[str]:
+    """Primeiro texto da lista que existe como opção em algum <select>."""
+    alvos = {normalizar(t): t for t in textos}
+    for sel in form.find_all("select"):
+        for opt in sel.find_all("option"):
+            texto = normalizar(opt.get_text())
+            if texto in alvos:
+                return alvos[texto]
+    return None
+
+
+def opcoes_de_situacao(form) -> list[str]:
+    return [texto for _, texto in opcoes_select(form, "situacao")]
+
+
+def resultados_excessivos(html: str) -> bool:
+    """O SIGAA de algumas instituições limita a consulta pública e pede para
+    restringir a busca ("A consulta retornou 599 resultados. Por favor,
+    restrinja mais a busca." ou "resultados excessivos")."""
+    texto = normalizar(BeautifulSoup(html, "html.parser").get_text(" "))
+    return "RESTRINJA MAIS A BUSCA" in texto or "RESULTADOS EXCESSIVOS" in texto
+
+
+def situacao_vigente(texto: Optional[str]) -> bool:
+    """Situação de projeto de pesquisa que conta como em execução, nas
+    variações que os SIGAAs publicam (EM EXECUÇÃO, EM ANDAMENTO, RENOVADO)."""
+    t = normalizar(texto)
+    return any(p in t for p in ("EXEC", "ANDAMENTO", "RENOVAD", "VIGENTE"))
+
+
 def aplicar_botao_buscar(form, dados: dict) -> None:
     """Inclui name=value do botão de busca — é assim que o JSF sabe a ação."""
     for b in form.find_all("input", {"type": ["submit", "image", "button"]}):
@@ -254,6 +314,7 @@ def parse_listagem_extensao(html: str, base_url: str = BASE_URL) -> list[dict]:
         sigaa_id = params.get("idAtividadeExtensaoSelecionada") or params.get("id")
         itens.append({
             "sigaa_id": sigaa_id,
+            "detalhe_params": params,
             "onclick": (link["onclick"][:300] if link else None),
             "titulo": titulo,
             "ano": ano,
