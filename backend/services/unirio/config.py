@@ -67,8 +67,11 @@ class UnirioConfig:
     # Pausa mínima entre requisições (nunca menos que 1s).
     pausa_segundos: float = 1.5
     timeout_segundos: float = 60.0
-    max_tentativas: int = 3
-    backoff_base_segundos: float = 2.0
+    # Os portais da UNIRIO derrubam conexões e devolvem 500 em rajadas curtas:
+    # 5 tentativas com espera de 5, 10, 20 e 40 s (75 s no total) antes de
+    # desistir de uma página.
+    max_tentativas: int = 5
+    backoff_base_segundos: float = 5.0
 
     @property
     def url_pesquisa(self) -> str:

@@ -15,9 +15,10 @@ não reconhecida) é marcada `completa=False`; o job NÃO desativa nada nesse
 caso, porque "sumiu da fonte" e "não chegamos a ler" seriam indistinguíveis.
 """
 
+import functools
 import logging
 from dataclasses import dataclass, field
-from typing import Collection, Optional
+from typing import Collection, Iterator, Optional
 
 from bs4 import BeautifulSoup
 
@@ -204,33 +205,74 @@ def listar(client: UnirioClient, modulo: str) -> tuple[list[dict], int, bool]:
     return itens, paginas, completa
 
 
-def coletar(client: UnirioClient, modulo: str, pular_detalhe: Collection[str] = frozenset()) -> ResultadoColeta:
-    """Listagem completa + detalhe de cada item.
+@dataclass
+class EstadoColeta:
+    """Andamento de uma coleta em lotes (ver `coletar_em_lotes`)."""
+    modulo: str
+    listados: int = 0
+    paginas: int = 0
+    completa: bool = True
+    pulados: int = 0
+    erros: list[dict] = field(default_factory=list)
+
+
+TAMANHO_LOTE = 50
+
+
+def coletar_em_lotes(
+    client: UnirioClient, modulo: str, pular_detalhe: Collection[str] = frozenset(),
+    tamanho_lote: int = TAMANHO_LOTE,
+) -> Iterator[tuple[EstadoColeta, list[dict]]]:
+    """Listagem completa + detalhe de cada item, entregue em lotes.
+
+    Gera pares (estado, lote): o primeiro par vem logo após a listagem, com
+    lote vazio (o chamador já sabe quantos itens virão); os seguintes trazem
+    até `tamanho_lote` registros com detalhe. O job grava cada lote assim que
+    ele chega: uma primeira carga da pesquisa leva horas, e se o processo
+    for morto no meio o que já foi lido fica no banco.
 
     `pular_detalhe`: ids (unirio_id) cujo detalhe NÃO deve ser aberto nesta
-    execução (já conhecidos no banco; modo incremental). Esses itens entram no
-    resultado só com os dados da listagem e `so_listagem=True`, para que o
-    upsert confirme a presença deles sem apagar o detalhe guardado.
+    execução (já conhecidos no banco; modo incremental). Esses itens entram
+    só com os dados da listagem e `so_listagem=True`, para que o upsert
+    confirme a presença deles sem apagar o detalhe guardado.
     """
-    res = ResultadoColeta(modulo)
-    itens, res.paginas, res.completa = listar(client, modulo)
+    estado = EstadoColeta(modulo)
+    itens, estado.paginas, estado.completa = listar(client, modulo)
+    estado.listados = len(itens)
+    yield estado, []
     limite = client.cfg.max_detalhes or len(itens)
     abertos = 0
+    lote: list[dict] = []
     for item in itens:
         if item.get("unirio_id") in pular_detalhe:
-            res.pulados += 1
-            res.itens.append({**_registro(modulo, item, None, client.cfg), "so_listagem": True})
-            continue
-        detalhe = None
-        if abertos < limite:
-            abertos += 1
-            try:
-                detalhe = parser.parse_detalhe(client.get(item["link_detalhe"]))
-            except (ErroColeta, ValueError) as e:
-                res.erros.append(_erro(modulo, item, e))
-        res.itens.append(_registro(modulo, item, detalhe, client.cfg))
-    if res.pulados:
-        logger.info("UNIRIO %s: %d detalhe(s) já conhecido(s) não reaberto(s) (modo incremental)", modulo, res.pulados)
+            estado.pulados += 1
+            lote.append({**_registro(modulo, item, None, client.cfg), "so_listagem": True})
+        else:
+            detalhe = None
+            if abertos < limite:
+                abertos += 1
+                try:
+                    detalhe = parser.parse_detalhe(client.get(item["link_detalhe"]))
+                except (ErroColeta, ValueError) as e:
+                    estado.erros.append(_erro(modulo, item, e))
+            lote.append(_registro(modulo, item, detalhe, client.cfg))
+        if len(lote) >= tamanho_lote:
+            yield estado, lote
+            lote = []
+    if lote:
+        yield estado, lote
+    if estado.pulados:
+        logger.info("UNIRIO %s: %d detalhe(s) já conhecido(s) não reaberto(s) (modo incremental)",
+                    modulo, estado.pulados)
+
+
+def coletar(client: UnirioClient, modulo: str, pular_detalhe: Collection[str] = frozenset()) -> ResultadoColeta:
+    """Mesma coleta de `coletar_em_lotes`, devolvida inteira (dry-run, testes)."""
+    res = ResultadoColeta(modulo)
+    estado = EstadoColeta(modulo)
+    for estado, lote in coletar_em_lotes(client, modulo, pular_detalhe, tamanho_lote=10**9):
+        res.itens.extend(lote)
+    res.paginas, res.completa, res.pulados, res.erros = estado.paginas, estado.completa, estado.pulados, estado.erros
     return res
 
 
@@ -240,6 +282,11 @@ def coletar_pesquisa(client: UnirioClient, pular_detalhe: Collection[str] = froz
 
 def coletar_extensao(client: UnirioClient, pular_detalhe: Collection[str] = frozenset()) -> ResultadoColeta:
     return coletar(client, "extensao", pular_detalhe)
+
+
+# Versões em lotes dos coletores, usadas pelo sync real (ver jobs/sync_unirio.py).
+coletar_pesquisa.em_lotes = functools.partial(coletar_em_lotes, modulo="pesquisa")  # type: ignore[attr-defined]
+coletar_extensao.em_lotes = functools.partial(coletar_em_lotes, modulo="extensao")  # type: ignore[attr-defined]
 
 
 def _registro(modulo: str, item: dict, detalhe: Optional[dict], cfg: Optional[UnirioConfig] = None) -> dict:

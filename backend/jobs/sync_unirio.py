@@ -27,7 +27,7 @@ import json
 import logging
 import os
 import sys
-from dataclasses import replace
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Awaitable, Callable, Optional
@@ -120,6 +120,58 @@ def _coletar(coletor, client, pular: set[str]):
     return coletor(client)
 
 
+@dataclass
+class Coletado:
+    """Resumo de um módulo coletado, pelo caminho em lotes ou pelo inteiro."""
+    coletados: int = 0
+    paginas: int = 0
+    completa: bool = True
+    pulados: int = 0
+    erros: list[dict] = field(default_factory=list)
+    amostra: list[dict] = field(default_factory=list)
+    itens: list[dict] = field(default_factory=list)          # só no caminho inteiro
+    gravado: Optional[repositorio.ResultadoUpsert] = None   # só no caminho em lotes
+
+
+async def _coletar_gravando(db, modulo: str, em_lotes, client, pular: set[str], run_id) -> Coletado:
+    """Sync real: consome o coletor em lotes e grava cada lote ao chegar.
+
+    Se o processo for morto no meio (timeout do Actions), o que já foi lido
+    está no banco; a run fica `abortada` e nada é desativado. O andamento vai
+    para `sigaa_sync_runs.progresso.<modulo>`.
+    """
+    gerador = em_lotes(client, pular_detalhe=pular)
+    fim = object()
+    out = Coletado(gravado=repositorio.ResultadoUpsert())
+    estado = None
+    while True:
+        passo = await asyncio.to_thread(next, gerador, fim)
+        if passo is fim:
+            break
+        estado, lote = passo
+        if not lote:
+            logger.info("UNIRIO %s: %d itens listados em %d página(s); abrindo detalhes...",
+                        modulo, estado.listados, estado.paginas)
+            continue
+        up = await repositorio.upsert_projetos(db, lote, fonte=UNIRIO)
+        out.gravado.novos += up.novos
+        out.gravado.atualizados += up.atualizados
+        out.gravado.chaves.extend(up.chaves)
+        out.coletados += len(lote)
+        out.amostra = out.amostra or lote[:3]
+        logger.info("UNIRIO %s: %d/%d gravados (%d novos, %d atualizados)",
+                    modulo, out.coletados, estado.listados, out.gravado.novos, out.gravado.atualizados)
+        if run_id is not None:
+            await db.sigaa_sync_runs.update_one(
+                {"_id": run_id},
+                {"$set": {f"progresso.{modulo}": {"coletados": out.coletados, "listados": estado.listados,
+                                                   "atualizado_em": datetime.now(timezone.utc)}}},
+            )
+    if estado is not None:
+        out.paginas, out.completa, out.pulados, out.erros = estado.paginas, estado.completa, estado.pulados, estado.erros
+    return out
+
+
 async def _executar(db, cfg, coletores, client, alertar, dry_run, run, run_id, inicio) -> dict:
     modulos: dict = {}
     erros: list[dict] = []
@@ -131,7 +183,14 @@ async def _executar(db, cfg, coletores, client, alertar, dry_run, run, run_id, i
                  "erros_detalhe": 0, "detalhes_pulados": 0, "paginas": 0, "completa": True, "status": "sucesso"}
         try:
             pular = set() if dry_run or db is None else await ids_sem_detalhe(db, modulo, cfg)
-            res = await asyncio.to_thread(_coletar, coletores[modulo], client, pular)
+            em_lotes = getattr(coletores[modulo], "em_lotes", None)
+            if em_lotes is not None and not dry_run and db is not None:
+                col = await _coletar_gravando(db, modulo, em_lotes, client, pular, run_id)
+            else:
+                res = await asyncio.to_thread(_coletar, coletores[modulo], client, pular)
+                col = Coletado(coletados=len(res.itens), paginas=res.paginas, completa=res.completa,
+                               pulados=getattr(res, "pulados", 0), erros=res.erros, amostra=res.itens[:3],
+                               itens=res.itens)
         except Exception as e:  # falha na busca/listagem do módulo
             logger.error("UNIRIO %s: busca falhou: %s", modulo, e)
             erros.append({"modulo": modulo, "erro": f"busca falhou: {e}"})
@@ -140,33 +199,41 @@ async def _executar(db, cfg, coletores, client, alertar, dry_run, run, run_id, i
             modulos[modulo] = stats
             continue
 
-        erros.extend(res.erros)
-        stats["erros_detalhe"] = len(res.erros)
-        stats["detalhes_pulados"] = getattr(res, "pulados", 0)
-        stats["coletados"] = len(res.itens)
-        stats["paginas"] = res.paginas
-        stats["completa"] = res.completa
-        amostras[modulo] = res.itens[:3]
+        erros.extend(col.erros)
+        stats["erros_detalhe"] = len(col.erros)
+        stats["detalhes_pulados"] = col.pulados
+        stats["coletados"] = col.coletados
+        stats["paginas"] = col.paginas
+        stats["completa"] = col.completa
+        amostras[modulo] = col.amostra
 
-        if not res.itens:
+        async def gravar() -> repositorio.ResultadoUpsert:
+            # No caminho em lotes já foi gravado; no inteiro, grava agora.
+            if col.gravado is not None:
+                return col.gravado
+            return await repositorio.upsert_projetos(db, col.itens, fonte=UNIRIO)
+
+        if not col.coletados:
             stats["status"] = "falha"
             falhou = True
             erros.append({"modulo": modulo, "erro": "coleta retornou 0 resultados"})
-        elif not res.completa:
+        elif not col.completa:
             # Lemos só parte da listagem: gravamos o que veio (upsert é seguro),
             # mas não desativamos nada e tratamos como falha para alertar.
             stats["status"] = "falha"
             falhou = True
             erros.append({"modulo": modulo, "erro": "listagem incompleta (teto de páginas ou paginação "
                                                     "não reconhecida); nada foi desativado",
-                          "paginas": res.paginas})
+                          "paginas": col.paginas})
             if not dry_run:
-                up = await repositorio.upsert_projetos(db, res.itens, fonte=UNIRIO)
+                up = await gravar()
                 stats["novos"], stats["atualizados"] = up.novos, up.atualizados
         elif not dry_run:
-            up = await repositorio.upsert_projetos(db, res.itens, fonte=UNIRIO)
+            up = await gravar()
             stats["novos"], stats["atualizados"] = up.novos, up.atualizados
-            stats["desativados"] = await repositorio.desativar_ausentes(db, modulo, [], up.chaves, fonte=UNIRIO)
+            stats["desativados"] = await repositorio.desativar_ausentes(
+                db, modulo, [], up.chaves, fonte=UNIRIO,
+                ano_minimo=cfg.pesquisa_ano_minimo if modulo == "pesquisa" else None)
         modulos[modulo] = stats
 
     if falhou:

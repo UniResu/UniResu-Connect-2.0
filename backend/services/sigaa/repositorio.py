@@ -188,11 +188,15 @@ async def desativar_ausentes(
     chaves_vistas: list[str],
     agora: Optional[datetime] = None,
     fonte: Fonte = SIGAA,
+    ano_minimo: Optional[int] = None,
 ) -> int:
     """Marca como inativos os projetos da fonte, no escopo coletado, que sumiram dela.
 
     Só deve ser chamado quando a coleta daquele módulo teve sucesso (> 0 itens).
     `anos` vazio significa "sem recorte por ano" (fontes que listam tudo de uma vez).
+    `ano_minimo` restringe o escopo a projetos com ano >= ele (coleta da UNIRIO
+    com UNIRIO_PESQUISA_ANO_MINIMO): os mais antigos não foram lidos, então
+    não podem ser dados como ausentes.
     """
     agora = agora or datetime.now(timezone.utc)
     filtro = {
@@ -203,6 +207,10 @@ async def desativar_ausentes(
     }
     if anos:
         filtro["ano"] = {"$in": anos}
+    elif ano_minimo:
+        # `ano` é gravado como texto de 4 dígitos: a comparação lexicográfica
+        # equivale à numérica, e docs sem ano (null) ficam fora do escopo.
+        filtro["ano"] = {"$gte": str(ano_minimo)}
     resultado = await db.projetos.update_many(filtro, {"$set": {"ativo": False, "desativado_em": agora}})
     return resultado.modified_count
 

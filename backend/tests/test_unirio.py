@@ -662,6 +662,65 @@ async def test_incremental_so_reabre_novos_e_pesquisa_em_execucao(db):
     assert nove["ativo"] is True and nove["email_professor"] == "c@unirio.br"
 
 
+def _coletor_em_lotes(lotes, listados, falhar_no=None):
+    """Dublê de `coletar_*.em_lotes`: gera (estado, lote); pode explodir num lote."""
+    def em_lotes(client, pular_detalhe=frozenset()):
+        estado = scraper.EstadoColeta("pesquisa", listados=listados, paginas=1)
+        yield estado, []
+        for i, lote in enumerate(lotes, start=1):
+            if falhar_no == i:
+                raise KeyboardInterrupt  # SIGINT do Actions no meio da coleta
+            yield estado, list(lote)
+    coletor = lambda client, pular_detalhe=frozenset(): None  # noqa: E731  (não usado no sync real)
+    coletor.em_lotes = em_lotes
+    return coletor
+
+
+async def test_sync_real_grava_cada_lote_e_registra_progresso(db):
+    coletor = _coletor_em_lotes([[item("pesquisa", "1"), item("pesquisa", "2")], [item("pesquisa", "3")]], listados=3)
+    run = await executar_sync(db, UnirioConfig(modulos=["pesquisa"]), {"pesquisa": coletor}, ClienteNulo())
+    assert run["status"] == "sucesso"
+    assert run["modulos"]["pesquisa"]["coletados"] == 3 and run["modulos"]["pesquisa"]["novos"] == 3
+    assert await db.projetos.count_documents({"origem": "unirio"}) == 3
+    salvo = await db.sigaa_sync_runs.find_one({"_id": run["_id"]})
+    assert salvo["progresso"]["pesquisa"]["coletados"] == 3 and salvo["progresso"]["pesquisa"]["listados"] == 3
+
+
+async def test_sync_interrompido_mantem_os_lotes_ja_gravados(db):
+    coletor = _coletor_em_lotes([[item("pesquisa", "1"), item("pesquisa", "2")], [item("pesquisa", "3")]],
+                                listados=3, falhar_no=2)
+    with pytest.raises(KeyboardInterrupt):
+        await executar_sync(db, UnirioConfig(modulos=["pesquisa"]), {"pesquisa": coletor}, ClienteNulo())
+    # o 1º lote ficou no banco, nada foi desativado e a run ficou abortada
+    assert sorted(p["unirio_id"] for p in await db.projetos.find({"origem": "unirio"}).to_list(None)) == ["1", "2"]
+    run = await db.sigaa_sync_runs.find_one({"fonte": "unirio"})
+    assert run["status"] == "abortada" and run["progresso"]["pesquisa"]["coletados"] == 2
+
+
+async def test_ano_minimo_nao_desativa_projetos_antigos_nao_lidos(db):
+    await executar_sync(db, CFG, coletores([item("pesquisa", "1", ano="2015"), item("pesquisa", "2", ano="2024")]),
+                        ClienteNulo())
+    cfg = UnirioConfig(pesquisa_ano_minimo=2022, modulos=["pesquisa"])
+    # a listagem recortada só traz o de 2024 (o de 2015 nem foi lido)
+    run = await executar_sync(db, cfg, coletores([item("pesquisa", "2", ano="2024")]), ClienteNulo())
+    assert run["modulos"]["pesquisa"]["desativados"] == 0
+    assert (await db.projetos.find_one({"unirio_id": "1"}))["ativo"] is True
+    # um de 2023 que sumiu dentro do recorte é desativado normalmente
+    await db.projetos.insert_one({"origem": "unirio", "modulo": "pesquisa", "chave_unirio": "x", "unirio_id": "9",
+                                  "ano": "2023", "ativo": True, "titulo": "Sumido"})
+    run = await executar_sync(db, cfg, coletores([item("pesquisa", "2", ano="2024")]), ClienteNulo())
+    assert run["modulos"]["pesquisa"]["desativados"] == 1
+
+
+def test_coletar_em_lotes_entrega_a_listagem_primeiro_e_os_detalhes_em_lotes():
+    cliente = ClienteRoteado(UnirioConfig(), _rotas_extensao())
+    passos = list(scraper.coletar_em_lotes(cliente, "extensao", tamanho_lote=3))
+    assert passos[0][1] == [] and passos[0][0].listados == 4 and passos[0][0].paginas == 2
+    assert [len(lote) for _, lote in passos[1:]] == [3, 1]
+    assert cliente.total_requisicoes == 2 + 4
+    assert scraper.coletar_extensao.em_lotes.func is scraper.coletar_em_lotes
+
+
 async def test_item_so_listagem_que_sumiu_do_banco_volta_pelo_fluxo_normal(db):
     reg = {**item("pesquisa", "7", detalhe_ok=False, email=None), "so_listagem": True}
     up = await repositorio.upsert_projetos(db, [reg], fonte=UNIRIO)
