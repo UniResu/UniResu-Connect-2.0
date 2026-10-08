@@ -1,3 +1,5 @@
+import { EMAIL_CONTATO } from "@/lib/constants";
+
 /**
  * Textos mostrados nos modais do registro e do perfil: o código de conduta
  * (as "regras de utilização e convivência") e a nota sobre os dados.
@@ -15,7 +17,7 @@ export const CODIGO_CONDUTA: string[] = [
   "Honestidade acadêmica: não se apresente com vínculo, titulação ou autoria que não tenha, e não envie uma mesma carta de intenção em massa.",
   "Os contatos das coordenações servem apenas para a candidatura ao projeto; usá-los para outros fins é motivo de remoção da conta.",
   "Conteúdos ou candidaturas que violem estas regras podem ser removidos pela moderação, e a conta pode ser suspensa ou encerrada, com aviso por e-mail.",
-  "Dúvidas e denúncias podem ser enviadas ao suporte pelo e-mail indicado no rodapé; a equipe responde em até alguns dias úteis.",
+  `Dúvidas e denúncias podem ser enviadas à equipe pelo e-mail ${EMAIL_CONTATO}, que também está no rodapé do site; a resposta chega em até alguns dias úteis.`,
 ];
 
 export const DADOS_TITULO = "Como os seus dados são usados";

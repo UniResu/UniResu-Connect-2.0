@@ -5,6 +5,9 @@ export const APP_DESCRIPTION = "Conectando a Comunidade Acadêmica";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.uniresu.org";
 
+/** E-mail de contato e suporte da equipe (aparece no rodapé e no código de conduta). */
+export const EMAIL_CONTATO = "contato@uniresu.org";
+
 /** Chave do token no localStorage */
 export const TOKEN_KEY = "uniresu_token";
 

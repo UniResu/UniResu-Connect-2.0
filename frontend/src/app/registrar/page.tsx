@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { PERFIS, NIVEIS, PERIODO_POR_NIVEL, type TipoPerfil, emailInstitucionalValido } from "@/lib/perfis";
+import { IconeVinculo } from "@/components/ui/Icones";
 import { CODIGO_CONDUTA, CODIGO_CONDUTA_INTRODUCAO, CODIGO_CONDUTA_TITULO, DADOS_TEXTO, DADOS_TITULO } from "@/lib/codigoConduta";
 import Modal from "@/components/ui/Modal";
 import conta from "../login/conta.module.css";
@@ -359,6 +360,9 @@ export default function RegistrarPage() {
                       className="sr-only"
                     />
                     <span className={styles.marcador} aria-hidden="true" />
+                    <span className={styles.perfilIcone} aria-hidden="true">
+                      <IconeVinculo papel={p.value} tamanho={18} />
+                    </span>
                     <span className={styles.perfilTexto}>
                       <span className={styles.perfilNome}>{p.label}</span>
                       <span className={styles.perfilDesc}>{p.descricao}</span>

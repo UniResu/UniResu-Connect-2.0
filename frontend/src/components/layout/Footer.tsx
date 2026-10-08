@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { IconePlaneta } from "@/components/ui/Icones";
+import { IconeEnvelope, IconePlaneta } from "@/components/ui/Icones";
+import { EMAIL_CONTATO } from "@/lib/constants";
 import styles from "./Footer.module.css";
 
 /** Rodapé escuro nos dois temas, no mesmo tom do cabeçalho. */
@@ -13,6 +14,10 @@ export default function Footer() {
             UniResu Connect
           </span>
           <span className={styles.lema}>Conectando a comunidade acadêmica</span>
+          <a href={`mailto:${EMAIL_CONTATO}`} className={styles.email}>
+            <IconeEnvelope tamanho={16} />
+            {EMAIL_CONTATO}
+          </a>
         </div>
         <nav className={styles.links} aria-label="Rodapé">
           <Link href="/projetos">Projetos acadêmicos</Link>

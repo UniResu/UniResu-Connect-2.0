@@ -40,6 +40,21 @@
   font-size: var(--font-size-sm);
 }
 
+.email {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: var(--space-sm);
+  padding: 0.25rem 0;
+  color: var(--text-on-dark);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.email:hover {
+  color: var(--brand-300);
+}
+
 .links {
   display: flex;
   flex-wrap: wrap;

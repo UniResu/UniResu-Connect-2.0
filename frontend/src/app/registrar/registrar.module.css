@@ -110,6 +110,25 @@
   border-color: var(--primary-light);
 }
 
+/* Símbolo do vínculo: quadradinho em tom de marca, mais forte quando escolhido. */
+.perfilIcone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-control);
+  background: var(--surface-3);
+  color: var(--text-secondary);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.perfilAtivo .perfilIcone {
+  background: var(--primary-100);
+  color: var(--text-accent);
+}
+
 .perfilTexto {
   display: flex;
   flex-direction: column;

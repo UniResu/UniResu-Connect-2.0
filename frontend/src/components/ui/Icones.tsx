@@ -245,6 +245,80 @@ export function IconeEnvelope(p: Props) {
   );
 }
 
+/* ── Vínculos (registro de conta) ── */
+
+export function IconeCapelo(p: Props) {
+  return (
+    <svg {...base(p)}>
+      <path d="M22 10 12 5 2 10l10 5 10-5z" />
+      <path d="M6 12v5c3 3 9 3 12 0v-5" />
+      <path d="M22 10v6" />
+    </svg>
+  );
+}
+
+export function IconeQuadro(p: Props) {
+  return (
+    <svg {...base(p)}>
+      <path d="M3 4h18" />
+      <path d="M4 4v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V4" />
+      <path d="M8 9h5M8 12h8" />
+      <path d="M12 15v3M8 21l4-3 4 3" />
+    </svg>
+  );
+}
+
+export function IconeMicroscopio(p: Props) {
+  return (
+    <svg {...base(p)}>
+      <path d="M6 18h8M3 22h18" />
+      <path d="M14 22a7 7 0 1 0 0-14h-1" />
+      <path d="M9 14h2" />
+      <path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z" />
+      <path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3" />
+    </svg>
+  );
+}
+
+export function IconeMaleta(p: Props) {
+  return (
+    <svg {...base(p)}>
+      <rect x="2.5" y="7" width="19" height="13" rx="2" />
+      <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+      <path d="M2.5 13h19M11 13v2h2v-2" />
+    </svg>
+  );
+}
+
+export function IconeDiploma(p: Props) {
+  return (
+    <svg {...base(p)}>
+      <path d="M14 18H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5" />
+      <path d="M7 8h10M7 11.5h6" />
+      <circle cx="18" cy="15" r="2.5" />
+      <path d="m16.5 17-.5 4.5 2-1.2 2 1.2-.5-4.5" />
+    </svg>
+  );
+}
+
+/** Ícone do tipo de vínculo (os mesmos valores de `papel` do backend). */
+export function IconeVinculo({ papel, ...p }: Props & { papel: string }) {
+  switch (papel) {
+    case "aluno":
+      return <IconeCapelo {...p} />;
+    case "professor":
+      return <IconeQuadro {...p} />;
+    case "pesquisador":
+      return <IconeMicroscopio {...p} />;
+    case "tecnico":
+      return <IconeMaleta {...p} />;
+    case "egresso":
+      return <IconeDiploma {...p} />;
+    default:
+      return <IconePessoas {...p} />;
+  }
+}
+
 /* ── Identidade espacial ── */
 
 export function IconeUfo(p: Props) {
