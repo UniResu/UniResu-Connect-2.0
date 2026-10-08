@@ -118,24 +118,28 @@ interface Membro {
   instituicao: string;
 }
 
+const JULIANA = {
+  nome: "Juliana Gimenes Müller",
+  curso: "Análise e desenvolvimento de sistemas",
+  instituicao: "PUC Minas",
+};
+
+// Ordem definida pela equipe: Lucas, Matheus, Maria Eduarda e Juliana.
 const FUNDADORES: Membro[] = [
   { nome: "Lucas Eduardo Sanches Cordeiro", cargo: "Co-fundador e CEO", curso: "Medicina", instituicao: "UERJ" },
-  {
-    nome: "Juliana Gimenes Müller",
-    cargo: "Co-fundadora e CTO",
-    curso: "Análise e desenvolvimento de sistemas",
-    instituicao: "PUC Minas",
-  },
+  { nome: "Matheus Gabriel Ramos de Melo", cargo: "Co-fundador e CSO", curso: "Medicina", instituicao: "UNIR" },
   {
     nome: "Maria Eduarda Siqueira de Medeiros",
     cargo: "Co-fundadora e CMO",
     curso: "Medicina",
     instituicao: "Afya Garanhuns",
   },
-  { nome: "Matheus Gabriel Ramos de Melo", cargo: "Co-fundador e CSO", curso: "Medicina", instituicao: "UNIR" },
+  { ...JULIANA, cargo: "Co-fundadora e CTO" },
 ];
 
+// Juliana também lidera o desenvolvimento, por isso aparece nos dois slides.
 const DESENVOLVIMENTO: Membro[] = [
+  { ...JULIANA, cargo: "Head de desenvolvimento" },
   { nome: "Daniel Pereira Santos da Silva", cargo: "Desenvolvedor", curso: "Ciência da computação", instituicao: "UERJ" },
   { nome: "Pedro de Magalhães Leitão", cargo: "Desenvolvedor", curso: "Ciência da computação", instituicao: "UERJ" },
 ];
