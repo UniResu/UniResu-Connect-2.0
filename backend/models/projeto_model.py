@@ -71,6 +71,9 @@ class ProjetoPublicoResponse(BaseModel):
     ano: Optional[str] = None
     categoria: Optional[str] = None
     link_detalhe: Optional[str] = None
+    # Consulta pública do SIGAA da instituição, para projetos sem página própria
+    # (a pesquisa no SIGAA só abre o detalhe por formulário).
+    link_consulta: Optional[str] = None
     periodo_inicio: Optional[str] = None
     periodo_fim: Optional[str] = None
     # Extras dos portais da UNIRIO e dos dados abertos da UFV.

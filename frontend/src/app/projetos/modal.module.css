@@ -146,6 +146,18 @@
   margin-top: var(--space-md);
 }
 
+.linkConsultaDica {
+  margin-top: var(--space-sm);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.linkConsultaDica strong {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Candidatura ── */
 
 /* `section.candidatura` vence o `.ui-card` global no fundo, sem depender da ordem dos CSS. */

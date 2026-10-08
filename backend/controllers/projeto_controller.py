@@ -12,6 +12,7 @@ from bson import ObjectId
 from database.connection import Database
 from services.areas import AREAS_CONHECIMENTO, classificar_area
 from services.fontes import FONTES, INSTITUICOES, SIGAA
+from services.sigaa.links import link_consulta
 from services.sigaa.parser import SITUACAO_EM_EXECUCAO, normalizar
 
 
@@ -62,10 +63,15 @@ def filtro_visiveis() -> Dict[str, Any]:
 
 
 def formatar_projeto_publico(doc: Dict[str, Any]) -> Dict[str, Any]:
-    """Como `formatar_projeto`, mas sem dados de contato (resposta pública)."""
+    """Como `formatar_projeto`, mas sem dados de contato (resposta pública).
+    Projetos do SIGAA sem página própria ganham `link_consulta`."""
     doc = formatar_projeto(doc)
     for campo in ("email_professor", "email_contato_manual", "autor_email"):
         doc.pop(campo, None)
+    if not doc.get("link_detalhe"):
+        consulta = link_consulta(doc)
+        if consulta:
+            doc["link_consulta"] = consulta
     return doc
 
 

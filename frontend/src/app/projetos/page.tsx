@@ -815,7 +815,7 @@ const DetalheProjeto = memo(function DetalheProjeto({
               ))}
             </dl>
           )}
-          {p.link_detalhe && (
+          {p.link_detalhe ? (
             <a
               href={p.link_detalhe}
               target="_blank"
@@ -825,7 +825,30 @@ const DetalheProjeto = memo(function DetalheProjeto({
               Ver no {FONTE_NOME[p.origem || ""] || "site de origem"}
               <Icone nome="linkExterno" tamanho={16} />
             </a>
-          )}
+          ) : p.link_consulta ? (
+            // Pesquisa no SIGAA não tem página pública por projeto: o botão abre a
+            // consulta da instituição e a dica diz o que digitar lá.
+            <div className={m.linkConsulta}>
+              <a
+                href={p.link_consulta}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`ui-btn ui-btn-secondary ${m.linkFonte}`}
+              >
+                Buscar no SIGAA
+                <Icone nome="linkExterno" tamanho={16} />
+              </a>
+              <p className={m.linkConsultaDica}>
+                {p.codigo ? (
+                  <>
+                    Na consulta pública, procure pelo código <strong>{p.codigo}</strong> ou pelo título.
+                  </>
+                ) : (
+                  <>Na consulta pública, procure pelo título do projeto.</>
+                )}
+              </p>
+            </div>
+          ) : null}
         </aside>
       </div>
 

@@ -32,6 +32,8 @@ export interface Projeto {
   ano?: string;
   categoria?: string;
   link_detalhe?: string;
+  /** Consulta pública do SIGAA da instituição, quando o projeto não tem página própria (pesquisa). */
+  link_consulta?: string;
   periodo_inicio?: string;
   periodo_fim?: string;
   area_tematica?: string;
