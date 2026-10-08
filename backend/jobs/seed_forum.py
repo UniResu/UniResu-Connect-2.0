@@ -376,7 +376,7 @@ PERGUNTAS: List[Dict[str, Any]] = [
 # foi removida do banco e não volta.
 POST_BOAS_VINDAS: Dict[str, Any] = {
     "seed_chave": "boas-vindas",
-    "titulo": "Bem-vindas e bem-vindos ao fórum do UniResu Connect",
+    "titulo": "Boas-vindas ao fórum do UniResu Connect",
     "conteudo": (
         "Este fórum nasceu de uma dificuldade que todo estudante conhece: descobrir onde estão os projetos de "
         "pesquisa e extensão da própria universidade, quem os coordena e como entrar em um deles. A plataforma "
@@ -391,8 +391,7 @@ POST_BOAS_VINDAS: Dict[str, Any] = {
         "Nada de dados pessoais de terceiros nem de conteúdo que não seja seu. E, antes de abrir uma pergunta, "
         "vale uma busca rápida: muitas já têm resposta na lista. O código de conduta completo aparece no "
         "registro e vale para todas as interações aqui.\n\n"
-        "Sejam bem-vindas e bem-vindos. A plataforma é feita por estudantes e cresce com o que a comunidade "
-        "traz para cá."
+        "Boas-vindas! A plataforma é feita por estudantes e cresce com o que a comunidade traz para cá."
     ),
 }
 
