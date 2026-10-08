@@ -17,6 +17,53 @@
   padding: var(--space-2xl) var(--space-lg) var(--space-3xl);
 }
 
+/* ── Aviso sobre a origem dos dados (recolhido por padrão) ── */
+
+.origem {
+  margin-top: var(--space-md);
+  max-width: 46rem;
+}
+
+.origemResumo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2rem;
+  padding: 0 0.5rem 0 0.35rem;
+  margin-left: -0.35rem;
+  border-radius: var(--radius-control);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  list-style: none;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.origemResumo::-webkit-details-marker {
+  display: none;
+}
+
+.origemResumo:hover,
+.origem[open] .origemResumo {
+  color: var(--text-accent);
+  background: var(--primary-50);
+}
+
+.origemResumo:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.origemTexto {
+  margin-top: var(--space-sm);
+  padding-left: var(--space-md);
+  border-left: 2px solid var(--primary-200);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+
 /* ── Painel de filtros ── */
 
 .filtros {

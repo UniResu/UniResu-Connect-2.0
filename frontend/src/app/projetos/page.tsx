@@ -15,7 +15,7 @@ import {
 import Modal from "@/components/ui/Modal";
 import MultiSelect from "@/components/ui/MultiSelect";
 import ProjetoCard from "@/components/projetos/ProjetoCard";
-import { IconeUfo } from "@/components/ui/Icones";
+import { IconeInfo, IconeUfo } from "@/components/ui/Icones";
 import styles from "./projetos.module.css";
 import m from "./modal.module.css";
 
@@ -442,6 +442,21 @@ export default function ProjetosPage() {
             Projetos de pesquisa e extensão das universidades, em um só lugar. Encontre o seu e envie uma
             carta de intenção à coordenação.
           </p>
+          {/* Aviso discreto e recolhido: explica o alcance da base sem disputar
+              atenção com a busca. */}
+          <details className={styles.origem}>
+            <summary className={styles.origemResumo}>
+              <IconeInfo tamanho={16} />
+              De onde vêm estes projetos
+            </summary>
+            <p className={styles.origemTexto}>
+              Reunimos somente projetos em andamento que as universidades publicam em acesso aberto, nos
+              próprios portais. Quando uma instituição não divulga os projetos, ou divulga sem a situação ou o
+              contato da coordenação, eles ficam de fora, e por isso uma busca pode voltar vazia mesmo que o
+              tema exista por lá. A base é atualizada toda semana; antes de se candidatar, vale confirmar os
+              detalhes no portal da instituição.
+            </p>
+          </details>
         </header>
 
         {/* ── Filtros ── */}
