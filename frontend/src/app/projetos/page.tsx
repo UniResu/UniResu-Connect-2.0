@@ -458,7 +458,7 @@ export default function ProjetosPage() {
                 type="text"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                placeholder="Buscar por título ou coordenação"
+                placeholder="Título ou coordenação"
                 className={`ui-field ${styles.inputBusca}`}
                 maxLength={200}
                 autoComplete="off"
@@ -528,7 +528,7 @@ export default function ProjetosPage() {
               rotuloTodos="Todos os campi"
               placeholder={
                 !instituicaoFiltro
-                  ? "Campus (escolha a instituição)"
+                  ? "Campus"
                   : campiOferecidos.length > 0
                     ? `Campi da ${instituicaoFiltro}`
                     : `Sem campi para ${instituicaoFiltro}`
@@ -543,7 +543,7 @@ export default function ProjetosPage() {
               rotuloTodos="Todas as unidades"
               placeholder={
                 !instituicaoFiltro
-                  ? "Unidades (escolha a instituição)"
+                  ? "Unidades"
                   : unidadesOferecidas.length > 0
                     ? `Unidades da ${instituicaoFiltro}`
                     : `Sem unidades para ${instituicaoFiltro}`

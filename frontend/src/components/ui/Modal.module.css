@@ -137,3 +137,8 @@
     width: 100%;
   }
 }
+
+/* A caixa recebe o foco ao abrir (tabIndex -1); o anel fica para os controles. */
+.caixa:focus {
+  outline: none;
+}

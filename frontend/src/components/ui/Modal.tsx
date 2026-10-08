@@ -54,7 +54,9 @@ export default function Modal({
   useEffect(() => {
     if (!aberto) return;
     const anterior = document.activeElement as HTMLElement | null;
-    focaveis()[0]?.focus();
+    // O foco inicial vai para a própria caixa (tabIndex -1): o leitor de tela
+    // anuncia o título e o X não abre com o anel de foco aceso.
+    caixaRef.current?.focus();
 
     function aoTeclar(e: KeyboardEvent) {
       if (e.key === "Escape") {
@@ -100,6 +102,7 @@ export default function Modal({
         aria-modal="true"
         aria-labelledby={idTitulo}
         ref={caixaRef}
+        tabIndex={-1}
       >
         <header className={styles.cabecalho}>
           <h2 id={idTitulo} className={styles.titulo}>

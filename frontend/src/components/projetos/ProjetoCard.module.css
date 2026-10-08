@@ -14,7 +14,8 @@
   color: var(--text-primary);
   text-decoration: none;
   content-visibility: auto;
-  contain-intrinsic-size: auto 180px;
+  /* Estimativa perto da altura real, para a barra de rolagem não pular. */
+  contain-intrinsic-size: auto 230px;
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
@@ -122,15 +123,14 @@
 }
 
 .coordenacao {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
+  display: block;
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
   margin-bottom: var(--space-sm);
 }
 
 .coordenacaoRotulo {
+  margin-right: 0.35rem;
   color: var(--text-muted);
 }
 
@@ -172,6 +172,12 @@
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+@media (max-width: 768px) {
+  .card {
+    contain-intrinsic-size: auto 330px;
+  }
 }
 
 @media (max-width: 640px) {

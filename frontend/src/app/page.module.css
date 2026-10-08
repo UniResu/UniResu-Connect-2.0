@@ -408,6 +408,8 @@ span.pessoaCargo {
 .carrossel .slide {
   display: flex;
   height: auto;
+  /* Centralizado: as setas laterais ficam alinhadas ao conteúdo de qualquer
+     slide, e a seção não muda de altura a cada troca. */
   align-items: center;
   justify-content: center;
 }

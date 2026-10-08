@@ -48,7 +48,7 @@
   /* ── Texto ── */
   --text-primary: #1c1730;
   --text-secondary: #5a556b;
-  --text-muted: #8b8699;
+  --text-muted: #6e687f;
   --text-accent: var(--brand-700);
   --text-on-primary: #ffffff;
   --text-on-dark: #f4f1f9;
@@ -451,7 +451,7 @@ textarea.ui-field { min-height: 7rem; resize: vertical; }
 select.ui-field {
   appearance: none;
   padding-right: 2.25rem;
-  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238b8699' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236e687f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
   cursor: pointer;
