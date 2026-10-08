@@ -153,9 +153,9 @@ async def test_seed_e_idempotente_e_cria_usuario_de_sistema_uma_vez(api, db):
     assert 12 <= len(seed.PERGUNTAS) <= 15
     agora = datetime(2026, 10, 7, 12, tzinfo=timezone.utc)
 
-    assert await seed.seed_forum(db, agora=agora) == len(seed.PERGUNTAS)
+    assert await seed.seed_forum(db, agora=agora) == seed.TOTAL_SEED
     assert await seed.seed_forum(db, agora=agora) == 0
-    assert await db.topicos_forum.count_documents({"seed": "forum_v1"}) == len(seed.PERGUNTAS)
+    assert await db.topicos_forum.count_documents({"seed": "forum_v1"}) == seed.TOTAL_SEED
 
     sistemas = await db.usuarios.find({"email": "forum@uniresu.org"}).to_list(10)
     assert len(sistemas) == 1
@@ -181,29 +181,24 @@ async def test_seed_e_idempotente_e_cria_usuario_de_sistema_uma_vez(api, db):
     assert await seed.seed_forum(db, agora=agora) == 1
 
     lista = (await api.get("/api/forum/topicos")).json()
-    assert len(lista) == len(seed.PERGUNTAS) and _sem_email(lista)
+    assert len(lista) == seed.TOTAL_SEED and _sem_email(lista)
     assert {t["autor_username"] for t in lista} == {"uniresu"}
     assert {t["autor_nome"] for t in lista} == {"Equipe UniResu"}
 
 
-async def test_seed_post_do_fundador_abre_a_linha_do_tempo(db):
+async def test_seed_boas_vindas_da_equipe_abre_a_linha_do_tempo(db):
     agora = datetime(2026, 10, 7, 12, tzinfo=timezone.utc)
-    # Sem a conta do fundador no banco, a postagem não é criada em nome de ninguém.
-    assert await seed.seed_forum(db, agora=agora) == len(seed.PERGUNTAS)
-    assert await db.topicos_forum.count_documents({"seed_chave": seed.POST_FUNDADOR["seed_chave"]}) == 0
-
-    # A conta é achada pelo username, mesmo com outro e-mail.
-    fundador = await db.usuarios.insert_one({"email": "outro@protonmail.com", "nome": "Matheus Gabriel Ramos",
-                                             "username": seed.POST_FUNDADOR["autor_username"], "papel": "aluno"})
-    assert await seed.seed_forum(db, agora=agora) == 1
-    assert await seed.seed_forum(db, agora=agora) == 0  # idempotente
-
-    post = await db.topicos_forum.find_one({"seed_chave": seed.POST_FUNDADOR["seed_chave"]})
-    assert post["autor_id"] == str(fundador.inserted_id) and "autor_email" not in post
-    assert post["seed"] == seed.SEED_VERSAO
-    assert len(post["conteudo_original"]) >= 600 and "·" not in post["titulo"] + post["conteudo_original"]
-    outros = await db.topicos_forum.find({"seed_chave": {"$ne": seed.POST_FUNDADOR["seed_chave"]}}).to_list(100)
+    # Um tópico de usuário mais antigo que as perguntas do seed.
+    await db.topicos_forum.insert_one({"titulo": "Pergunta antiga", "autor_id": "x",
+                                       "data_criacao": datetime(2026, 7, 1, 15, tzinfo=timezone.utc)})
+    await seed.seed_forum(db, agora=agora)
+    sistema = await db.usuarios.find_one({"username": "uniresu"})
+    post = await db.topicos_forum.find_one({"seed_chave": seed.POST_BOAS_VINDAS["seed_chave"]})
+    assert post["autor_id"] == str(sistema["_id"])
+    assert post["data_criacao"].replace(tzinfo=timezone.utc) == datetime(2026, 6, 30, 10, tzinfo=timezone.utc)
+    outros = await db.topicos_forum.find({"_id": {"$ne": post["_id"]}}).to_list(100)
     assert all(post["data_criacao"] < t["data_criacao"] for t in outros)
+    assert await seed.seed_forum(db, agora=agora) == 0  # idempotente
 
 
 async def test_seed_completa_conta_de_sistema_antiga(db):
@@ -289,14 +284,14 @@ async def test_migrar_dados_preenche_usernames_e_roda_seed(db):
     assert docs["forum@uniresu.org"]["username"] == "uniresu"  # seed rodou
     todos = [u["username"] for u in docs.values()]
     assert len(set(todos)) == len(todos)
-    assert await db.topicos_forum.count_documents({"seed": "forum_v1"}) == len(seed.PERGUNTAS)
+    assert await db.topicos_forum.count_documents({"seed": "forum_v1"}) == seed.TOTAL_SEED
 
     # Idempotente: segunda rodada não muda nada.
     await migrar_dados(db)
     assert {u["email"]: u["username"] for u in await db.usuarios.find({}).to_list(100)} == {
         e: u["username"] for e, u in docs.items()
     }
-    assert await db.topicos_forum.count_documents({"seed": "forum_v1"}) == len(seed.PERGUNTAS)
+    assert await db.topicos_forum.count_documents({"seed": "forum_v1"}) == seed.TOTAL_SEED
 
 
 async def test_criar_indices_inclui_username_unico_sparse(db):

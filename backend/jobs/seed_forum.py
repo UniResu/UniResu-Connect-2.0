@@ -370,14 +370,12 @@ PERGUNTAS: List[Dict[str, Any]] = [
 ]
 
 
-# Primeira postagem do fórum, assinada por um dos fundadores com a conta
-# pessoal dele (identificada pelo username; o e-mail fica como alternativa). Entra com data anterior a tudo o
-# que já existe no fórum, para abrir a linha do tempo; se a conta não existir
-# no banco, a postagem não é criada (nunca sai em nome de outra pessoa).
-POST_FUNDADOR: Dict[str, Any] = {
-    "seed_chave": "boas-vindas-fundador",
-    "autor_username": "matheus-gabriel-ramos",
-    "autor_email": "matheusmggabriel@gmail.com",
+# Primeira postagem do fórum, de boas-vindas, assinada pela conta da equipe
+# (@uniresu). Entra com data anterior a todas as outras, para abrir a linha
+# do tempo. A versão antiga, assinada por um fundador ("boas-vindas-fundador"),
+# foi removida do banco e não volta.
+POST_BOAS_VINDAS: Dict[str, Any] = {
+    "seed_chave": "boas-vindas",
     "titulo": "Bem-vindas e bem-vindos ao fórum do UniResu Connect",
     "conteudo": (
         "Este fórum nasceu de uma dificuldade que todo estudante conhece: descobrir onde estão os projetos de "
@@ -478,23 +476,27 @@ async def seed_forum(db, agora: Optional[datetime] = None) -> int:
             continue  # outro processo inseriu a mesma pergunta neste instante
         if resultado.upserted_id is not None:
             inseridos += 1
-    inseridos += await seed_post_fundador(db, agora)
+    inseridos += await seed_boas_vindas(db, autor_id, agora)
     return inseridos
 
 
-async def seed_post_fundador(db, agora: datetime) -> int:
-    """Insere a postagem de boas-vindas do fundador, datada um dia antes da
-    postagem mais antiga do fórum (ou 90 dias atrás, se o fórum estiver vazio).
-    Só entra se a conta do autor existir; devolve 1 se inseriu, senão 0."""
-    if await db.topicos_forum.find_one({"seed": SEED_VERSAO, "seed_chave": POST_FUNDADOR["seed_chave"]}):
+# Total de tópicos que o seed cria: as perguntas e a postagem de boas-vindas.
+TOTAL_SEED = len(PERGUNTAS) + 1
+
+# Chaves das postagens de boas-vindas (a atual e a antiga, já removida), que
+# não contam ao calcular a data da postagem mais antiga do fórum.
+CHAVES_BOAS_VINDAS = ("boas-vindas", "boas-vindas-fundador")
+
+
+async def seed_boas_vindas(db, autor_id: str, agora: datetime) -> int:
+    """Insere a postagem de boas-vindas da equipe, datada um dia antes da
+    postagem mais antiga do fórum (ou 90 dias atrás, se o fórum estiver
+    vazio). Devolve 1 se inseriu, senão 0."""
+    if await db.topicos_forum.find_one({"seed": SEED_VERSAO, "seed_chave": POST_BOAS_VINDAS["seed_chave"]}):
         return 0
-    autor = await db.usuarios.find_one(
-        {"$or": [{"username": POST_FUNDADOR["autor_username"]}, {"email": POST_FUNDADOR["autor_email"]}]},
-        {"_id": 1},
+    mais_antigo = await db.topicos_forum.find_one(
+        {"seed_chave": {"$nin": list(CHAVES_BOAS_VINDAS)}}, {"data_criacao": 1}, sort=[("data_criacao", 1)],
     )
-    if not autor:
-        return 0
-    mais_antigo = await db.topicos_forum.find_one({}, {"data_criacao": 1}, sort=[("data_criacao", 1)])
     if mais_antigo and mais_antigo.get("data_criacao"):
         referencia = mais_antigo["data_criacao"]
         if referencia.tzinfo is None:
@@ -502,12 +504,11 @@ async def seed_post_fundador(db, agora: datetime) -> int:
         data = (referencia - timedelta(days=1)).replace(hour=10, minute=0, second=0, microsecond=0)
     else:
         data = (agora - timedelta(days=90)).replace(hour=10, minute=0, second=0, microsecond=0)
-    dados = {k: v for k, v in POST_FUNDADOR.items() if k not in ("autor_username", "autor_email")}
-    topico = montar_topico({**dados, "dias_atras": 0, "hora": 10}, str(autor["_id"]), agora)
+    topico = montar_topico({**POST_BOAS_VINDAS, "dias_atras": 0, "hora": 10}, autor_id, agora)
     topico["data_criacao"] = data
     try:
         resultado = await db.topicos_forum.update_one(
-            {"seed": SEED_VERSAO, "seed_chave": POST_FUNDADOR["seed_chave"]},
+            {"seed": SEED_VERSAO, "seed_chave": POST_BOAS_VINDAS["seed_chave"]},
             {"$setOnInsert": topico},
             upsert=True,
         )
@@ -526,7 +527,7 @@ async def main() -> int:
     finally:
         await Database.disconnect()
 
-    print(f"Seed do fórum: {inseridos} pergunta(s) inserida(s), {len(PERGUNTAS) - inseridos} já existia(m).")
+    print(f"Seed do fórum: {inseridos} tópico(s) inserido(s).")
     return 0
 
 

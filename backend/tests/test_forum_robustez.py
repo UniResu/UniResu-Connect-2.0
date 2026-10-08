@@ -88,10 +88,10 @@ async def test_login_em_conta_sem_senha_da_401_e_nao_500(db):
 
 async def test_seed_duas_vezes_nao_duplica_usuario_nem_perguntas(db):
     agora = datetime(2026, 10, 1, 12, tzinfo=timezone.utc)
-    assert await seed.seed_forum(db, agora=agora) == len(seed.PERGUNTAS)
+    assert await seed.seed_forum(db, agora=agora) == seed.TOTAL_SEED
     assert await seed.seed_forum(db, agora=agora) == 0
     assert await db.usuarios.count_documents({"email": seed.USUARIO_SISTEMA["email"]}) == 1
-    assert await db.topicos_forum.count_documents({"seed": seed.SEED_VERSAO}) == len(seed.PERGUNTAS)
+    assert await db.topicos_forum.count_documents({"seed": seed.SEED_VERSAO}) == seed.TOTAL_SEED
     indices = await db.topicos_forum.index_information()
     assert "uniq_seed_chave" in indices
 
