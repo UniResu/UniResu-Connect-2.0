@@ -32,6 +32,7 @@ PÚBLICO: migrantes e refugiados em Campinas (RMC)<br>
 RESUMO: prestar assistência jurídica a migrantes.</p>
 <p>DOCENTE: PEDRO DE MIRANDA COSTA<br>ESCOLA: ECON<br>FACULDADE: Ciências Econômicas<br>
 TÍTULO: Coleta e divulgação dos preços da cesta básica<br>RESUMO: acompanhar preços.</p>
+<h3>Projetos de Extensão Anos de 2024/2025</h3><h4>Anos de 2024/2025</h4>
 <h3>Ano de 2023</h3>
 <p>DOCENTE: FULANO ANTIGO<br>TÍTULO: Projeto do ciclo passado<br>RESUMO: antigo.</p>
 </body></html>
@@ -54,6 +55,7 @@ def test_parse_le_so_o_ciclo_vigente_com_programa_e_grafia_dos_nomes():
     assert segundo["programa"] == terceiro["programa"] == "Direitos humanos e Justiça"
     assert segundo["publico"] == "migrantes e refugiados em Campinas (RMC)"
     assert terceiro["publico"] is None
+    assert terceiro["resumo"] == "acompanhar preços."  # sem o cabeçalho do ciclo seguinte
     assert primeiro["inicio"] == "2026-08-01" and primeiro["fim"] == "2029-01-31"
 
 

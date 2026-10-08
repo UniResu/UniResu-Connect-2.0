@@ -74,6 +74,9 @@ async def executar_sync(db, cfg: PucCampConfig, client: Optional[PucCampClient] 
     if dry_run:
         print("\n=== Projetos coletados ===")
         print(json.dumps(registros, ensure_ascii=False, indent=2, default=str))
+        print(f"\n=== Resumo: {len(registros)} projeto(s) ===")
+        for r in registros:
+            print(f"  [{r['situacao']}] {r['titulo']} | {r['coordenador']} | {r['unidade']}")
     return run
 
 

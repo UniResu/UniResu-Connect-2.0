@@ -39,7 +39,7 @@ _RE_CAMPO = re.compile(rf"({_ROTULOS_RE})\s*:\s*(.*?)(?=(?:{_ROTULOS_RE})\s*:|PI
 _RE_VIGENCIA = re.compile(r"Vig[êe]ncia de (\d{2}/\d{2}/\d{4}) a (\d{2}/\d{2}/\d{4})", re.I)
 _RE_PIE = re.compile(r"PIE\s*(\d)\s*[–-]\s*([^\n]+)")
 # Onde começam os ciclos antigos (fim do trecho vigente).
-_RE_FIM_CICLO = re.compile(r"Ano de 20\d\d|Bi[êe]nio|PLANOS DE TRABALHO", re.I)
+_RE_FIM_CICLO = re.compile(r"Projetos de Extens[ãa]o\s+Anos?\s+de|Anos? de 20\d\d|Bi[êe]nio|PLANOS DE TRABALHO", re.I)
 
 
 class PucCampErro(ErroColeta):
