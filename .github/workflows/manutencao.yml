@@ -24,6 +24,14 @@ on:
         description: "Tarefa consultar: trecho do título do projeto a procurar"
         required: false
         default: ""
+      instituicao:
+        description: "Tarefa consultar: sigla da instituição (opcional; sem termo, lista amostras dela)"
+        required: false
+        default: ""
+      modulo:
+        description: "Tarefa consultar: pesquisa ou extensao (opcional)"
+        required: false
+        default: ""
       confirmar:
         description: "Apagar de fato (desmarcado = só listar)"
         type: boolean
@@ -75,6 +83,8 @@ jobs:
         run: python -m jobs.consultar_projeto "$TERMO"
         env:
           TERMO: ${{ inputs.termo }}
+          CONSULTA_INSTITUICAO: ${{ inputs.instituicao }}
+          CONSULTA_MODULO: ${{ inputs.modulo }}
           MONGO_URI: ${{ secrets.MONGO_URI_ADMIN || secrets.MONGO_URI }}
           MONGO_DB_NAME: ${{ vars.MONGO_DB_NAME || 'UniResuDB' }}
 
