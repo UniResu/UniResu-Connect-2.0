@@ -141,8 +141,10 @@ a.btnEscuroSecundario:hover {
   color: var(--text-on-dark);
 }
 
+/* "Connect" em verde, a segunda cor da marca: contrasta com o roxo do hero
+   e lê melhor do que o lilás. */
 .heroDestaque {
-  color: var(--brand-300);
+  color: var(--green-400);
 }
 
 .heroTexto {
