@@ -21,7 +21,7 @@
  * de erro traz o link para resolver.
  */
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,6 +31,7 @@ import {
   RESPOSTAS_POR_PAGINA,
   dataCompleta,
   ehAutor,
+  inicialDe,
   juntarRespostas,
   mensagemDeErro,
   plural,
@@ -71,6 +72,7 @@ interface ItemRespostaProps {
 }
 
 function ItemResposta({ resposta, autor, onEditar, onExcluir }: ItemRespostaProps) {
+  const idCampo = useId();
   const [editando, setEditando] = useState(false);
   const [texto, setTexto] = useState(resposta.conteudo);
   const [salvando, setSalvando] = useState(false);
@@ -96,9 +98,14 @@ function ItemResposta({ resposta, autor, onEditar, onExcluir }: ItemRespostaProp
 
   return (
     <li className={styles.resposta}>
+      {/* [R5] Avatar com a inicial e o @username; o e-mail nunca aparece. */}
+      <span className={styles.avatar} aria-hidden="true">
+        {inicialDe(resposta.autor_nome, resposta.autor_username)}
+      </span>
+
       <div className={styles.respostaCabecalho}>
         <div className={`${styles.meta} ${styles.respostaMeta}`}>
-          <span className={`${styles.metaItem} ${styles.metaAutor}`} title={resposta.autor_nome || undefined}>
+          <span className={`${styles.metaItem} ${styles.respostaAutor}`} title={resposta.autor_nome || undefined}>
             @{resposta.autor_username || "usuario"}
           </span>
           <span className={styles.metaItem} title={dataCompleta(resposta.data_criacao)}>
@@ -114,21 +121,24 @@ function ItemResposta({ resposta, autor, onEditar, onExcluir }: ItemRespostaProp
       </div>
 
       {editando ? (
-        <form className={styles.formResposta} onSubmit={salvar}>
+        <form className={styles.formEdicao} onSubmit={salvar}>
+          <label htmlFor={idCampo} className="sr-only">
+            Texto da resposta
+          </label>
           <textarea
+            id={idCampo}
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
-            className={styles.campo}
+            className="ui-field"
             rows={4}
             maxLength={RESPOSTA_MAX_CARACTERES}
             required
-            aria-label="Texto da resposta"
           />
           <div className={styles.formAcoes}>
-            <button type="button" className={styles.acaoTexto} onClick={() => setEditando(false)}>
+            <button type="button" className="ui-btn ui-btn-ghost ui-btn-sm" onClick={() => setEditando(false)}>
               Cancelar
             </button>
-            <button type="submit" className={styles.btnPrimario} disabled={salvando || !texto.trim()}>
+            <button type="submit" className="ui-btn ui-btn-primary ui-btn-sm" disabled={salvando || !texto.trim()}>
               {salvando ? "Salvando..." : "Salvar"}
             </button>
           </div>
@@ -155,6 +165,7 @@ interface RespostasProps {
 
 export function Respostas({ topicoId, estado, modo, onMudar, falhou, onRecarregar }: RespostasProps) {
   const { token, user, isAuthenticated, isLoading } = useAuth();
+  const idCampo = useId();
 
   const [formAberto, setFormAberto] = useState(modo === "pagina");
   const [texto, setTexto] = useState("");
@@ -263,7 +274,7 @@ export function Respostas({ topicoId, estado, modo, onMudar, falhou, onRecarrega
           <p className={styles.erro} role="alert">
             Não foi possível carregar as respostas.{" "}
             {onRecarregar && (
-              <button type="button" className={styles.btnSecundario} onClick={onRecarregar}>
+              <button type="button" className="ui-btn ui-btn-secondary ui-btn-sm" onClick={onRecarregar}>
                 Tentar novamente
               </button>
             )}
@@ -292,20 +303,24 @@ export function Respostas({ topicoId, estado, modo, onMudar, falhou, onRecarrega
           )}
 
           {modo === "thread" && total > RESPOSTAS_NA_THREAD && (
-            <Link href={`/forum/${topicoId}`} className={styles.verTodas}>
-              Ver todas as {total} respostas
-            </Link>
+            <div className={styles.respostasRodape}>
+              <Link href={`/forum/${topicoId}`} className="ui-btn ui-btn-ghost ui-btn-sm">
+                Ver todas as {total} respostas
+              </Link>
+            </div>
           )}
 
           {modo === "pagina" && respostas.length < total && (
-            <button
-              type="button"
-              className={styles.btnSecundario}
-              onClick={carregarMais}
-              disabled={carregandoMais}
-            >
-              {carregandoMais ? "Carregando..." : "Carregar mais respostas"}
-            </button>
+            <div className={styles.respostasRodape}>
+              <button
+                type="button"
+                className="ui-btn ui-btn-secondary"
+                onClick={carregarMais}
+                disabled={carregandoMais}
+              >
+                {carregandoMais ? "Carregando..." : "Carregar mais respostas"}
+              </button>
+            </div>
           )}
         </>
       )}
@@ -329,7 +344,7 @@ export function Respostas({ topicoId, estado, modo, onMudar, falhou, onRecarrega
       )}
 
       {publicadaForaDaTela && (
-        <p className={styles.respostasAviso} role="status">
+        <p className={styles.aviso} role="status">
           {modo === "thread" ? (
             <>
               Sua resposta foi publicada no fim da lista. Para vê-la,{" "}
@@ -344,44 +359,51 @@ export function Respostas({ topicoId, estado, modo, onMudar, falhou, onRecarrega
       {/* Enquanto a sessão carrega, não mostra nem o convite nem o formulário. */}
       {estado !== null && !isLoading && (
         !isAuthenticated ? (
-          <p className={styles.dicaLogin}>
+          <p className={`${styles.dicaLogin} ${styles.respostasRodape}`}>
             <Link href="/login">Entre</Link> para responder.
           </p>
         ) : perfilIncompleto ? (
           // A API devolveria 403: em vez de deixar tentar, aponta o caminho.
-          <p className={styles.dicaLogin}>
+          <p className={`${styles.dicaLogin} ${styles.respostasRodape}`}>
             Para responder, <Link href="/perfil/completar">complete seu perfil</Link> com o vínculo
             institucional, o e-mail e os aceites.
           </p>
         ) : formAberto ? (
-          <form className={styles.formResposta} onSubmit={publicar}>
-            <textarea
-              value={texto}
-              onChange={(e) => setTexto(e.target.value)}
-              placeholder="Escreva sua resposta. Separe parágrafos com uma linha em branco."
-              className={styles.campo}
-              rows={4}
-              maxLength={RESPOSTA_MAX_CARACTERES}
-              required
-              autoFocus={modo === "thread"}
-              aria-label="Sua resposta"
-            />
+          <form className={`ui-card ${styles.formCard} ${styles.formResposta}`} onSubmit={publicar}>
+            <div>
+              <label htmlFor={idCampo} className="ui-label">
+                Sua resposta
+              </label>
+              <textarea
+                id={idCampo}
+                value={texto}
+                onChange={(e) => setTexto(e.target.value)}
+                placeholder="Escreva sua resposta. Separe parágrafos com uma linha em branco."
+                className="ui-field"
+                rows={4}
+                maxLength={RESPOSTA_MAX_CARACTERES}
+                required
+                autoFocus={modo === "thread"}
+              />
+            </div>
             <div className={styles.formAcoes}>
               <span className={styles.dicaForm}>Publicada como @{user?.username || "você"}.</span>
               {modo === "thread" && (
-                <button type="button" className={styles.acaoTexto} onClick={() => setFormAberto(false)}>
+                <button type="button" className="ui-btn ui-btn-ghost" onClick={() => setFormAberto(false)}>
                   Cancelar
                 </button>
               )}
-              <button type="submit" className={styles.btnPrimario} disabled={enviando || !texto.trim()}>
+              <button type="submit" className="ui-btn ui-btn-primary" disabled={enviando || !texto.trim()}>
                 {enviando ? "Publicando..." : "Publicar resposta"}
               </button>
             </div>
           </form>
         ) : (
-          <button type="button" className={styles.btnSecundario} onClick={() => setFormAberto(true)}>
-            Responder
-          </button>
+          <div className={styles.respostasRodape}>
+            <button type="button" className="ui-btn ui-btn-secondary ui-btn-sm" onClick={() => setFormAberto(true)}>
+              Responder
+            </button>
+          </div>
         )
       )}
     </section>

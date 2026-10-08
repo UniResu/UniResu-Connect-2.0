@@ -2,11 +2,14 @@
 
 /**
  * Peças da pergunta usadas na lista (/forum) e na página da pergunta
- * (/forum/[id]): linha de meta, corpo em parágrafos, controles de voto,
- * ações do autor e o formulário de edição.
+ * (/forum/[id]): ícones, linha de meta, chips de contagem, corpo em
+ * parágrafos, controles de voto, ações do autor e o formulário de edição.
+ *
+ * Botões e campos usam as classes globais ui-* (globals.css); o módulo só
+ * acrescenta layout e os estados específicos do fórum.
  */
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import Link from "next/link";
 import type { User } from "@/types/user";
 import {
@@ -21,13 +24,48 @@ import {
 } from "./forum";
 import styles from "../forum.module.css";
 
-// ── Ícones (SVG inline, sem dependências e sem emoji) ─────────────────────
+// ── Ícones (SVG inline no estilo Lucide: traço 2, sem emoji) ─────────────
 
-function Seta({ direcao }: { direcao: "cima" | "baixo" }) {
+type NomeIcone = "busca" | "cima" | "baixo" | "esquerda" | "mais";
+
+const CAMINHOS: Record<NomeIcone, React.ReactNode> = {
+  busca: (
+    <>
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.3-4.3" />
+    </>
+  ),
+  cima: (
+    <>
+      <path d="M12 19V5" />
+      <path d="m5 12 7-7 7 7" />
+    </>
+  ),
+  baixo: (
+    <>
+      <path d="M12 5v14" />
+      <path d="m19 12-7 7-7-7" />
+    </>
+  ),
+  esquerda: (
+    <>
+      <path d="m12 19-7-7 7-7" />
+      <path d="M19 12H5" />
+    </>
+  ),
+  mais: (
+    <>
+      <path d="M5 12h14" />
+      <path d="M12 5v14" />
+    </>
+  ),
+};
+
+export function Icone({ nome, tamanho = 20 }: { nome: NomeIcone; tamanho?: number }) {
   return (
     <svg
-      width="16"
-      height="16"
+      width={tamanho}
+      height={tamanho}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -35,13 +73,14 @@ function Seta({ direcao }: { direcao: "cima" | "baixo" }) {
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
+      focusable="false"
     >
-      {direcao === "cima" ? <path d="M12 19V5M5 12l7-7 7 7" /> : <path d="M12 5v14M19 12l-7 7-7-7" />}
+      {CAMINHOS[nome]}
     </svg>
   );
 }
 
-// ── Meta: "@username | há 3 dias | 12 visualizações | 4 votos | 2 respostas" ──
+// ── Meta: "@username | há 3 dias | 12 visualizações" ─────────────────────
 
 export function MetaPergunta({ topico }: { topico: Topico }) {
   return (
@@ -53,9 +92,21 @@ export function MetaPergunta({ topico }: { topico: Topico }) {
         {tempoRelativo(topico.data_criacao)}
       </span>
       <span className={styles.metaItem}>{plural(topico.visualizacoes, "visualização", "visualizações")}</span>
-      <span className={styles.metaItem}>{plural(votosDe(topico), "voto", "votos")}</span>
-      <span className={styles.metaItem}>{plural(topico.total_respostas ?? 0, "resposta", "respostas")}</span>
     </div>
+  );
+}
+
+// ── Chips: votos e respostas (o pai decide onde ficam) ───────────────────
+
+export function ChipsPergunta({ topico }: { topico: Topico }) {
+  const respostas = topico.total_respostas ?? 0;
+  return (
+    <>
+      <span className="ui-chip">{plural(votosDe(topico), "voto", "votos")}</span>
+      <span className={respostas > 0 ? "ui-chip ui-chip-primary" : "ui-chip"}>
+        {plural(respostas, "resposta", "respostas")}
+      </span>
+    </>
   );
 }
 
@@ -79,11 +130,11 @@ interface AcoesAutorProps {
 
 export function AcoesAutor({ onEditar, onExcluir }: AcoesAutorProps) {
   return (
-    <div className={styles.acoesAutor}>
-      <button type="button" className={styles.acaoTexto} onClick={onEditar}>
+    <div className={styles.acoes}>
+      <button type="button" className="ui-btn ui-btn-ghost ui-btn-sm" onClick={onEditar}>
         Editar
       </button>
-      <button type="button" className={`${styles.acaoTexto} ${styles.acaoPerigo}`} onClick={onExcluir}>
+      <button type="button" className={`ui-btn ui-btn-ghost ui-btn-sm ${styles.acaoPerigo}`} onClick={onExcluir}>
         Excluir
       </button>
     </div>
@@ -101,6 +152,7 @@ interface FormPerguntaProps {
 }
 
 export function FormPergunta({ titulo, conteudo, onCancelar, onSalvar }: FormPerguntaProps) {
+  const idBase = useId();
   const [editTitulo, setEditTitulo] = useState(titulo);
   const [editConteudo, setEditConteudo] = useState(conteudo);
   const [salvando, setSalvando] = useState(false);
@@ -119,29 +171,39 @@ export function FormPergunta({ titulo, conteudo, onCancelar, onSalvar }: FormPer
   }
 
   return (
-    <form className={styles.formPergunta} onSubmit={salvar}>
-      <input
-        type="text"
-        value={editTitulo}
-        onChange={(e) => setEditTitulo(e.target.value)}
-        className={styles.campo}
-        maxLength={200}
-        required
-        aria-label="Título"
-      />
-      <textarea
-        value={editConteudo}
-        onChange={(e) => setEditConteudo(e.target.value)}
-        className={styles.campo}
-        rows={8}
-        required
-        aria-label="Conteúdo"
-      />
+    <form className={`ui-card ${styles.formCard} ${styles.formEdicaoPergunta}`} onSubmit={salvar}>
+      <div>
+        <label htmlFor={`${idBase}-titulo`} className="ui-label">
+          Título
+        </label>
+        <input
+          id={`${idBase}-titulo`}
+          type="text"
+          value={editTitulo}
+          onChange={(e) => setEditTitulo(e.target.value)}
+          className="ui-field"
+          maxLength={200}
+          required
+        />
+      </div>
+      <div>
+        <label htmlFor={`${idBase}-conteudo`} className="ui-label">
+          Conteúdo
+        </label>
+        <textarea
+          id={`${idBase}-conteudo`}
+          value={editConteudo}
+          onChange={(e) => setEditConteudo(e.target.value)}
+          className="ui-field"
+          rows={8}
+          required
+        />
+      </div>
       <div className={styles.formAcoes}>
-        <button type="button" className={styles.acaoTexto} onClick={onCancelar}>
+        <button type="button" className="ui-btn ui-btn-ghost" onClick={onCancelar}>
           Cancelar
         </button>
-        <button type="submit" className={styles.btnPrimario} disabled={salvando}>
+        <button type="submit" className="ui-btn ui-btn-primary" disabled={salvando}>
           {salvando ? "Salvando..." : "Salvar"}
         </button>
       </div>
@@ -180,30 +242,30 @@ export function Votos({ topico, user, votando, onVotar }: VotosProps) {
     <div className={styles.votos}>
       <button
         type="button"
-        className={styles.votoBtn}
+        className={`ui-btn ui-btn-ghost ui-btn-sm ${styles.votoBtn}`}
         onClick={() => onVotar("like")}
         disabled={votando}
         aria-pressed={meuVoto === "like"}
         aria-label="Votar a favor"
         title="Votar a favor"
       >
-        <Seta direcao="cima" />
+        <Icone nome="cima" tamanho={18} />
       </button>
       <span className={styles.votosTotal} aria-live="polite">
         {total}
       </span>
       <button
         type="button"
-        className={styles.votoBtn}
+        className={`ui-btn ui-btn-ghost ui-btn-sm ${styles.votoBtn}`}
         onClick={() => onVotar("dislike")}
         disabled={votando}
         aria-pressed={meuVoto === "dislike"}
         aria-label="Votar contra"
         title="Votar contra"
       >
-        <Seta direcao="baixo" />
+        <Icone nome="baixo" tamanho={18} />
       </button>
-      <span className={styles.votosRotulo}>{plural(total, "voto", "votos")}</span>
+      <span className={styles.votosRotulo}>{Math.abs(total) === 1 ? "voto" : "votos"}</span>
     </div>
   );
 }

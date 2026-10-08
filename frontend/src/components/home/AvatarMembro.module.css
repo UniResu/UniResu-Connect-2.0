@@ -1,52 +1,31 @@
-/* Avatar: círculo em degradê (como antes) com a silhueta de perfil dentro e
-   um selo com o símbolo da função no canto inferior direito. */
-.wrap {
-  position: relative;
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 1.2rem auto;
-}
-
-.circulo {
-  background: linear-gradient(135deg, #b224ef, #00d084);
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.6);
-  display: flex;
+/* Avatar de iniciais: pílula em degradê de marca, só com tokens, para ficar
+   igual nos dois temas. Sem sombra: o card em volta já tem a dele. */
+.avatar {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
-  margin: 0;
+  flex-shrink: 0;
+  width: 4rem;
+  height: 4rem;
+  border-radius: var(--radius-chip);
+  background: linear-gradient(135deg, var(--brand-700), var(--brand-500));
+  color: var(--text-on-dark);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  user-select: none;
 }
 
-.pessoa {
-  width: 100%;
-  height: 100%;
-  fill: rgba(255, 255, 255, 0.92);
+@media (min-width: 769px) {
+  .avatar {
+    width: 4.5rem;
+    height: 4.5rem;
+    font-size: 1.375rem;
+  }
 }
 
-.selo {
-  position: absolute;
-  right: -4px;
-  bottom: -2px;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: #ffffff;
-  /* Roxo do ícone: mais saturado que --primary para ler bem em 16 px sobre
-     branco (contraste ~6:1); o anel tem a cor efetiva do card (superfície
-     clara translúcida sobre o degradê da seção), para parecer um recorte. */
-  color: #7a1fb0;
-  border: 2px solid #e2dce9;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.selo svg {
-  width: 16px;
-  height: 16px;
+/* No escuro o degradê sobe um tom, senão some contra a superfície do card. */
+:global([data-theme="dark"]) .avatar {
+  background: linear-gradient(135deg, var(--brand-600), var(--brand-400));
 }

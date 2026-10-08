@@ -4,7 +4,7 @@ import { useState, FormEvent, Suspense } from "react";
 import { api } from "@/lib/api";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import styles from "../recuperar-senha/recuperar.module.css";
+import styles from "../login/conta.module.css";
 
 function ResetSenhaForm() {
   const router = useRouter();
@@ -18,17 +18,31 @@ function ResetSenhaForm() {
 
   if (!token) {
     return (
-      <div className={styles.card}>
-        <div className={styles.header}>
-          <h1 className={styles.title}>Token Inválido</h1>
-        </div>
-        <div className={styles.errorMessage} style={{ margin: "2rem 0" }}>
-          Link de recuperação ausente ou formato inválido.
-        </div>
-        <div className={styles.footer}>
-          <Link href="/recuperar-senha" className={styles.link}>
-            Solicitar um novo link
-          </Link>
+      <div className={`ui-card animate-fade-in ${styles.cartao}`}>
+        <div className={styles.estado}>
+          <span className={`${styles.estadoIcone} ${styles.estadoErro}`}>
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </span>
+          <h1 className={styles.titulo}>Link inválido</h1>
+          <p className={styles.estadoTexto}>Link de recuperação ausente ou formato inválido.</p>
+          <div className={styles.estadoAcoes}>
+            <Link href="/recuperar-senha" className="ui-btn ui-btn-primary">
+              Solicitar um novo link
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -67,59 +81,60 @@ function ResetSenhaForm() {
   }
 
   return (
-    <div className={styles.card}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Redefinir Senha</h1>
-        <p className={styles.subtitle}>
-          Crie uma nova senha segura para sua conta.
-        </p>
-      </div>
+    <div className={`ui-card animate-fade-in ${styles.cartao}`}>
+      <header className={styles.topo}>
+        <h1 className={styles.titulo}>Redefinir senha</h1>
+        <p className={styles.subtitulo}>Crie uma nova senha para a sua conta.</p>
+      </header>
 
       {status === "success" ? (
-        <div className={styles.successMessage}>
+        <div className={`${styles.aviso} ${styles.avisoSucesso}`} role="status">
           <p>{message}</p>
-          <p style={{ marginTop: "0.5rem", fontSize: "0.8rem", opacity: 0.8 }}>
-            Redirecionando para o login...
-          </p>
+          <p>Redirecionando para o login...</p>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className={styles.form}>
-          {status === "error" && <div className={styles.errorMessage}>{message}</div>}
+        <form onSubmit={handleSubmit} className={styles.formulario}>
+          {status === "error" && (
+            <div className={`${styles.aviso} ${styles.avisoErro}`} role="alert">
+              <p>{message}</p>
+            </div>
+          )}
 
-          <div className={styles.fieldGroup}>
-            <label htmlFor="senha" className={styles.label}>
-              Nova Senha
+          <div className={styles.campo}>
+            <label htmlFor="senha" className="ui-label">
+              Nova senha
             </label>
             <input
               id="senha"
               type="password"
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
-              placeholder="••••••••"
+              autoComplete="new-password"
               required
-              className={styles.input}
+              className="ui-field"
             />
+            <p className="ui-hint">Mínimo de 6 caracteres.</p>
           </div>
 
-          <div className={styles.fieldGroup}>
-            <label htmlFor="confirmarSenha" className={styles.label}>
-              Confirmar Nova Senha
+          <div className={styles.campo}>
+            <label htmlFor="confirmarSenha" className="ui-label">
+              Confirmar nova senha
             </label>
             <input
               id="confirmarSenha"
               type="password"
               value={confirmarSenha}
               onChange={(e) => setConfirmarSenha(e.target.value)}
-              placeholder="••••••••"
+              autoComplete="new-password"
               required
-              className={styles.input}
+              className="ui-field"
             />
           </div>
 
           <button
             type="submit"
             disabled={status === "loading"}
-            className={styles.submitButton}
+            className={`ui-btn ui-btn-primary ${styles.botaoLargo}`}
           >
             {status === "loading" ? "Salvando..." : "Salvar nova senha"}
           </button>
@@ -131,8 +146,17 @@ function ResetSenhaForm() {
 
 export default function ResetarSenhaPage() {
   return (
-    <div className={styles.page}>
-      <Suspense fallback={<div>Carregando validador de sessão...</div>}>
+    <div className={styles.pagina}>
+      <Suspense
+        fallback={
+          <div className={`ui-card ${styles.cartao}`}>
+            <div className={styles.estado}>
+              <div className={styles.spinner} aria-hidden="true" />
+              <p className={styles.estadoTexto}>Carregando...</p>
+            </div>
+          </div>
+        }
+      >
         <ResetSenhaForm />
       </Suspense>
     </div>

@@ -104,6 +104,12 @@ export function dataCompleta(iso: string) {
   return d.toLocaleString("pt-BR", { dateStyle: "long", timeStyle: "short" });
 }
 
+/** Letra do avatar: a primeira do nome ou, sem nome, do username ("U" para autor desconhecido). */
+export function inicialDe(nome?: string | null, username?: string | null) {
+  const base = (nome || username || "").trim();
+  return base ? base.charAt(0).toUpperCase() : "U";
+}
+
 /** Parágrafos separados por linha em branco; quebras simples ficam dentro do <p>. */
 export function paragrafos(texto: string) {
   return texto

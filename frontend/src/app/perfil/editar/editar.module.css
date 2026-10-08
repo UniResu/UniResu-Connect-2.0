@@ -1,188 +1,173 @@
-.page {
-  max-width: 680px;
+/* Editar perfil: um formulário em card, dividido em grupos com título e com
+   as ações no rodapé do card. Campos e botões usam as classes globais ui-*;
+   aqui fica só o layout. */
+
+.pagina {
+  width: 100%;
+  max-width: 760px;
   margin: 0 auto;
   padding: var(--space-xl) var(--space-lg) var(--space-3xl);
 }
 
-.headerRow {
-  margin-bottom: var(--space-xl);
-  animation: fadeIn 0.4s ease;
+.esqueleto {
+  height: 520px;
+  border-radius: var(--radius-card);
 }
 
-.backBtn {
-  background: none;
-  border: none;
-  color: var(--primary);
-  font-weight: 500;
-  font-size: var(--font-size-sm);
-  cursor: pointer;
-  padding: 0;
-  margin-bottom: var(--space-md);
-  display: block;
-}
-.backBtn:hover { color: var(--primary-dark); }
-
-.title {
-  font-size: var(--font-size-2xl);
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.skeleton {
-  background: linear-gradient(90deg, var(--bg-card) 25%, var(--border-light) 50%, var(--bg-card) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: var(--radius-xl);
-}
-
-/* ── Form ── */
-
-.form {
+.topo {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xl);
-  animation: slideUp 0.5s ease;
-}
-
-.section {
-  background: var(--surface);
-  border: 1px solid var(--surface-border);
-  border-radius: var(--radius-xl);
-  padding: var(--space-xl);
-  box-shadow: var(--surface-highlight), var(--surface-shadow);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-.legend {
-  font-size: var(--font-size-base);
-  font-weight: 600;
-  color: var(--primary);
-  padding: 0 var(--space-sm);
-}
-
-.fieldRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-md);
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
+  align-items: flex-start;
   gap: var(--space-xs);
 }
 
-.field label {
-  font-size: var(--font-size-sm);
-  font-weight: 500;
+/* Alinha o texto do botão fantasma com a margem do título. */
+.voltar {
+  margin-left: -0.9rem;
+}
+
+/* ── Card do formulário ── */
+
+.cartao {
+  overflow: hidden;
+}
+
+.grupo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-width: 0;
+  padding: var(--space-xl);
+}
+
+.grupo + .grupo {
+  border-top: 1px solid var(--border-light);
+}
+
+.grupoTitulo {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  letter-spacing: var(--heading-tracking);
   color: var(--text-primary);
 }
 
-.input, .select, .textarea {
-  padding: 0.625rem var(--space-md);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+.grupoDescricao {
+  margin-top: calc(-1 * var(--space-sm));
   font-size: var(--font-size-sm);
-  font-family: var(--font-family);
-  color: var(--text-primary);
-  outline: none;
-  transition: all var(--transition-fast);
-}
-.textarea { resize: vertical; }
-.input:focus, .select:focus, .textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-100); }
-.input::placeholder, .textarea::placeholder { color: var(--text-muted); }
-
-.select {
-  appearance: none;
-  background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 12px center;
-  padding-right: 2rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
 }
 
-.charCount { font-size: var(--font-size-xs); color: var(--text-muted); text-align: right; }
-.hint { font-size: var(--font-size-xs); color: var(--text-muted); }
-
-/* ── Messages ── */
-
-.errorMsg {
-  background: #fef2f2;
-  color: var(--error);
-  padding: var(--space-sm) var(--space-md);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  border: 1px solid #fecaca;
+.campos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md) var(--space-lg);
 }
 
-.successMsg {
-  background: #ecfdf5;
-  color: var(--success);
-  padding: var(--space-sm) var(--space-md);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  border: 1px solid #a7f3d0;
+.campo {
+  min-width: 0;
 }
 
-/* ── Save Button ── */
-
-.saveButton {
-  padding: 0.875rem;
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color: white;
-  font-weight: 600;
-  font-size: var(--font-size-base);
-  border: none;
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-.saveButton:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35); }
-.saveButton:disabled { opacity: 0.6; cursor: not-allowed; }
-
-@media (max-width: 640px) {
-  .fieldRow { grid-template-columns: 1fr; }
+.inteiro {
+  grid-column: 1 / -1;
 }
 
+.contador {
+  text-align: right;
+}
 
 /* "Não tenho e-mail acadêmico" e o passo de vincular o ORCID. */
-.checkboxLinha {
+.caixa {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  margin-top: var(--space-sm);
+  min-height: 2.75rem;
+  margin-top: var(--space-xs);
   font-size: var(--font-size-sm);
   color: var(--text-primary);
   cursor: pointer;
 }
 
-.checkboxLinha input {
+.caixa input {
+  flex-shrink: 0;
   width: 18px;
   height: 18px;
+  margin: 0;
   accent-color: var(--primary);
+  cursor: pointer;
 }
 
-.avisoOrcid {
-  margin-top: var(--space-sm);
-  padding: var(--space-md);
-  border-radius: var(--radius-md);
-  background: var(--primary-50);
+.destaqueOrcid {
+  padding: var(--space-md) var(--space-lg);
   border: 1px solid var(--primary-100);
+  border-radius: var(--radius-control);
+  background: var(--primary-50);
+  color: var(--text-primary);
   font-size: var(--font-size-sm);
   line-height: 1.55;
 }
 
-.orcidBotao {
-  margin-top: var(--space-sm);
-  padding: 0.55rem 1.1rem;
-  border: 2px solid var(--accent);
-  border-radius: var(--radius-md);
-  background: white;
-  color: var(--primary);
-  font-weight: 600;
-  cursor: pointer;
+.destaqueOrcid p {
+  margin-bottom: var(--space-md);
 }
 
-.orcidBotao:hover,
-.orcidBotao:focus-visible {
-  background: var(--primary-100);
+/* ── Rodapé: mensagem e ações ── */
+
+.rodape {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-lg) var(--space-xl);
+  border-top: 1px solid var(--border-light);
+  background: var(--surface-2);
+}
+
+.alerta {
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-control);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.alertaErro {
+  background: var(--error-bg);
+  color: var(--error-fg);
+}
+
+.alertaSucesso {
+  background: var(--success-bg);
+  color: var(--success-fg);
+}
+
+.acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+/* ── Celular ── */
+
+@media (max-width: 640px) {
+  .pagina {
+    padding: var(--space-lg) var(--space-md) var(--space-2xl);
+  }
+
+  .grupo {
+    padding: var(--space-lg);
+  }
+
+  .campos {
+    grid-template-columns: 1fr;
+  }
+
+  .rodape {
+    padding: var(--space-md) var(--space-lg);
+  }
+
+  .acoes {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
 }

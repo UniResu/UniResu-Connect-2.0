@@ -30,7 +30,15 @@ import {
   type TipoVoto,
   type Topico,
 } from "../_componentes/forum";
-import { AcoesAutor, CorpoPergunta, FormPergunta, MetaPergunta, Votos } from "../_componentes/Pergunta";
+import {
+  AcoesAutor,
+  ChipsPergunta,
+  CorpoPergunta,
+  FormPergunta,
+  Icone,
+  MetaPergunta,
+  Votos,
+} from "../_componentes/Pergunta";
 import { Respostas } from "../_componentes/Respostas";
 import styles from "../forum.module.css";
 
@@ -155,64 +163,72 @@ export default function PaginaPergunta({ params }: { params: Promise<{ id: strin
 
   // ── Render ──
   return (
-    <div className={styles.page}>
-      <Link href="/forum" className={styles.voltar}>
-        Voltar ao fórum
-      </Link>
+    <div className={styles.pagina}>
+      <div className={styles.container}>
+        <Link href="/forum" className={`ui-btn ui-btn-ghost ui-btn-sm ${styles.voltar}`}>
+          <Icone nome="esquerda" tamanho={18} />
+          Voltar ao fórum
+        </Link>
 
-      {carregando ? (
-        <div aria-busy="true">
-          <div className={styles.esqueleto} />
-          <div className={styles.esqueleto} />
-          <div className={styles.esqueleto} />
-        </div>
-      ) : naoEncontrada ? (
-        <section className={styles.naoEncontrada}>
-          <h1>Pergunta não encontrada</h1>
-          <p>
-            Ela pode ter sido excluída pelo autor ou o endereço está incompleto. As demais perguntas continuam
-            no <Link href="/forum">fórum</Link>.
-          </p>
-        </section>
-      ) : !topico ? (
-        <p className={styles.erro} role="alert">
-          {erro}{" "}
-          <button type="button" className={styles.btnSecundario} onClick={() => carregar()}>
-            Tentar novamente
-          </button>
-        </p>
-      ) : (
-        <article>
-          {editando ? (
-            <FormPergunta
-              titulo={topico.titulo}
-              conteudo={conteudoDe(topico)}
-              onCancelar={() => setEditando(false)}
-              onSalvar={editar}
-            />
-          ) : (
-            <>
-              <h1 className={styles.perguntaTitulo}>{topico.titulo}</h1>
-              <MetaPergunta topico={topico} />
-              <CorpoPergunta topico={topico} />
-              <div className={styles.rodape}>
-                <Votos topico={topico} user={user} votando={votando} onVotar={votar} />
-                {ehAutor(topico, user) && <AcoesAutor onEditar={() => setEditando(true)} onExcluir={excluir} />}
-              </div>
-            </>
-          )}
-
-          {erro && (
-            <p className={styles.erro} role="alert">
-              {erro}
-            </p>
-          )}
-
-          <div className={styles.secaoRespostas}>
-            <Respostas topicoId={topico.id} estado={estadoRespostas} modo="pagina" onMudar={mudarRespostas} />
+        {carregando ? (
+          <div aria-busy="true">
+            <div className={`skeleton ${styles.esqueleto}`} />
+            <div className={`skeleton ${styles.esqueleto}`} />
+            <div className={`skeleton ${styles.esqueleto}`} />
           </div>
-        </article>
-      )}
+        ) : naoEncontrada ? (
+          <section className={styles.naoEncontrada}>
+            <h1>Pergunta não encontrada</h1>
+            <p>
+              Ela pode ter sido excluída pelo autor ou o endereço está incompleto. As demais perguntas continuam
+              no <Link href="/forum">fórum</Link>.
+            </p>
+          </section>
+        ) : !topico ? (
+          <p className={styles.erro} role="alert">
+            {erro}{" "}
+            <button type="button" className="ui-btn ui-btn-secondary ui-btn-sm" onClick={() => carregar()}>
+              Tentar novamente
+            </button>
+          </p>
+        ) : (
+          <article>
+            {editando ? (
+              <FormPergunta
+                titulo={topico.titulo}
+                conteudo={conteudoDe(topico)}
+                onCancelar={() => setEditando(false)}
+                onSalvar={editar}
+              />
+            ) : (
+              <>
+                <h1 className={styles.perguntaTitulo}>{topico.titulo}</h1>
+                <div className={styles.perguntaMeta}>
+                  <MetaPergunta topico={topico} />
+                  <div className={styles.chips}>
+                    <ChipsPergunta topico={topico} />
+                  </div>
+                </div>
+                <CorpoPergunta topico={topico} />
+                <div className={styles.rodape}>
+                  <Votos topico={topico} user={user} votando={votando} onVotar={votar} />
+                  {ehAutor(topico, user) && <AcoesAutor onEditar={() => setEditando(true)} onExcluir={excluir} />}
+                </div>
+              </>
+            )}
+
+            {erro && (
+              <p className={styles.erro} role="alert">
+                {erro}
+              </p>
+            )}
+
+            <div className={styles.secaoRespostas}>
+              <Respostas topicoId={topico.id} estado={estadoRespostas} modo="pagina" onMudar={mudarRespostas} />
+            </div>
+          </article>
+        )}
+      </div>
     </div>
   );
 }

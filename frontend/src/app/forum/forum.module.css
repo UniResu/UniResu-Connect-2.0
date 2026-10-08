@@ -1,8 +1,23 @@
-/* Fórum: lista de perguntas em estilo thread, ultraminimalista.
-   Sem cartões nem sombras: linhas separadas por filetes, tipografia legível,
-   cores e espaçamentos vindos das variáveis de globals.css. */
+/* Fórum: lista de perguntas em estilo thread (linhas separadas por filetes,
+   sem cards pesados) sobre o fundo papel quente da página.
+   Cores, raios e sombras vêm só dos tokens de globals.css; botões, campos,
+   cards e chips usam as classes globais ui-*. Aqui fica o que é da tela:
+   layout, espaçamentos e os estados próprios do fórum. */
 
-.page {
+/* ── Página: wrapper com fundo próprio e container central ── */
+
+/* O <main> é flex column: o wrapper estica até o rodapé e carrega o fundo
+   (papel quente, distinto do lilás frio de /projetos) com o brilho no topo. */
+.pagina {
+  flex: 1;
+  width: 100%;
+  background-color: var(--page-forum-bg);
+  background-image: radial-gradient(ellipse 80% 360px at 50% 0%, var(--page-forum-glow), transparent 70%);
+  background-repeat: no-repeat;
+}
+
+.container {
+  width: 100%;
   max-width: 860px;
   margin: 0 auto;
   padding: var(--space-2xl) var(--space-md) var(--space-3xl);
@@ -14,22 +29,8 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  gap: var(--space-md);
+  gap: var(--space-md) var(--space-lg);
   flex-wrap: wrap;
-  margin-bottom: var(--space-lg);
-}
-
-.titulo {
-  font-size: var(--font-size-2xl);
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--text-primary);
-}
-
-.subtitulo {
-  margin-top: var(--space-xs);
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
 }
 
 .dicaLogin {
@@ -38,87 +39,28 @@
 }
 .dicaLogin a { font-weight: 600; }
 
-/* ── Botões ── */
+/* ── Caixas de formulário (nova pergunta, edição e resposta) ── */
 
-.btnPrimario {
-  padding: 0.55rem var(--space-md);
-  background: var(--primary);
-  color: var(--text-on-primary);
-  font: inherit;
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  border: 1px solid var(--primary);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background var(--transition-fast);
+.formCard {
+  display: grid;
+  gap: var(--space-md);
+  padding: var(--space-lg);
 }
-.btnPrimario:hover:not(:disabled) { background: var(--primary-dark); }
-.btnPrimario:disabled { opacity: 0.6; cursor: not-allowed; }
+.formNova { margin-bottom: var(--space-xl); }
+.formResposta { margin-top: var(--space-lg); }
+.formEdicaoPergunta { margin-top: var(--space-md); }
 
-.btnSecundario {
-  padding: 0.3rem var(--space-sm);
-  background: none;
-  color: var(--primary);
-  font: inherit;
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  border: 1px solid var(--primary-200);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-.btnSecundario:hover { background: var(--primary-50); }
-
-/* Ações discretas em texto (Editar, Excluir, Cancelar) */
-.acaoTexto {
-  background: none;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-.acaoTexto:hover { color: var(--primary); text-decoration: underline; }
-.acaoPerigo:hover { color: var(--error); }
-
-/* ── Formulário (nova pergunta e edição) ── */
-
-/* A única caixa da página (as perguntas seguem em linhas, sem cartões):
-   usa os tokens de superfície do globals.css. */
-.formPergunta {
+/* Edição de uma resposta: fica na própria linha, sem card. */
+.formEdicao {
   display: grid;
   gap: var(--space-sm);
-  padding: var(--space-md);
-  border: 1px solid var(--surface-border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  box-shadow: var(--surface-highlight), var(--surface-shadow);
-  margin-bottom: var(--space-lg);
 }
-
-.campo {
-  width: 100%;
-  padding: 0.6rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg-primary);
-  font: inherit;
-  font-size: var(--font-size-base);
-  line-height: 1.6;
-  color: var(--text-primary);
-  outline: none;
-  resize: vertical;
-  transition: border-color var(--transition-fast);
-}
-.campo::placeholder { color: var(--text-muted); }
-.campo:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-100); }
 
 .formAcoes {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: var(--space-md);
+  gap: var(--space-sm);
   flex-wrap: wrap;
 }
 
@@ -134,60 +76,69 @@
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  flex-wrap: wrap;
   margin-bottom: var(--space-md);
 }
 
-.busca {
-  flex: 1 1 240px;
-  padding: 0.55rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font: inherit;
-  font-size: var(--font-size-sm);
-  color: var(--text-primary);
-  outline: none;
-  transition: border-color var(--transition-fast);
+.buscaWrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
 }
-.busca::placeholder { color: var(--text-muted); }
-.busca:focus { border-color: var(--primary); }
 
-.ordem {
+.buscaIcone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0.85rem;
   display: inline-flex;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
+  align-items: center;
+  color: var(--text-muted);
+  pointer-events: none;
 }
 
-.ordemBtn {
-  padding: 0.5rem 0.8rem;
-  background: var(--bg-primary);
-  border: 0;
-  font: inherit;
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast);
+.buscaWrap .busca { padding-left: 2.6rem; }
+
+.barra .ordem {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 11rem;
 }
-.ordemBtn + .ordemBtn { border-left: 1px solid var(--border); }
-.ordemBtn:hover { color: var(--text-primary); }
-.ordemBtn[aria-pressed="true"] {
-  background: var(--bg-card);
-  color: var(--text-primary);
-  font-weight: 600;
-}
+
+/* ── Contagem, erro e avisos ── */
 
 .contagem {
   padding-bottom: var(--space-sm);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-light);
   font-size: var(--font-size-sm);
   color: var(--text-muted);
 }
 
-.erro {
-  margin-bottom: var(--space-md);
+.erro,
+.aviso {
+  margin: var(--space-sm) 0 var(--space-md);
+  padding: 0.7rem var(--space-md);
+  border-radius: var(--radius-control);
   font-size: var(--font-size-sm);
-  color: var(--error);
+  line-height: 1.6;
+}
+.erro {
+  background: var(--error-bg);
+  color: var(--error-fg);
+}
+.aviso {
+  background: var(--info-bg);
+  color: var(--info-fg);
+}
+.erro a,
+.aviso a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+}
+.erro :global(.ui-btn),
+.aviso :global(.ui-btn) {
+  vertical-align: middle;
+  margin-left: var(--space-xs);
 }
 
 /* ── Lista de perguntas ── */
@@ -195,45 +146,65 @@
 .lista { list-style: none; }
 
 .linha {
-  padding: var(--space-md) 0;
+  padding: var(--space-lg) 0;
   border-bottom: 1px solid var(--border-light);
 }
-.linhaAberta { padding-bottom: var(--space-lg); }
+.linhaAberta { padding-bottom: var(--space-xl); }
 
-.linhaCabecalho { cursor: pointer; }
+.linhaCabecalho {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-lg);
+  cursor: pointer;
+}
+
+.linhaTexto {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.linhaChips,
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+.linhaChips {
+  flex-shrink: 0;
+  padding-top: 0.2rem;
+}
 
 .linhaTitulo {
   margin: 0;
   font-size: var(--font-size-lg);
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.35;
+  letter-spacing: var(--heading-tracking);
 }
 
-/* O título é um <button> para abrir/fechar pelo teclado; visualmente é um link. */
+/* O título é um <button> para abrir/fechar pelo teclado; visualmente é texto. */
 .linhaTituloBtn {
-  background: none;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  color: var(--primary);
-  text-align: left;
-  cursor: pointer;
   max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--text-primary);
+  text-align: left;
   overflow-wrap: anywhere;
-  word-break: break-word;
+  cursor: pointer;
+  transition: color var(--transition-fast);
 }
-.linhaCabecalho:hover .linhaTituloBtn { text-decoration: underline; }
+.linhaCabecalho:hover .linhaTituloBtn { color: var(--text-accent); }
 .linhaTituloBtn:focus-visible {
-  outline: 2px solid var(--primary-light);
-  outline-offset: 2px;
-  border-radius: 2px;
+  outline: 2px solid var(--brand-500);
+  outline-offset: 3px;
 }
-.linhaAberta .linhaTituloBtn { color: var(--text-primary); }
 
 .resumo {
   margin-top: var(--space-xs);
   font-size: var(--font-size-sm);
-  line-height: 1.5;
+  line-height: 1.55;
   color: var(--text-secondary);
   overflow-wrap: anywhere;
   display: -webkit-box;
@@ -242,39 +213,37 @@
   overflow: hidden;
 }
 
-/* Linha de meta: itens separados por um filete vertical fino */
-/* Separador vertical entre os itens. Todo item tem a borda à esquerda e o
-   container é deslocado para a esquerda com overflow: hidden: o filete do
-   primeiro item de cada linha fica fora da área visível, inclusive quando a
-   meta quebra em duas linhas no celular. */
+/* Linha de meta: itens separados por um filete vertical fino.
+   Todo item tem a borda à esquerda e o container é deslocado para a esquerda
+   com overflow: hidden: o filete do primeiro item de cada linha fica fora da
+   área visível, inclusive quando a meta quebra em duas linhas no celular. */
 .meta {
   display: flex;
   flex-wrap: wrap;
-  column-gap: 0.6rem;
-  row-gap: 0.1rem;
+  column-gap: 0.65rem;
+  row-gap: 0.15rem;
   margin-top: var(--space-sm);
-  margin-left: calc(-0.6rem - 1px);
+  margin-left: calc(-0.65rem - 1px);
   overflow: hidden;
   font-size: var(--font-size-xs);
   line-height: 1.6;
   color: var(--text-muted);
 }
 .metaItem {
-  padding-left: 0.6rem;
+  padding-left: 0.65rem;
   border-left: 1px solid var(--border);
 }
 .metaAutor {
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-secondary);
 }
 
 /* ── Thread aberta ── */
 
-.thread { animation: aparecer 0.2s ease; }
+.thread { margin-top: var(--space-md); }
 
 .corpo {
   max-width: 720px;
-  margin-top: var(--space-md);
   font-size: var(--font-size-base);
   line-height: 1.7;
   color: var(--text-primary);
@@ -287,11 +256,27 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: var(--space-md);
+  gap: var(--space-sm) var(--space-md);
   flex-wrap: wrap;
   max-width: 720px;
   margin-top: var(--space-lg);
 }
+
+.acoes {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+}
+
+/* Excluir: ghost em cor de erro (a especificidade vence o hover do ui-btn-ghost). */
+.acoes .acaoPerigo { color: var(--error-fg); }
+.acoes .acaoPerigo:hover:not(:disabled) {
+  background: var(--error-bg);
+  color: var(--error-fg);
+}
+
+/* ── Votos ── */
 
 .votos {
   display: inline-flex;
@@ -299,32 +284,24 @@
   gap: var(--space-xs);
 }
 
-.votoBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg-primary);
+.votos .votoBtn {
+  width: 2.25rem;
+  padding: 0;
   color: var(--text-secondary);
-  cursor: pointer;
-  transition: border-color var(--transition-fast), color var(--transition-fast);
 }
-.votoBtn:hover:not(:disabled) { border-color: var(--primary-light); color: var(--primary); }
-.votoBtn[aria-pressed="true"] {
-  border-color: var(--primary);
-  background: var(--primary-50);
-  color: var(--primary);
+.votos .votoBtn:hover:not(:disabled) { color: var(--text-accent); }
+.votos .votoBtn[aria-pressed="true"],
+.votos .votoBtn[aria-pressed="true"]:hover:not(:disabled) {
+  background: var(--primary-100);
+  color: var(--text-accent);
 }
-.votoBtn:disabled { opacity: 0.5; cursor: default; }
 
 .votosTotal {
-  min-width: 2ch;
+  min-width: 2.5ch;
   text-align: center;
-  font-weight: 600;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
 }
 
 .votosRotulo {
@@ -333,65 +310,76 @@
   color: var(--text-muted);
 }
 
-.acoesAutor {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-md);
-}
-
 /* ── Respostas: um único nível abaixo da pergunta ── */
 
 .respostas {
   max-width: 720px;
-  margin-top: var(--space-lg);
+  margin-top: var(--space-xl);
 }
 
 .respostasTitulo {
-  margin: 0 0 var(--space-sm);
+  margin: 0 0 var(--space-xs);
   font-size: var(--font-size-sm);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-secondary);
 }
 
-/* O filete à esquerda marca o subnível; como não há resposta de resposta,
-   ele nunca se repete para dentro. */
 .listaRespostas {
   list-style: none;
-  margin: 0 0 var(--space-md);
-  padding-left: var(--space-md);
-  border-left: 2px solid var(--border);
+  margin: 0;
 }
 
-.resposta { padding: var(--space-xs) 0 var(--space-md); }
-.resposta + .resposta {
-  padding-top: var(--space-md);
+/* Avatar na primeira coluna; cabeçalho e texto na segunda. */
+.resposta {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  column-gap: var(--space-sm);
+  row-gap: var(--space-xs);
+  padding: var(--space-md) 0;
   border-top: 1px solid var(--border-light);
+}
+
+.avatar {
+  grid-row: 1 / span 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-chip);
+  background: var(--brand-500);
+  color: var(--text-on-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  line-height: 1;
 }
 
 .respostaCabecalho {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
-  gap: var(--space-md);
+  align-items: center;
+  gap: var(--space-xs) var(--space-md);
   flex-wrap: wrap;
+  min-height: 2rem;
 }
 .respostaMeta { margin-top: 0; }
+.respostaAutor {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
 
 .respostaTexto {
-  margin-top: var(--space-xs);
+  grid-column: 2;
   font-size: var(--font-size-base);
   line-height: 1.65;
   color: var(--text-primary);
   white-space: pre-line;
   overflow-wrap: anywhere;
 }
+.resposta .formEdicao { grid-column: 2; }
 
-.verTodas {
-  display: inline-block;
-  margin-bottom: var(--space-md);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-}
+.respostasRodape { margin-top: var(--space-sm); }
 
 .respostasAviso {
   margin: var(--space-sm) 0;
@@ -399,37 +387,42 @@
   color: var(--text-muted);
 }
 
-.formResposta {
-  display: grid;
-  gap: var(--space-sm);
-  margin-top: var(--space-sm);
-}
-
 /* ── Página da pergunta (/forum/[id]) ── */
 
+/* Alinha o texto do botão fantasma à margem do conteúdo. */
 .voltar {
-  display: inline-block;
   margin-bottom: var(--space-lg);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
+  margin-left: -0.9rem;
 }
 
 .perguntaTitulo {
   margin: 0;
   font-size: var(--font-size-2xl);
-  font-weight: 700;
-  line-height: 1.3;
-  letter-spacing: -0.01em;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: var(--heading-tracking);
   color: var(--text-primary);
   overflow-wrap: anywhere;
 }
+
+.perguntaMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+  flex-wrap: wrap;
+  margin-top: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+.perguntaMeta .meta { margin-top: 0; }
 
 /* Separa a lista de respostas da pergunta, que na página ocupa o topo. */
 .secaoRespostas {
   margin-top: var(--space-xl);
   padding-top: var(--space-lg);
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--border-light);
 }
+.secaoRespostas .respostas { margin-top: 0; }
 
 .naoEncontrada {
   padding: var(--space-2xl) 0;
@@ -439,7 +432,6 @@
 .naoEncontrada h1 {
   margin-bottom: var(--space-sm);
   font-size: var(--font-size-xl);
-  color: var(--text-primary);
 }
 
 /* ── Vazio e carregando ── */
@@ -451,31 +443,43 @@
   color: var(--text-muted);
 }
 
+/* O gradiente e a animação vêm da classe global .skeleton. */
 .esqueleto {
-  height: 72px;
+  height: 76px;
   margin: var(--space-md) 0;
-  border-radius: var(--radius-sm);
-  background: linear-gradient(90deg, var(--bg-card) 25%, var(--border-light) 50%, var(--bg-card) 75%);
-  background-size: 200% 100%;
-  animation: brilho 1.5s infinite;
-}
-
-@keyframes aparecer {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes brilho {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
 }
 
 /* ── Telas estreitas ── */
 
 @media (max-width: 640px) {
-  .page { padding-top: var(--space-xl); }
+  .container { padding-top: var(--space-xl); }
   .cabecalho { align-items: flex-start; }
-  .linhaTitulo { font-size: var(--font-size-base); }
+  .barra { flex-wrap: wrap; }
+  .barra .ordem { width: 100%; }
+  .linhaCabecalho {
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  .linhaChips { padding-top: 0; }
   .perguntaTitulo { font-size: var(--font-size-xl); }
-  .rodape { align-items: flex-start; flex-direction: column; }
+}
+
+/* ── Marca no cabeçalho: o alienígena do UniResu ao lado do título ── */
+
+.tituloLinha {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.tituloMarca {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: var(--radius-card);
+  background: var(--primary-50);
+  color: var(--text-accent);
 }

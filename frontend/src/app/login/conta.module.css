@@ -1,0 +1,245 @@
+/* Fluxos de conta: entrar, registrar, recuperar e redefinir senha,
+   verificar e-mail e retorno do ORCID. Um único card centralizado sobre
+   --bg-primary, com largura de 480px (720px no registro). Só layout e
+   espaçamento aqui; cores, raios e sombras vêm dos tokens e os controles
+   usam as classes globais ui-*. */
+
+.pagina {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2xl) var(--space-lg);
+  background: var(--bg-primary);
+}
+
+.cartao {
+  width: 100%;
+  max-width: 480px;
+  padding: var(--space-2xl);
+}
+
+.cartaoLargo {
+  max-width: 720px;
+}
+
+/* ── Cabeçalho do card ── */
+
+.topo {
+  margin-bottom: var(--space-xl);
+}
+
+.titulo {
+  font-size: var(--font-size-2xl);
+  font-weight: 800;
+  letter-spacing: var(--heading-tracking);
+  color: var(--text-primary);
+}
+
+.subtitulo {
+  margin-top: var(--space-xs);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+/* ── Formulário ── */
+
+.pilha,
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.campo {
+  min-width: 0;
+}
+
+/* Rótulo com um link à direita (ex.: "Perdi minha senha"). */
+.linhaRotulo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: 0.35rem;
+}
+
+.linhaRotulo > label {
+  margin-bottom: 0;
+}
+
+.linkDiscreto {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--text-accent);
+}
+
+.linkDiscreto:hover {
+  text-decoration: underline;
+}
+
+.botaoLargo {
+  width: 100%;
+}
+
+.separador {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.separador::before,
+.separador::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border-light);
+}
+
+/* ── Avisos de erro, sucesso e informação ── */
+
+.aviso {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-control);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.avisoErro {
+  background: var(--error-bg);
+  color: var(--error-fg);
+}
+
+.avisoSucesso {
+  background: var(--success-bg);
+  color: var(--success-fg);
+}
+
+.avisoInfo {
+  background: var(--info-bg);
+  color: var(--info-fg);
+}
+
+/* ── Telas de estado (verificando, verificado, erro) ── */
+
+.estado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  text-align: center;
+}
+
+.estadoIcone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin-bottom: var(--space-sm);
+  border-radius: var(--radius-chip);
+}
+
+.estadoSucesso {
+  background: var(--success-bg);
+  color: var(--success-fg);
+}
+
+.estadoErro {
+  background: var(--error-bg);
+  color: var(--error-fg);
+}
+
+.estadoNeutro {
+  background: var(--primary-50);
+  color: var(--text-accent);
+}
+
+.estadoTexto {
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.estadoTexto strong {
+  color: var(--text-primary);
+}
+
+.estadoAcoes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-bottom: var(--space-sm);
+  border: 3px solid var(--border);
+  border-top-color: var(--primary-light);
+  border-radius: var(--radius-chip);
+  animation: girar 0.8s linear infinite;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Rodapé do card ── */
+
+.rodape {
+  margin-top: var(--space-xl);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.link {
+  font-weight: 600;
+  color: var(--text-accent);
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .pagina {
+    padding: var(--space-lg) var(--space-md);
+  }
+
+  .cartao {
+    padding: var(--space-lg) var(--space-md);
+  }
+
+  .estadoAcoes > * {
+    flex: 1 1 100%;
+  }
+}
+
+/* ── Marca no topo do card: a nave do UniResu ── */
+
+.marcaIcone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: var(--space-md);
+  border-radius: var(--radius-card);
+  background: var(--primary-50);
+  color: var(--text-accent);
+}

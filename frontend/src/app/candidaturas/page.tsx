@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { IconeFoguete } from "@/components/ui/Icones";
 import styles from "./candidaturas.module.css";
 
 interface Candidatura {
@@ -21,8 +22,14 @@ interface Candidatura {
 
 const STATUS_LABEL: Record<Candidatura["status"], string> = {
   pendente: "Pendente",
-  aprovado: "Aprovado",
-  recusado: "Recusado",
+  aprovado: "Aprovada",
+  recusado: "Recusada",
+};
+
+const STATUS_CHIP: Record<Candidatura["status"], string> = {
+  pendente: "ui-chip-warning",
+  aprovado: "ui-chip-success",
+  recusado: "ui-chip-error",
 };
 
 function formatarData(iso: string): string {
@@ -36,6 +43,36 @@ function formatarData(iso: string): string {
   } catch {
     return iso;
   }
+}
+
+const svgProps = {
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 2,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+  "aria-hidden": true,
+};
+
+function IconeUsuario() {
+  return (
+    <svg width="16" height="16" {...svgProps}>
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+
+function IconeCalendario() {
+  return (
+    <svg width="16" height="16" {...svgProps}>
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4" />
+      <path d="M8 2v4" />
+      <path d="M3 10h18" />
+    </svg>
+  );
 }
 
 export default function CandidaturasPage() {
@@ -85,87 +122,75 @@ export default function CandidaturasPage() {
     };
   }, [token]);
 
-  if (authLoading || (isLoading && !errorMsg)) {
-    return (
-      <div className={styles.page}>
-        <div className={styles.header}>
-          <h1 className={styles.title}>Minhas Candidaturas</h1>
-          <p className={styles.subtitle}>Carregando suas candidaturas…</p>
-        </div>
-        <div className={styles.skeletonList}>
-          <div className={styles.skeletonCard} />
-          <div className={styles.skeletonCard} />
-          <div className={styles.skeletonCard} />
-        </div>
-      </div>
-    );
-  }
+  const carregando = authLoading || (isLoading && !errorMsg);
 
   return (
-    <div className={styles.page}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Minhas Candidaturas</h1>
-        <p className={styles.subtitle}>
-          Acompanhe o status das suas candidaturas aos projetos acadêmicos.
-        </p>
-      </div>
-
-      {errorMsg && <div className={styles.errorBox}>{errorMsg}</div>}
-
-      {!errorMsg && candidaturas.length === 0 ? (
-        <div className={styles.emptyState}>
-          <div className={styles.emptyIcon}>📋</div>
-          <h2 className={styles.emptyTitle}>
-            Você ainda não enviou nenhuma candidatura
-          </h2>
-          <p className={styles.emptyDescription}>
-            Explore os projetos acadêmicos disponíveis e candidate-se àqueles
-            que combinam com seus interesses de pesquisa.
+    <div className={styles.pagina}>
+      <div className={styles.container}>
+        <header className="ui-page-header">
+          <h1 className="ui-page-title">Minhas candidaturas</h1>
+          <p className="ui-page-subtitle">
+            Acompanhe o andamento das candidaturas que você enviou aos projetos acadêmicos.
           </p>
-          <Link href="/projetos" className={styles.emptyButton}>
-            Ver Projetos Acadêmicos
-          </Link>
-        </div>
-      ) : (
-        <ul className={styles.list}>
-          {candidaturas.map((c) => {
-            const statusClass =
-              c.status === "aprovado"
-                ? styles.statusAprovado
-                : c.status === "recusado"
-                  ? styles.statusRecusado
-                  : styles.statusPendente;
+        </header>
 
-            return (
-              <li key={c.id} className={styles.card}>
-                <div className={styles.cardHeader}>
-                  <h3 className={styles.cardTitle}>
-                    {c.titulo_projeto || "Projeto Acadêmico"}
-                  </h3>
-                  <span className={`${styles.statusBadge} ${statusClass}`}>
+        {carregando ? (
+          <div className={styles.lista} aria-busy="true" aria-label="Carregando candidaturas">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className={`skeleton ${styles.esqueleto}`} />
+            ))}
+          </div>
+        ) : errorMsg ? (
+          <div className={styles.aviso} role="alert">
+            {errorMsg}
+          </div>
+        ) : candidaturas.length === 0 ? (
+          <div className={`ui-card ${styles.vazio}`}>
+            <span className={styles.vazioIcone}>
+              <IconeFoguete tamanho={28} />
+            </span>
+            <h2 className={styles.vazioTitulo}>Você ainda não enviou nenhuma candidatura</h2>
+            <p className={styles.vazioTexto}>
+              Explore os projetos acadêmicos disponíveis e candidate-se àqueles que combinam com seus
+              interesses de pesquisa.
+            </p>
+            <Link href="/projetos" className="ui-btn ui-btn-primary">
+              Explorar projetos
+            </Link>
+          </div>
+        ) : (
+          <ul className={`${styles.lista} animate-stagger`}>
+            {candidaturas.map((c) => (
+              <li key={c.id} className={`ui-card ${styles.card}`}>
+                <div className={styles.cardTopo}>
+                  <h2 className={styles.cardTitulo}>{c.titulo_projeto || "Projeto acadêmico"}</h2>
+                  <span className={`ui-chip ${STATUS_CHIP[c.status] ?? ""}`}>
                     {STATUS_LABEL[c.status] ?? c.status}
                   </span>
                 </div>
 
-                <div className={styles.cardMeta}>
+                <div className={styles.meta}>
                   <span className={styles.metaItem}>
-                    <strong>Professor(a):</strong>{" "}
-                    {c.nome_professor || "Não informado"}
+                    <IconeUsuario />
+                    <span>Docente: {c.nome_professor || "não informado"}</span>
                   </span>
                   <span className={styles.metaItem}>
-                    <strong>Candidatura enviada em:</strong>{" "}
-                    {formatarData(c.data_candidatura)}
+                    <IconeCalendario />
+                    <span>Enviada em {formatarData(c.data_candidatura)}</span>
                   </span>
                 </div>
 
                 {c.mensagem && (
-                  <p className={styles.cardMessage}>{c.mensagem}</p>
+                  <div className={styles.mensagem}>
+                    <span className={styles.mensagemRotulo}>Sua mensagem</span>
+                    <p>{c.mensagem}</p>
+                  </div>
                 )}
               </li>
-            );
-          })}
-        </ul>
-      )}
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,7 +1,8 @@
 /* Card de projeto: superfície opaca, borda de 1px, raio de card e sombra
    mínima em repouso; no hover só a borda e a sombra mudam (sem deslocar o
    card, para a lista não "pular"). `content-visibility` deixa a rolagem
-   leve mesmo com centenas de cards. */
+   leve mesmo com centenas de cards. As tags usam as classes globais
+   `ui-chip`; aqui fica só o que é específico do card. */
 
 .card {
   display: block;
@@ -57,6 +58,7 @@
   margin-bottom: var(--space-sm);
 }
 
+/* Selo do tipo: a única caixa alta permitida (rótulo pequeno). */
 .tipo {
   display: inline-flex;
   align-items: center;
@@ -94,7 +96,7 @@
 .ponto {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: var(--radius-chip);
   background: var(--text-muted);
 }
 
@@ -116,6 +118,7 @@
   letter-spacing: -0.01em;
   color: var(--text-primary);
   margin-bottom: var(--space-xs);
+  overflow-wrap: anywhere;
 }
 
 .coordenacao {
@@ -158,44 +161,17 @@
   display: none;
 }
 
-.tag {
-  display: inline-flex;
-  align-items: center;
-  max-width: 100%;
-  padding: 0.15rem 0.6rem;
-  border: 1px solid transparent;
-  border-radius: var(--radius-chip);
-  background: var(--bg-card);
-  color: var(--text-secondary);
-  font-size: var(--font-size-xs);
-  font-weight: 600;
-  line-height: 1.6;
-  white-space: nowrap;
-}
-
-.tagArea {
-  background: var(--primary-50);
-  color: var(--text-accent);
-}
-
-.tagInstituicao {
-  background: transparent;
-  border-color: var(--border-strong);
-  color: var(--text-primary);
-  letter-spacing: 0.02em;
-}
-
-/* Nomes de unidade são longos: corta com reticências e mostra o nome inteiro no title. */
-.tagLonga {
-  display: inline-block;
+/* Nomes de unidade são longos: corta com reticências e mostra o nome inteiro
+   no title. `.tags .tagLonga` vence o max-width do `ui-chip` global; o texto
+   fica num span próprio para o ícone não ser cortado junto. */
+.tags .tagLonga {
   max-width: 320px;
+}
+
+.tagTexto {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.tagRemoto {
-  background: var(--success-bg);
-  color: var(--success-fg);
 }
 
 @media (max-width: 640px) {
@@ -204,7 +180,7 @@
     padding: var(--space-md);
   }
 
-  .tagLonga {
+  .tags .tagLonga {
     max-width: 100%;
   }
 

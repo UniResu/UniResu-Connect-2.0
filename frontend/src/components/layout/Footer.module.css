@@ -3,7 +3,7 @@
   padding: var(--space-2xl) var(--space-lg) var(--space-xl);
   background: var(--footer-bg);
   color: var(--text-on-dark-muted);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--footer-border);
 }
 
 .conteudo {
@@ -23,10 +23,17 @@
 }
 
 .nome {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   color: var(--text-on-dark);
   font-weight: 800;
   letter-spacing: var(--heading-tracking);
   font-size: var(--font-size-lg);
+}
+
+.nome svg {
+  color: var(--brand-300);
 }
 
 .lema {
@@ -54,7 +61,7 @@
   max-width: var(--max-width);
   margin: var(--space-xl) auto 0;
   padding-top: var(--space-md);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--footer-border);
   font-size: var(--font-size-xs);
   color: var(--text-on-dark-muted);
 }

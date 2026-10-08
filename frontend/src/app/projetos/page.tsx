@@ -1,15 +1,23 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import type { User } from "@/types/user";
-import { formatarData, formatarSituacao, type Projeto } from "@/types/projeto";
+import {
+  formatarData,
+  formatarSituacao,
+  moduloDoProjeto,
+  tomDaSituacao,
+  type Projeto,
+} from "@/types/projeto";
+import Modal from "@/components/ui/Modal";
 import MultiSelect from "@/components/ui/MultiSelect";
 import ProjetoCard from "@/components/projetos/ProjetoCard";
+import { IconeUfo } from "@/components/ui/Icones";
 import styles from "./projetos.module.css";
-import modalStyles from "./modal.module.css";
+import m from "./modal.module.css";
 
 interface UnidadeFiltro {
   nome: string;
@@ -37,6 +45,8 @@ interface FiltrosResponse {
   instituicoes: InstituicaoFiltro[];
   areas: AreaFiltro[];
 }
+
+type Modulo = "" | "pesquisa" | "extensao";
 
 /** Unidades de uma instituição que têm projetos no módulo escolhido (ou em qualquer um). */
 function unidadesVisiveis(inst: InstituicaoFiltro, modulo: string) {
@@ -76,11 +86,11 @@ function avisoSemContato(p: Projeto) {
   );
 }
 
-/** Nome da fonte externa, para rótulos como "Ver no SIGAA". */
+/** Nome da fonte externa, para o botão "Ver no SIGAA". */
 const FONTE_NOME: Record<string, string> = {
   sigaa: "SIGAA",
   unirio: "Portal da UNIRIO",
-  ufv: "portal de dados abertos da UFV",
+  ufv: "Portal da UFV",
 };
 
 const PAGE_SIZE = 20;
@@ -96,7 +106,7 @@ Disponibilidade: quantas horas por semana, em quais turnos e a partir de quando.
 function cursoPeriodoDoUsuario(user: User | null) {
   if (!user?.curso) return "";
   const semestre = user.dados_aluno?.semestre;
-  return semestre ? `${user.curso} — ${semestre}º período` : user.curso;
+  return semestre ? `${user.curso}, ${semestre}º período` : user.curso;
 }
 
 /** Converte o `detail` da API (string ou lista de erros do FastAPI) em texto. */
@@ -111,18 +121,82 @@ function mensagemDeErro(detail: unknown, padrao: string) {
   return padrao;
 }
 
+/** Tira `?projeto=` da URL sem recarregar nem criar entrada no histórico. */
+function removerParamProjeto() {
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has("projeto")) return;
+  url.searchParams.delete("projeto");
+  window.history.replaceState(null, "", url.toString());
+}
+
+function gravarParamProjeto(id: string) {
+  const url = new URL(window.location.href);
+  if (url.searchParams.get("projeto") === id) return;
+  url.searchParams.set("projeto", id);
+  window.history.replaceState(null, "", url.toString());
+}
+
+/* ── Ícones (traço 2, estilo Lucide) ── */
+
+const ICONE = {
+  lupa: "M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0M21 21l-4.3-4.3",
+  x: "M18 6 6 18M6 6l12 12",
+  linkExterno: "M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6",
+  check: "M20 6 9 17l-5-5",
+  buscaVazia: "M13.5 8.5l-5 5M8.5 8.5l5 5M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0M21 21l-4.3-4.3",
+  alerta: "m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3M12 9v4M12 17h.01",
+  info: "M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0M12 16v-4M12 8h.01",
+  carregando: "M21 12a9 9 0 1 1-6.22-8.56",
+  repetir: "M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8M21 3v5h-5",
+};
+
+function Icone({
+  nome,
+  tamanho = 20,
+  className = "",
+}: {
+  nome: keyof typeof ICONE;
+  tamanho?: number;
+  className?: string;
+}) {
+  return (
+    <svg
+      width={tamanho}
+      height={tamanho}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className={className}
+    >
+      <path d={ICONE[nome]} />
+    </svg>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   Página
+   ═══════════════════════════════════════════ */
+
 export default function ProjetosPage() {
-  const { token, user } = useAuth();
-  const router = useRouter();
+  const { token } = useAuth();
   const [projetos, setProjetos] = useState<Projeto[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // A lista nunca é zerada enquanto uma busca nova está no ar: `atualizando`
+  // só esmaece o que já está na tela. O esqueleto aparece apenas quando
+  // ainda não há nada para mostrar.
+  const [atualizando, setAtualizando] = useState(true);
+  const [carregouUmaVez, setCarregouUmaVez] = useState(false);
+  const [erroBusca, setErroBusca] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
 
   // Filtros
   const [busca, setBusca] = useState("");
   const [buscaAplicada, setBuscaAplicada] = useState("");
-  const [tipoFiltro, setTipoFiltro] = useState<"" | "pesquisa" | "extensao">("");
+  const [tipoFiltro, setTipoFiltro] = useState<Modulo>("");
   const [instituicaoFiltro, setInstituicaoFiltro] = useState("");
   const [unidadesEscolhidas, setUnidadesEscolhidas] = useState<string[]>([]);
   const [campiEscolhidos, setCampiEscolhidos] = useState<string[]>([]);
@@ -131,59 +205,92 @@ export default function ProjetosPage() {
   const [filtros, setFiltros] = useState<InstituicaoFiltro[]>([]);
   const [areas, setAreas] = useState<AreaFiltro[]>([]);
 
-  // Categorias: instituição > unidade/departamento. As unidades só aparecem
-  // depois de escolher a instituição (sem ela o seletor fica vazio e
-  // desabilitado, em vez de listar as unidades de todas as universidades);
-  // a lista toda vem de uma única chamada a /api/projetos/filtros.
-  const gruposDeUnidades = filtros
-    .filter((i) => instituicaoFiltro && i.sigla === instituicaoFiltro)
-    .map((i) => ({ sigla: i.sigla, unidades: unidadesVisiveis(i, tipoFiltro) }))
-    .filter((g) => g.unidades.length > 0);
-  const unidadesOferecidas = gruposDeUnidades.flatMap((g) => g.unidades.map((u) => u.nome));
-  // Campi da instituição escolhida, no módulo escolhido.
-  const campiOferecidos = filtros
-    .filter((i) => instituicaoFiltro && i.sigla === instituicaoFiltro)
-    .flatMap((i) => (i.campi || []).filter((c) => !tipoFiltro || (c.modulos[tipoFiltro] || 0) > 0));
+  const inputBuscaRef = useRef<HTMLInputElement>(null);
+  const idBusca = useId();
+
+  // Categorias: instituição > campus / unidade. Campi e unidades só aparecem
+  // depois de escolher a instituição; a lista toda vem de uma única chamada
+  // a /api/projetos/filtros.
+  const instituicao = useMemo(
+    () => (instituicaoFiltro ? filtros.find((i) => i.sigla === instituicaoFiltro) ?? null : null),
+    [filtros, instituicaoFiltro]
+  );
+  const unidadesOferecidas = useMemo(
+    () => (instituicao ? unidadesVisiveis(instituicao, tipoFiltro) : []),
+    [instituicao, tipoFiltro]
+  );
+  const campiOferecidos = useMemo(
+    () =>
+      instituicao
+        ? (instituicao.campi || []).filter((c) => !tipoFiltro || (c.modulos[tipoFiltro] || 0) > 0)
+        : [],
+    [instituicao, tipoFiltro]
+  );
   // Escolhas que saíram das opções (mudou a instituição ou o módulo) deixam
   // de valer, sem precisar de efeito.
-  const unidadesFiltro =
-    filtros.length === 0 ? unidadesEscolhidas : unidadesEscolhidas.filter((u) => unidadesOferecidas.includes(u));
-  const campiFiltro =
-    filtros.length === 0 ? campiEscolhidos : campiEscolhidos.filter((c) => campiOferecidos.some((o) => o.nome === c));
-  // Áreas do conhecimento com projetos no recorte atual (texto, tipo,
-  // instituição, unidade e remoto). Uma área escolhida que saiu das opções
-  // deixa de valer, pela mesma regra da unidade.
-  const areasOferecidas = areas.map((a) => a.nome);
+  const unidadesFiltro = useMemo(
+    () =>
+      filtros.length === 0
+        ? unidadesEscolhidas
+        : unidadesEscolhidas.filter((u) => unidadesOferecidas.some((o) => o.nome === u)),
+    [filtros.length, unidadesEscolhidas, unidadesOferecidas]
+  );
+  const campiFiltro = useMemo(
+    () =>
+      filtros.length === 0
+        ? campiEscolhidos
+        : campiEscolhidos.filter((c) => campiOferecidos.some((o) => o.nome === c)),
+    [filtros.length, campiEscolhidos, campiOferecidos]
+  );
+  // Áreas do conhecimento com projetos no recorte atual. Uma área escolhida
+  // que saiu das opções deixa de valer, pela mesma regra da unidade.
   const areaFiltro =
-    areaEscolhida && (areas.length === 0 || areasOferecidas.includes(areaEscolhida)) ? areaEscolhida : "";
+    areaEscolhida && (areas.length === 0 || areas.some((a) => a.nome === areaEscolhida)) ? areaEscolhida : "";
+
+  const opcoesCampi = useMemo(
+    () => campiOferecidos.map((c) => ({ valor: c.nome, rotulo: c.nome, total: c.total })),
+    [campiOferecidos]
+  );
+  const opcoesUnidades = useMemo(
+    () => unidadesOferecidas.map((u) => ({ valor: u.nome, rotulo: u.nome, total: u.total })),
+    [unidadesOferecidas]
+  );
+
+  const instituicoesExternas = useMemo(() => filtros.filter((i) => i.externa), [filtros]);
+  const instituicoesInternas = useMemo(() => filtros.filter((i) => !i.externa), [filtros]);
+
+  const temFiltroAtivo =
+    busca.trim() !== "" ||
+    tipoFiltro !== "" ||
+    instituicaoFiltro !== "" ||
+    campiFiltro.length > 0 ||
+    unidadesFiltro.length > 0 ||
+    areaFiltro !== "" ||
+    remotoFiltro;
 
   // Ignora respostas de buscas antigas (filtros mudaram no meio do caminho).
   const buscaAtual = useRef(0);
   const filtrosAtuais = useRef(0);
 
-  // Modal State
+  // Modal
   const [selectedProjeto, setSelectedProjeto] = useState<Projeto | null>(null);
-  const [nome, setNome] = useState("");
-  const [cursoPeriodo, setCursoPeriodo] = useState("");
-  const [emailCandidato, setEmailCandidato] = useState("");
-  const [lattes, setLattes] = useState("");
-  const [carta, setCarta] = useState("");
-  const [formStatus, setFormStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
-  const [formError, setFormError] = useState("");
+  const [avisoLink, setAvisoLink] = useState("");
 
-  // Recorte comum à busca e às opções de filtro: tudo menos a área e a paginação.
+  // Recorte comum à busca e às opções de filtro: tudo menos a área e a
+  // paginação. As listas entram como texto para o callback só mudar quando
+  // o conteúdo muda (a resposta de /filtros recria os arrays a cada vez).
+  const chaveUnidades = JSON.stringify(unidadesFiltro);
+  const chaveCampi = JSON.stringify(campiFiltro);
   const montarParamsRecorte = useCallback(() => {
     const params = new URLSearchParams();
     if (buscaAplicada) params.set("q", buscaAplicada);
     if (tipoFiltro) params.set("modulo", tipoFiltro);
     if (instituicaoFiltro) params.set("instituicao", instituicaoFiltro);
-    unidadesFiltro.forEach((u) => params.append("unidade", u));
-    campiFiltro.forEach((c) => params.append("campus", c));
+    (JSON.parse(chaveUnidades) as string[]).forEach((u) => params.append("unidade", u));
+    (JSON.parse(chaveCampi) as string[]).forEach((c) => params.append("campus", c));
     if (remotoFiltro) params.set("remoto", "true");
     return params;
-    // Os arrays derivados mudam de identidade a cada render; o conteúdo é o que importa.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [buscaAplicada, tipoFiltro, instituicaoFiltro, unidadesFiltro.join("|"), campiFiltro.join("|"), remotoFiltro]);
+  }, [buscaAplicada, tipoFiltro, instituicaoFiltro, chaveUnidades, chaveCampi, remotoFiltro]);
 
   const montarParams = useCallback(() => {
     const params = montarParamsRecorte();
@@ -194,21 +301,25 @@ export default function ProjetosPage() {
 
   const carregarProjetos = useCallback(async () => {
     const id = ++buscaAtual.current;
-    setIsLoading(true);
+    setAtualizando(true);
     try {
-      const data = await api.get<Projeto[]>(
-        `/api/projetos/buscar?${montarParams().toString()}`,
-        { token: token || undefined }
-      );
+      const data = await api.get<Projeto[]>(`/api/projetos/buscar?${montarParams().toString()}`, {
+        token: token || undefined,
+      });
       if (id !== buscaAtual.current) return;
       setProjetos(data);
       setHasMore(data.length === PAGE_SIZE);
+      setErroBusca(false);
     } catch {
       if (id !== buscaAtual.current) return;
       setProjetos([]);
       setHasMore(false);
+      setErroBusca(true);
     } finally {
-      if (id === buscaAtual.current) setIsLoading(false);
+      if (id === buscaAtual.current) {
+        setAtualizando(false);
+        setCarregouUmaVez(true);
+      }
     }
   }, [montarParams, token]);
 
@@ -216,7 +327,8 @@ export default function ProjetosPage() {
     carregarProjetos();
   }, [carregarProjetos]);
 
-  // Busca por texto com debounce (o botão "Buscar" aplica na hora).
+  // Busca por texto com debounce (o botão "Buscar" aplica na hora). As
+  // opções de filtro seguem o mesmo debounce, porque dependem de `buscaAplicada`.
   useEffect(() => {
     const t = setTimeout(() => setBuscaAplicada(busca.trim()), 400);
     return () => clearTimeout(t);
@@ -240,6 +352,28 @@ export default function ProjetosPage() {
         setAreas([]);
       });
   }, [montarParamsRecorte]);
+
+  // Link direto (/projetos?projeto=<id>): busca o projeto pela rota pública
+  // e abre o modal. Lido de window.location dentro do efeito para não
+  // precisar do Suspense que useSearchParams exige.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("projeto");
+    if (!id) return;
+    let cancelado = false;
+    api
+      .get<Projeto>(`/api/projetos/${encodeURIComponent(id)}`)
+      .then((p) => {
+        if (!cancelado) setSelectedProjeto(p);
+      })
+      .catch(() => {
+        if (cancelado) return;
+        setAvisoLink("O projeto do link não foi encontrado ou não está mais disponível.");
+        removerParamProjeto();
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, []);
 
   async function carregarMais() {
     const ultimo = projetos[projetos.length - 1];
@@ -267,24 +401,490 @@ export default function ProjetosPage() {
     setBuscaAplicada(busca.trim());
   }
 
-  function abrirProjeto(projeto: Projeto) {
-    setSelectedProjeto(projeto);
-    // Pré-preenche com o que já sabemos do aluno logado.
-    setNome(user?.nome_social || user?.nome || "");
-    setCursoPeriodo(cursoPeriodoDoUsuario(user));
-    setEmailCandidato(user?.email || "");
+  function limparBusca() {
+    setBusca("");
+    setBuscaAplicada("");
+    inputBuscaRef.current?.focus();
   }
 
-  function fecharModal() {
-    setSelectedProjeto(null);
-    setFormStatus("idle");
-    setFormError("");
-    setNome("");
-    setCursoPeriodo("");
-    setEmailCandidato("");
-    setLattes("");
-    setCarta("");
+  function limparFiltros() {
+    setBusca("");
+    setBuscaAplicada("");
+    setTipoFiltro("");
+    setInstituicaoFiltro("");
+    setUnidadesEscolhidas([]);
+    setCampiEscolhidos([]);
+    setAreaFiltro("");
+    setRemotoFiltro(false);
   }
+
+  // Estáveis, para o card (memo) e o modal não serem refeitos a cada render.
+  const abrirProjeto = useCallback((projeto: Projeto) => {
+    setSelectedProjeto(projeto);
+    gravarParamProjeto(projeto.id);
+  }, []);
+
+  const fecharModal = useCallback(() => {
+    setSelectedProjeto(null);
+    removerParamProjeto();
+  }, []);
+
+  const total = projetos.length;
+  const mostrarEsqueleto = total === 0 && (atualizando || !carregouUmaVez);
+  const contagem = total === 1 ? "1 projeto carregado" : `${total} projetos carregados`;
+
+  return (
+    <div className={styles.pagina}>
+      <div className={styles.container}>
+        <header className="ui-page-header">
+          <h1 className="ui-page-title">Projetos acadêmicos</h1>
+          <p className="ui-page-subtitle">
+            Projetos de pesquisa e extensão das universidades, em um só lugar. Encontre o seu e envie uma
+            carta de intenção à coordenação.
+          </p>
+        </header>
+
+        {/* ── Filtros ── */}
+        <form onSubmit={handleSearch} className={`ui-card ${styles.filtros}`} role="search" aria-label="Filtrar projetos">
+          <div className={styles.linhaBusca}>
+            <div className={styles.campoBusca}>
+              <Icone nome="lupa" className={styles.iconeBusca} />
+              <label htmlFor={idBusca} className="sr-only">
+                Buscar por título ou coordenação
+              </label>
+              <input
+                id={idBusca}
+                ref={inputBuscaRef}
+                type="text"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Buscar por título ou coordenação"
+                className={`ui-field ${styles.inputBusca}`}
+                maxLength={200}
+                autoComplete="off"
+              />
+              {busca && (
+                <button type="button" className={styles.limparBusca} onClick={limparBusca} aria-label="Limpar busca">
+                  <Icone nome="x" tamanho={18} />
+                </button>
+              )}
+            </div>
+            <button type="submit" className="ui-btn ui-btn-primary">
+              Buscar
+            </button>
+          </div>
+
+          <div className={styles.grade}>
+            <select
+              value={tipoFiltro}
+              onChange={(e) => {
+                setTipoFiltro(e.target.value as Modulo);
+                setUnidadesEscolhidas([]);
+                setCampiEscolhidos([]);
+              }}
+              className="ui-field"
+              aria-label="Módulo"
+            >
+              <option value="">Pesquisa e extensão</option>
+              <option value="pesquisa">Pesquisa</option>
+              <option value="extensao">Extensão</option>
+            </select>
+
+            <select
+              value={instituicaoFiltro}
+              onChange={(e) => {
+                setInstituicaoFiltro(e.target.value);
+                setUnidadesEscolhidas([]);
+                setCampiEscolhidos([]);
+              }}
+              className="ui-field"
+              aria-label="Instituição"
+              disabled={filtros.length === 0}
+            >
+              <option value="">Todas as instituições</option>
+              {instituicoesExternas.length > 0 && (
+                <optgroup label="Universidades (coleta automática)">
+                  {instituicoesExternas.map((i) => (
+                    <option key={i.sigla} value={i.sigla}>
+                      {i.sigla} ({i.total})
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {instituicoesInternas.length > 0 && (
+                <optgroup label="Cadastrados na plataforma">
+                  {instituicoesInternas.map((i) => (
+                    <option key={i.sigla} value={i.sigla}>
+                      {i.sigla} ({i.total})
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+
+            {/* Campi e unidades da instituição escolhida, com seleção múltipla. */}
+            <MultiSelect
+              rotulo="Campus"
+              rotuloTodos="Todos os campi"
+              placeholder={
+                !instituicaoFiltro
+                  ? "Campus (escolha a instituição)"
+                  : campiOferecidos.length > 0
+                    ? `Campi da ${instituicaoFiltro}`
+                    : `Sem campi para ${instituicaoFiltro}`
+              }
+              opcoes={opcoesCampi}
+              selecionados={campiFiltro}
+              onChange={setCampiEscolhidos}
+              disabled={campiOferecidos.length === 0}
+            />
+            <MultiSelect
+              rotulo="Unidades"
+              rotuloTodos="Todas as unidades"
+              placeholder={
+                !instituicaoFiltro
+                  ? "Unidades (escolha a instituição)"
+                  : unidadesOferecidas.length > 0
+                    ? `Unidades da ${instituicaoFiltro}`
+                    : `Sem unidades para ${instituicaoFiltro}`
+              }
+              opcoes={opcoesUnidades}
+              selecionados={unidadesFiltro}
+              onChange={setUnidadesEscolhidas}
+              disabled={unidadesOferecidas.length === 0}
+            />
+
+            {/* Grandes áreas do CNPq, na ordem fixa da tabela, só as que têm projeto no recorte atual. */}
+            <select
+              value={areaFiltro}
+              onChange={(e) => setAreaFiltro(e.target.value)}
+              className="ui-field"
+              aria-label="Área do conhecimento"
+              disabled={areas.length === 0}
+            >
+              <option value="">{areas.length > 0 ? "Todas as áreas" : "Área do conhecimento"}</option>
+              {areas.map((a) => (
+                <option key={a.nome} value={a.nome}>
+                  {a.nome} ({a.total})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className={styles.linhaExtras}>
+            <label className={styles.marcar}>
+              <input type="checkbox" checked={remotoFiltro} onChange={(e) => setRemotoFiltro(e.target.checked)} />
+              Somente remotos
+            </label>
+            {temFiltroAtivo && (
+              <button type="button" className="ui-btn ui-btn-ghost" onClick={limparFiltros}>
+                <Icone nome="x" tamanho={16} />
+                Limpar filtros
+              </button>
+            )}
+          </div>
+        </form>
+
+        {avisoLink && (
+          <div className={styles.avisoLink} role="status">
+            <Icone nome="info" className={styles.avisoIcone} />
+            <span className={styles.avisoTexto}>{avisoLink}</span>
+            <button type="button" className={styles.avisoFechar} onClick={() => setAvisoLink("")} aria-label="Fechar aviso">
+              <Icone nome="x" tamanho={16} />
+            </button>
+          </div>
+        )}
+
+        {/* ── Lista ── */}
+        {carregouUmaVez && !mostrarEsqueleto && total > 0 && (
+          <div className={styles.resultadosTopo}>
+            <p className={styles.contagem} aria-live="polite">
+              {contagem}
+            </p>
+            {atualizando && (
+              <span className={styles.atualizando}>
+                <Icone nome="carregando" tamanho={16} className={styles.girando} />
+                Atualizando
+              </span>
+            )}
+          </div>
+        )}
+
+        {mostrarEsqueleto ? (
+          <div className={styles.lista} aria-busy="true" aria-label="Carregando projetos">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className={`skeleton ${styles.esqueleto}`} />
+            ))}
+          </div>
+        ) : erroBusca && total === 0 ? (
+          <div className={`ui-card ${styles.vazio}`} role="alert">
+            <span className={styles.vazioIcone}>
+              <Icone nome="alerta" tamanho={24} />
+            </span>
+            <h2 className={styles.vazioTitulo}>Não foi possível carregar os projetos</h2>
+            <p className={styles.vazioTexto}>Confira sua conexão e tente de novo.</p>
+            <button type="button" className="ui-btn ui-btn-secondary" onClick={carregarProjetos}>
+              <Icone nome="repetir" tamanho={16} />
+              Tentar de novo
+            </button>
+          </div>
+        ) : total === 0 ? (
+          <div className={`ui-card ${styles.vazio}`}>
+            <span className={`${styles.vazioIcone} ${styles.vazioMarca}`}>
+              <IconeUfo tamanho={30} />
+            </span>
+            <h2 className={styles.vazioTitulo}>Nenhum projeto com esses filtros</h2>
+            <p className={styles.vazioTexto}>
+              Nossa nave varreu a base e não achou nada por aqui. Tente outra palavra ou amplie o recorte de
+              instituição, unidade e área.
+            </p>
+            {temFiltroAtivo && (
+              <button type="button" className="ui-btn ui-btn-secondary" onClick={limparFiltros}>
+                Limpar filtros
+              </button>
+            )}
+          </div>
+        ) : (
+          <>
+            <div className={`${styles.lista} ${atualizando ? styles.listaAtualizando : ""}`} aria-busy={atualizando}>
+              {projetos.map((projeto) => (
+                <ProjetoCard key={projeto.id} projeto={projeto} onClick={abrirProjeto} />
+              ))}
+            </div>
+            {hasMore && (
+              <div className={styles.maisWrapper}>
+                <button
+                  type="button"
+                  className="ui-btn ui-btn-secondary ui-btn-lg"
+                  onClick={carregarMais}
+                  disabled={isLoadingMore || atualizando}
+                >
+                  {isLoadingMore ? "Carregando" : "Carregar mais"}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* ── Modal de detalhes e candidatura ── */}
+      <Modal
+        aberto={selectedProjeto !== null}
+        titulo={selectedProjeto?.titulo ?? ""}
+        onFechar={fecharModal}
+        tamanho="largo"
+        botaoRodape={false}
+      >
+        {selectedProjeto && <DetalheProjeto projeto={selectedProjeto} onFechar={fecharModal} />}
+      </Modal>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   Detalhe do projeto (corpo do modal)
+   ═══════════════════════════════════════════ */
+
+function Secao({ titulo, children }: { titulo: string; children: ReactNode }) {
+  return (
+    <section className={m.secao}>
+      <h3 className={m.secaoTitulo}>{titulo}</h3>
+      {children}
+    </section>
+  );
+}
+
+const DetalheProjeto = memo(function DetalheProjeto({
+  projeto: p,
+  onFechar,
+}: {
+  projeto: Projeto;
+  onFechar: () => void;
+}) {
+  const { token, user } = useAuth();
+  const router = useRouter();
+  const modulo = moduloDoProjeto(p);
+  const situacao = formatarSituacao(p.situacao);
+  const tom = tomDaSituacao(p.situacao);
+
+  const metadados: { rotulo: string; valor: ReactNode }[] = [];
+  if (p.nome_professor) {
+    metadados.push({ rotulo: p.origem ? "Coordenação" : "Docente ou pesquisador(a)", valor: p.nome_professor });
+  }
+  if (p.responsavel_acao && p.responsavel_acao !== p.nome_professor) {
+    metadados.push({ rotulo: "Responsável pela ação", valor: p.responsavel_acao });
+  }
+  if (p.categoria && p.origem) metadados.push({ rotulo: "Categoria", valor: p.categoria });
+  if (p.instituicao) metadados.push({ rotulo: "Instituição", valor: p.instituicao });
+  if (p.campus) metadados.push({ rotulo: "Campus", valor: p.campus });
+  if (p.unidade) metadados.push({ rotulo: "Unidade ou departamento", valor: p.unidade });
+  if (p.area_conhecimento) metadados.push({ rotulo: "Área do conhecimento", valor: p.area_conhecimento });
+  if (p.area_tematica) metadados.push({ rotulo: "Área temática", valor: p.area_tematica });
+  if (situacao) {
+    metadados.push({
+      rotulo: "Situação",
+      valor: (
+        <span className={`${m.situacao} ${m[`tom_${tom}`]}`}>
+          <span className={m.ponto} aria-hidden="true" />
+          {situacao}
+        </span>
+      ),
+    });
+  }
+  if (p.periodo_inicio && p.periodo_fim) {
+    metadados.push({ rotulo: "Período", valor: `${formatarData(p.periodo_inicio)} a ${formatarData(p.periodo_fim)}` });
+  }
+  if (p.ano) metadados.push({ rotulo: "Ano", valor: p.ano });
+  if (p.codigo && p.origem === "sigaa") metadados.push({ rotulo: "Código no SIGAA", valor: p.codigo });
+  if (p.modalidade) metadados.push({ rotulo: "Modalidade", valor: p.modalidade });
+  if (p.local) metadados.push({ rotulo: "Localização", valor: p.local });
+
+  const temConteudoPrincipal = Boolean(
+    p.descricao ||
+      (p.palavras_chave && p.palavras_chave.length > 0) ||
+      (p.linhas_extensao && p.linhas_extensao.length > 0) ||
+      p.grupo_pesquisa ||
+      p.financiamento
+  );
+
+  return (
+    <>
+      <div className={m.corpo}>
+        <div className={m.principal}>
+          <div className={m.chips}>
+            {p.tipo && (
+              <span
+                className={`ui-chip ${
+                  modulo === "pesquisa" ? "ui-chip-primary" : modulo === "extensao" ? "ui-chip-info" : ""
+                }`}
+              >
+                {p.tipo}
+              </span>
+            )}
+            {p.e_remoto && <span className="ui-chip ui-chip-success">Remoto</span>}
+          </div>
+
+          {p.descricao && (
+            <Secao titulo="Descrição">
+              <p className={m.texto}>{p.descricao}</p>
+            </Secao>
+          )}
+          {p.palavras_chave && p.palavras_chave.length > 0 && (
+            <Secao titulo="Palavras-chave">
+              <ul className={m.listaChips}>
+                {p.palavras_chave.map((palavra) => (
+                  <li key={palavra} className="ui-chip">
+                    {palavra}
+                  </li>
+                ))}
+              </ul>
+            </Secao>
+          )}
+          {p.linhas_extensao && p.linhas_extensao.length > 0 && (
+            <Secao titulo="Linhas de extensão">
+              <ul className={m.listaTexto}>
+                {p.linhas_extensao.map((linha) => (
+                  <li key={linha}>{linha}</li>
+                ))}
+              </ul>
+            </Secao>
+          )}
+          {p.grupo_pesquisa && (
+            <Secao titulo="Grupo de pesquisa">
+              <p className={m.texto}>{p.grupo_pesquisa}</p>
+            </Secao>
+          )}
+          {p.financiamento && (
+            <Secao titulo="Financiamento">
+              <p className={m.texto}>{p.financiamento}</p>
+            </Secao>
+          )}
+          {!temConteudoPrincipal && (
+            <p className={m.semDescricao}>A fonte não publicou descrição para este projeto.</p>
+          )}
+        </div>
+
+        <aside className={m.lateral} aria-label="Dados do projeto">
+          {metadados.length > 0 && (
+            <dl className={m.meta}>
+              {metadados.map((item) => (
+                <div key={item.rotulo} className={m.metaItem}>
+                  <dt>{item.rotulo}</dt>
+                  <dd>{item.valor}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+          {p.link_detalhe && (
+            <a
+              href={p.link_detalhe}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`ui-btn ui-btn-secondary ${m.linkFonte}`}
+            >
+              Ver no {FONTE_NOME[p.origem || ""] || "site de origem"}
+              <Icone nome="linkExterno" tamanho={16} />
+            </a>
+          )}
+        </aside>
+      </div>
+
+      <section className={`ui-card ${m.candidatura}`} aria-labelledby="candidatura-titulo">
+        <h3 id="candidatura-titulo" className={m.candidaturaTitulo}>
+          Candidatar-se
+        </h3>
+
+        {!p.tem_contato ? (
+          <>
+            <div className={m.aviso}>
+              <Icone nome="info" className={m.avisoIcone} />
+              <p>{avisoSemContato(p)}</p>
+            </div>
+            <button type="button" className="ui-btn ui-btn-primary" disabled>
+              Candidatar-se
+            </button>
+          </>
+        ) : !token ? (
+          <>
+            <p className={m.candidaturaTexto}>
+              Entre na sua conta para enviar uma carta de intenção à coordenação deste projeto.
+            </p>
+            <button type="button" className="ui-btn ui-btn-primary" onClick={() => router.push("/login")}>
+              Faça login para se candidatar
+            </button>
+          </>
+        ) : (
+          <FormularioCandidatura key={user?.id ?? "anonimo"} projeto={p} onEnviado={onFechar} />
+        )}
+      </section>
+    </>
+  );
+});
+
+/* ═══════════════════════════════════════════
+   Formulário de candidatura (estado local: digitar na carta não refaz o modal)
+   ═══════════════════════════════════════════ */
+
+function FormularioCandidatura({ projeto, onEnviado }: { projeto: Projeto; onEnviado: () => void }) {
+  const { token, user } = useAuth();
+  const router = useRouter();
+  const idBase = useId();
+
+  // Pré-preenche com o que já sabemos do aluno logado.
+  const [nome, setNome] = useState(user?.nome_social || user?.nome || "");
+  const [cursoPeriodo, setCursoPeriodo] = useState(cursoPeriodoDoUsuario(user));
+  const [emailCandidato, setEmailCandidato] = useState(user?.email || "");
+  const [lattes, setLattes] = useState("");
+  const [carta, setCarta] = useState("");
+  const [formStatus, setFormStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [formError, setFormError] = useState("");
+
+  // Depois do envio, o modal fecha sozinho em alguns segundos.
+  useEffect(() => {
+    if (formStatus !== "success") return;
+    const t = setTimeout(onEnviado, 3000);
+    return () => clearTimeout(t);
+  }, [formStatus, onEnviado]);
 
   async function handleCandidatar(e: React.FormEvent) {
     e.preventDefault();
@@ -298,7 +898,6 @@ export default function ProjetosPage() {
       router.push("/perfil/completar");
       return;
     }
-    if (!selectedProjeto) return;
     if (carta.trim().length < CARTA_MIN) {
       setFormStatus("error");
       setFormError(`A carta de intenção precisa ter pelo menos ${CARTA_MIN} caracteres.`);
@@ -310,7 +909,7 @@ export default function ProjetosPage() {
 
     try {
       await api.post(
-        `/api/projetos/${selectedProjeto.id}/candidatar`,
+        `/api/projetos/${projeto.id}/candidatar`,
         {
           nome,
           curso_periodo: cursoPeriodo,
@@ -321,9 +920,6 @@ export default function ProjetosPage() {
         { token }
       );
       setFormStatus("success");
-      setTimeout(() => {
-        fecharModal();
-      }, 3000);
     } catch (err: unknown) {
       setFormStatus("error");
       const apiErr = err as { detail?: unknown };
@@ -331,398 +927,130 @@ export default function ProjetosPage() {
     }
   }
 
+  if (formStatus === "success") {
+    return (
+      <div className={m.sucesso} role="status">
+        <Icone nome="check" className={m.sucessoIcone} />
+        <p>
+          Sua carta de intenção foi enviada à coordenação do projeto!
+          <br />
+          Enviamos uma cópia para o e-mail da sua conta.
+        </p>
+      </div>
+    );
+  }
+
   const tamanhoCarta = carta.trim().length;
+  const cartaOk = tamanhoCarta >= CARTA_MIN;
 
   return (
-    <div className={styles.page}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Projetos Acadêmicos</h1>
-        <p className={styles.subtitle}>
-          Descubra oportunidades de pesquisa e extensão
-        </p>
-        {/* A data da última coleta não é exibida: o momento em que a base foi
-            atualizada é informação interna da equipe. */}
+    <form onSubmit={handleCandidatar} className={m.form}>
+      <div className={m.linhaCampos}>
+        <div className={m.campo}>
+          <label className="ui-label" htmlFor={`${idBase}-nome`}>
+            Nome completo
+          </label>
+          <input
+            id={`${idBase}-nome`}
+            type="text"
+            required
+            minLength={3}
+            maxLength={120}
+            className="ui-field"
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            autoComplete="name"
+          />
+        </div>
+
+        <div className={m.campo}>
+          <label className="ui-label" htmlFor={`${idBase}-curso`}>
+            Curso e período
+          </label>
+          <input
+            id={`${idBase}-curso`}
+            type="text"
+            required
+            minLength={2}
+            maxLength={120}
+            placeholder="Ex.: Ciência da Computação, 5º período"
+            className="ui-field"
+            value={cursoPeriodo}
+            onChange={(e) => setCursoPeriodo(e.target.value)}
+          />
+        </div>
       </div>
 
-      {/* ── Filtros ── */}
-      <form onSubmit={handleSearch} className={styles.filters}>
-        <div className={styles.searchGroup}>
-          <input
-            type="text"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar por título ou coordenador(a)..."
-            className={styles.searchInput}
-            maxLength={200}
-          />
-          <button type="submit" className={styles.searchButton}>
-            Buscar
-          </button>
-        </div>
-        <div className={styles.filterRow}>
-          <select
-            value={tipoFiltro}
-            onChange={(e) => {
-              setTipoFiltro(e.target.value as "" | "pesquisa" | "extensao");
-              setUnidadesEscolhidas([]);
-              setCampiEscolhidos([]);
-            }}
-            className={styles.filterInput}
-            aria-label="Tipo de projeto"
-          >
-            <option value="">Pesquisa e Extensão</option>
-            <option value="pesquisa">Pesquisa</option>
-            <option value="extensao">Extensão</option>
-          </select>
-          {filtros.length > 0 && (
-            <select
-              value={instituicaoFiltro}
-              onChange={(e) => {
-                setInstituicaoFiltro(e.target.value);
-                setUnidadesEscolhidas([]);
-                setCampiEscolhidos([]);
-              }}
-              className={styles.filterInput}
-              aria-label="Instituição ou universidade"
-            >
-              <option value="">Todas as instituições</option>
-              {filtros.some((i) => i.externa) && (
-                <optgroup label="Universidades (coleta automática)">
-                  {filtros.filter((i) => i.externa).map((i) => (
-                    <option key={i.sigla} value={i.sigla}>
-                      {i.sigla} ({i.total})
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-              {filtros.some((i) => !i.externa) && (
-                <optgroup label="Cadastrados na plataforma">
-                  {filtros.filter((i) => !i.externa).map((i) => (
-                    <option key={i.sigla} value={i.sigla}>
-                      {i.sigla} ({i.total})
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-            </select>
-          )}
-          {/* Campi e unidades da instituição escolhida, com seleção múltipla. */}
-          <MultiSelect
-            rotulo="Campi"
-            placeholder={
-              !instituicaoFiltro
-                ? "Campi (escolha a instituição)"
-                : campiOferecidos.length > 0
-                  ? `Campi da ${instituicaoFiltro}`
-                  : `Sem campi identificados para ${instituicaoFiltro}`
-            }
-            opcoes={campiOferecidos.map((c) => ({ valor: c.nome, rotulo: c.nome, total: c.total }))}
-            selecionados={campiFiltro}
-            onChange={setCampiEscolhidos}
-            disabled={campiOferecidos.length === 0}
-            className={styles.filterMulti}
-          />
-          <MultiSelect
-            rotulo="Unidades"
-            placeholder={
-              !instituicaoFiltro
-                ? "Unidades / Departamentos (escolha a instituição)"
-                : unidadesOferecidas.length > 0
-                  ? `Unidades da ${instituicaoFiltro}`
-                  : `Sem unidades cadastradas para ${instituicaoFiltro}`
-            }
-            opcoes={gruposDeUnidades.flatMap((g) => g.unidades.map((u) => ({ valor: u.nome, rotulo: u.nome, total: u.total })))}
-            selecionados={unidadesFiltro}
-            onChange={setUnidadesEscolhidas}
-            disabled={unidadesOferecidas.length === 0}
-            className={styles.filterMulti}
-          />
-          {/* Grandes áreas do CNPq, na ordem fixa da tabela, só as que têm projeto no recorte atual. */}
-          <select
-            value={areaFiltro}
-            onChange={(e) => setAreaFiltro(e.target.value)}
-            className={styles.filterInput}
-            aria-label="Área do conhecimento"
-            disabled={areas.length === 0}
-          >
-            <option value="">
-              {areas.length > 0 ? "Todas as áreas do conhecimento" : "Área do conhecimento"}
-            </option>
-            {areas.map((a) => (
-              <option key={a.nome} value={a.nome}>
-                {a.nome} ({a.total})
-              </option>
-            ))}
-          </select>
-          <label className={styles.checkboxLabel}>
-            <input
-              type="checkbox"
-              checked={remotoFiltro}
-              onChange={(e) => setRemotoFiltro(e.target.checked)}
-              className={styles.checkbox}
-            />
-            Mostrar apenas projetos remotos
+      <div className={m.linhaCampos}>
+        <div className={m.campo}>
+          <label className="ui-label" htmlFor={`${idBase}-email`}>
+            Seu e-mail
           </label>
+          <input
+            id={`${idBase}-email`}
+            type="email"
+            required
+            className="ui-field"
+            value={emailCandidato}
+            onChange={(e) => setEmailCandidato(e.target.value)}
+            autoComplete="email"
+          />
+          <p className="ui-hint">A resposta da coordenação chegará neste e-mail.</p>
         </div>
-      </form>
 
-      {/* ── Lista de Projetos ── */}
-      {isLoading ? (
-        <div className={styles.loadingGrid}>
-          {[1, 2, 3].map((i) => (
-            <div key={i} className={styles.skeletonCard} />
-          ))}
+        <div className={m.campo}>
+          <label className="ui-label" htmlFor={`${idBase}-lattes`}>
+            Link do Currículo Lattes <span className={m.opcional}>(opcional)</span>
+          </label>
+          <input
+            id={`${idBase}-lattes`}
+            type="url"
+            maxLength={300}
+            placeholder="http://lattes.cnpq.br/0000000000000000"
+            className="ui-field"
+            value={lattes}
+            onChange={(e) => setLattes(e.target.value)}
+          />
         </div>
-      ) : projetos.length === 0 ? (
-        <div className={styles.emptyState}>
-          <span className={styles.emptyIcon}>📭</span>
-          <h3>Nenhum projeto encontrado com esses filtros</h3>
-          <p>Tente outra busca ou limpe os filtros de tipo, unidade e área.</p>
-        </div>
-      ) : (
-        <>
-          <div className={styles.projetosList}>
-            {projetos.map((projeto) => (
-              <ProjetoCard key={projeto.id} projeto={projeto} onClick={abrirProjeto} />
-            ))}
-          </div>
-          {hasMore && (
-            <div className={styles.loadMoreWrapper}>
-              <button
-                type="button"
-                className={styles.loadMoreButton}
-                onClick={carregarMais}
-                disabled={isLoadingMore}
-              >
-                {isLoadingMore ? "Carregando..." : "Carregar mais projetos"}
-              </button>
-            </div>
+      </div>
+
+      <div className={m.campo}>
+        <label className="ui-label" htmlFor={`${idBase}-carta`}>
+          Carta de intenção
+        </label>
+        <textarea
+          id={`${idBase}-carta`}
+          required
+          rows={9}
+          maxLength={CARTA_MAX}
+          placeholder={CARTA_PLACEHOLDER}
+          className={`ui-field ${m.carta}`}
+          value={carta}
+          onChange={(e) => setCarta(e.target.value)}
+        />
+        <p className={`ui-hint ${m.contador} ${cartaOk ? m.contadorOk : ""}`} aria-live="polite">
+          {cartaOk ? (
+            <>
+              <Icone nome="check" tamanho={14} />
+              {tamanhoCarta} caracteres
+            </>
+          ) : (
+            `${tamanhoCarta} de ${CARTA_MIN} caracteres (faltam ${CARTA_MIN - tamanhoCarta})`
           )}
-        </>
-      )}
+        </p>
+      </div>
 
-      {/* ── Modal de Detalhes e Candidatura ── */}
-      {selectedProjeto && (
-        <div className={modalStyles.overlay} onClick={(e) => {
-          if (e.target === e.currentTarget) fecharModal();
-        }}>
-          <div className={modalStyles.modal} role="dialog" aria-modal="true" aria-labelledby="projeto-titulo">
-            <button className={modalStyles.closeButton} onClick={fecharModal} aria-label="Fechar">
-              &times;
-            </button>
-            <h2 id="projeto-titulo" className={modalStyles.title}>{selectedProjeto.titulo}</h2>
-
-            <div className={modalStyles.infoGrid}>
-              {selectedProjeto.tipo && (
-                <div className={modalStyles.infoLine}><strong>Tipo:</strong> {selectedProjeto.tipo}
-                  {selectedProjeto.categoria && selectedProjeto.origem ? ` (${selectedProjeto.categoria})` : ""}
-                </div>
-              )}
-              {selectedProjeto.nome_professor && (
-                <div className={modalStyles.infoLine}>
-                  <strong>{selectedProjeto.origem ? "Coordenador(a):" : "Professor/Pesquisador:"}</strong>{" "}
-                  {selectedProjeto.nome_professor}
-                </div>
-              )}
-              {selectedProjeto.responsavel_acao &&
-                selectedProjeto.responsavel_acao !== selectedProjeto.nome_professor && (
-                  <div className={modalStyles.infoLine}>
-                    <strong>Responsável pela ação:</strong> {selectedProjeto.responsavel_acao}
-                  </div>
-                )}
-              {selectedProjeto.instituicao && (
-                <div className={modalStyles.infoLine}><strong>Instituição:</strong> {selectedProjeto.instituicao}</div>
-              )}
-              {selectedProjeto.campus && (
-                <div className={modalStyles.infoLine}><strong>Campus:</strong> {selectedProjeto.campus}</div>
-              )}
-              {selectedProjeto.unidade && (
-                <div className={modalStyles.infoLine}><strong>Unidade/Departamento:</strong> {selectedProjeto.unidade}</div>
-              )}
-              {selectedProjeto.area_conhecimento && (
-                <div className={modalStyles.infoLine}>
-                  <strong>Área do conhecimento:</strong> {selectedProjeto.area_conhecimento}
-                </div>
-              )}
-              {selectedProjeto.area_tematica && (
-                <div className={modalStyles.infoLine}><strong>Área temática:</strong> {selectedProjeto.area_tematica}</div>
-              )}
-              {selectedProjeto.grupo_pesquisa && (
-                <div className={modalStyles.infoLine}><strong>Grupo de pesquisa:</strong> {selectedProjeto.grupo_pesquisa}</div>
-              )}
-              {selectedProjeto.linhas_extensao && selectedProjeto.linhas_extensao.length > 0 && (
-                <div className={modalStyles.infoLine}>
-                  <strong>Linhas de extensão:</strong> {selectedProjeto.linhas_extensao.join(", ")}
-                </div>
-              )}
-              {selectedProjeto.financiamento && (
-                <div className={modalStyles.infoLine}><strong>Financiamento:</strong> {selectedProjeto.financiamento}</div>
-              )}
-              {selectedProjeto.ano && (
-                <div className={modalStyles.infoLine}><strong>Ano:</strong> {selectedProjeto.ano}</div>
-              )}
-              {selectedProjeto.situacao && (
-                <div className={modalStyles.infoLine}><strong>Situação:</strong> {formatarSituacao(selectedProjeto.situacao)}</div>
-              )}
-              {selectedProjeto.periodo_inicio && selectedProjeto.periodo_fim && (
-                <div className={modalStyles.infoLine}>
-                  <strong>Período:</strong> {formatarData(selectedProjeto.periodo_inicio)} a {formatarData(selectedProjeto.periodo_fim)}
-                </div>
-              )}
-              {selectedProjeto.codigo && selectedProjeto.origem === "sigaa" && (
-                <div className={modalStyles.infoLine}><strong>Código SIGAA:</strong> {selectedProjeto.codigo}</div>
-              )}
-              {selectedProjeto.palavras_chave && selectedProjeto.palavras_chave.length > 0 && (
-                <div className={modalStyles.infoLine}>
-                  <strong>Palavras-chave:</strong> {selectedProjeto.palavras_chave.join(", ")}
-                </div>
-              )}
-              {selectedProjeto.local && (
-                <div className={modalStyles.infoLine}><strong>Localização:</strong> {selectedProjeto.local}</div>
-              )}
-              {selectedProjeto.modalidade && (
-                <div className={modalStyles.infoLine}><strong>Modalidade:</strong> {selectedProjeto.modalidade}</div>
-              )}
-              {selectedProjeto.link_detalhe && (
-                <div className={modalStyles.infoLine}>
-                  <a href={selectedProjeto.link_detalhe} target="_blank" rel="noopener noreferrer" className={modalStyles.externalLink}>
-                    Ver no {FONTE_NOME[selectedProjeto.origem || ""] || "site de origem"} ↗
-                  </a>
-                </div>
-              )}
-            </div>
-
-            {selectedProjeto.descricao && (
-              <div className={modalStyles.descriptionSection}>
-                <h4>Descrição:</h4>
-                <p className={modalStyles.descriptionP}>{selectedProjeto.descricao}</p>
-              </div>
-            )}
-
-            <div className={modalStyles.divider} />
-
-            <div className={modalStyles.candidaturaSection}>
-              <h4>Candidatar-se</h4>
-
-              {!selectedProjeto.tem_contato ? (
-                <>
-                  <div className={modalStyles.noticeMessage}>{avisoSemContato(selectedProjeto)}</div>
-                  <button type="button" className={modalStyles.submitBtn} disabled>
-                    Candidatar-se
-                  </button>
-                </>
-              ) : !token ? (
-                <button
-                  type="button"
-                  className={modalStyles.submitBtn}
-                  onClick={() => router.push("/login")}
-                >
-                  Faça login para se candidatar
-                </button>
-              ) : formStatus === "success" ? (
-                <div className={modalStyles.successMessage}>
-                  Sua carta de intenção foi enviada à coordenação do projeto! ✅
-                  <br />
-                  Enviamos uma cópia para o e-mail da sua conta.
-                </div>
-              ) : (
-                <form onSubmit={handleCandidatar}>
-                  <div className={modalStyles.formGroup}>
-                    <label className={modalStyles.label} htmlFor="cand-nome">Nome completo</label>
-                    <input
-                      id="cand-nome"
-                      type="text"
-                      required
-                      minLength={3}
-                      maxLength={120}
-                      className={modalStyles.input}
-                      value={nome}
-                      onChange={(e) => setNome(e.target.value)}
-                    />
-                  </div>
-
-                  <div className={modalStyles.formGroup}>
-                    <label className={modalStyles.label} htmlFor="cand-curso">Curso e período</label>
-                    <input
-                      id="cand-curso"
-                      type="text"
-                      required
-                      minLength={2}
-                      maxLength={120}
-                      placeholder="Ex.: Ciência da Computação — 5º período"
-                      className={modalStyles.input}
-                      value={cursoPeriodo}
-                      onChange={(e) => setCursoPeriodo(e.target.value)}
-                    />
-                  </div>
-
-                  <div className={modalStyles.formGroup}>
-                    <label className={modalStyles.label} htmlFor="cand-email">Seu e-mail</label>
-                    <input
-                      id="cand-email"
-                      type="email"
-                      required
-                      className={modalStyles.input}
-                      value={emailCandidato}
-                      onChange={(e) => setEmailCandidato(e.target.value)}
-                    />
-                    <span className={modalStyles.hint}>A resposta da coordenação chegará neste e-mail.</span>
-                  </div>
-
-                  <div className={modalStyles.formGroup}>
-                    <label className={modalStyles.label} htmlFor="cand-lattes">
-                      Link do Currículo Lattes <span className={modalStyles.optional}>(opcional)</span>
-                    </label>
-                    <input
-                      id="cand-lattes"
-                      type="url"
-                      maxLength={300}
-                      placeholder="http://lattes.cnpq.br/0000000000000000"
-                      className={modalStyles.input}
-                      value={lattes}
-                      onChange={(e) => setLattes(e.target.value)}
-                    />
-                  </div>
-
-                  <div className={modalStyles.formGroup}>
-                    <label className={modalStyles.label} htmlFor="cand-carta">Carta de intenção</label>
-                    <textarea
-                      id="cand-carta"
-                      required
-                      rows={9}
-                      maxLength={CARTA_MAX}
-                      placeholder={CARTA_PLACEHOLDER}
-                      className={modalStyles.textarea}
-                      value={carta}
-                      onChange={(e) => setCarta(e.target.value)}
-                    />
-                    <span
-                      className={`${modalStyles.hint} ${tamanhoCarta >= CARTA_MIN ? modalStyles.hintOk : ""}`}
-                      aria-live="polite"
-                    >
-                      {tamanhoCarta < CARTA_MIN
-                        ? `${tamanhoCarta}/${CARTA_MIN} caracteres — faltam ${CARTA_MIN - tamanhoCarta}`
-                        : `${tamanhoCarta} caracteres ✓`}
-                    </span>
-                  </div>
-
-                  {formStatus === "error" && (
-                    <div className={modalStyles.errorMessage}>{formError}</div>
-                  )}
-
-                  <button
-                    type="submit"
-                    className={modalStyles.submitBtn}
-                    disabled={formStatus === "submitting"}
-                  >
-                    {formStatus === "submitting" ? "Enviando..." : "Enviar carta de intenção"}
-                  </button>
-                </form>
-              )}
-            </div>
-          </div>
+      {formStatus === "error" && (
+        <div className={m.erro} role="alert">
+          {formError}
         </div>
       )}
-    </div>
+
+      <div className={m.acoes}>
+        <button type="submit" className="ui-btn ui-btn-primary" disabled={formStatus === "submitting"}>
+          {formStatus === "submitting" ? "Enviando" : "Enviar carta de intenção"}
+        </button>
+      </div>
+    </form>
   );
 }

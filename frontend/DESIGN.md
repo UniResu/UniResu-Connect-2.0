@@ -46,8 +46,13 @@ páginas e nos dois temas (claro e escuro).
 10. **Sem emojis como ícones.** Ícones são SVG inline (traço 2, 20px) ou texto.
 11. **Movimento curto.** `--transition-fast` em cor/borda/sombra; animações
     de entrada só no `animate-fade-in`. Respeite `prefers-reduced-motion`
-    (já tratado no globals).
-12. **Acessibilidade:** foco visível (`:focus-visible` com `--ring`), rótulos
+    (já tratado no globals). Única exceção decorativa: a nave da seção do
+    fórum na página inicial flutua devagar, porque é a assinatura da marca.
+12. **Símbolos da marca com parcimônia.** Os ícones espaciais de
+    `components/ui/Icones` (nave, alienígena, planeta, foguete, estrelas)
+    entram em estados vazios, cabeçalhos de seção e telas de entrada, nunca
+    como decoração repetida em listas.
+13. **Acessibilidade:** foco visível (`:focus-visible` com `--ring`), rótulos
     em todo controle, contraste AA nos dois temas, nada que dependa só de cor.
 
 ## Tema escuro

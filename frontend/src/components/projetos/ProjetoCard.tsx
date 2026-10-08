@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, type ReactNode } from "react";
 import Link from "next/link";
 import {
   formatarSituacao,
@@ -8,7 +8,43 @@ import {
   tomDaSituacao,
   type Projeto,
 } from "@/types/projeto";
+import {
+  IconeBalanca,
+  IconeBroto,
+  IconeCalendario,
+  IconeCoracao,
+  IconeEngrenagem,
+  IconeFolha,
+  IconeFrasco,
+  IconeGlobo,
+  IconeGrade,
+  IconeLivro,
+  IconePaleta,
+  IconePin,
+  IconePredio,
+} from "@/components/ui/Icones";
 import styles from "./ProjetoCard.module.css";
+
+/**
+ * Grande área do CNPq: cada uma com um tom e um ícone próprios, para a tag
+ * ser reconhecida de relance. Instituição, campus e unidade ficam neutros de
+ * propósito: são muitos valores, e cor neles viraria ruído.
+ */
+const AREAS: Record<string, { classe: string; icone: ReactNode }> = {
+  "Ciências Exatas e da Terra": { classe: "ui-chip-indigo", icone: <IconeFrasco /> },
+  "Ciências Biológicas": { classe: "ui-chip-green", icone: <IconeFolha /> },
+  Engenharias: { classe: "ui-chip-orange", icone: <IconeEngrenagem /> },
+  "Ciências da Saúde": { classe: "ui-chip-rose", icone: <IconeCoracao /> },
+  "Ciências Agrárias": { classe: "ui-chip-amber", icone: <IconeBroto /> },
+  "Ciências Sociais Aplicadas": { classe: "ui-chip-sky", icone: <IconeBalanca /> },
+  "Ciências Humanas": { classe: "ui-chip-violet", icone: <IconeLivro /> },
+  "Linguística, Letras e Artes": { classe: "ui-chip-teal", icone: <IconePaleta /> },
+  Multidisciplinar: { classe: "ui-chip-slate", icone: <IconeGrade /> },
+};
+
+export function estiloDaArea(area?: string) {
+  return (area && AREAS[area]) || { classe: "ui-chip-primary", icone: null };
+}
 
 /**
  * Card de projeto, o mesmo na busca e na página inicial.
@@ -33,6 +69,7 @@ function ProjetoCardBase({
   const modulo = moduloDoProjeto(projeto);
   const tom = tomDaSituacao(projeto.situacao);
   const situacao = formatarSituacao(projeto.situacao);
+  const area = estiloDaArea(projeto.area_conhecimento);
 
   const conteudo = (
     <>
@@ -69,30 +106,43 @@ function ProjetoCardBase({
 
       <div className={styles.tags}>
         {projeto.area_conhecimento && (
-          <span className={`${styles.tag} ${styles.tagArea}`} title="Área do conhecimento (grande área do CNPq)">
+          <span className={`ui-chip ${area.classe}`} title="Área do conhecimento (grande área do CNPq)">
+            {area.icone}
             {projeto.area_conhecimento}
           </span>
         )}
         {projeto.instituicao && (
           <span
-            className={`${styles.tag} ${projeto.origem ? styles.tagInstituicao : styles.tagLonga}`}
+            className={`ui-chip ${projeto.origem ? "ui-chip-outline" : `ui-chip-truncate ${styles.tagLonga}`}`}
             title={projeto.instituicao}
           >
             {projeto.instituicao}
           </span>
         )}
         {projeto.campus && !compacto && (
-          <span className={`${styles.tag} ${styles.tagLonga}`} title={`Campus ${projeto.campus}`}>
-            {projeto.campus}
+          <span className={`ui-chip ${styles.tagLonga}`} title={`Campus ${projeto.campus}`}>
+            <IconePin />
+            <span className={styles.tagTexto}>{projeto.campus}</span>
           </span>
         )}
         {projeto.unidade && !compacto && (
-          <span className={`${styles.tag} ${styles.tagLonga}`} title={projeto.unidade}>
-            {projeto.unidade}
+          <span className={`ui-chip ${styles.tagLonga}`} title={projeto.unidade}>
+            <IconePredio />
+            <span className={styles.tagTexto}>{projeto.unidade}</span>
           </span>
         )}
-        {projeto.ano && <span className={styles.tag}>{projeto.ano}</span>}
-        {projeto.e_remoto && <span className={`${styles.tag} ${styles.tagRemoto}`}>Remoto</span>}
+        {projeto.ano && (
+          <span className="ui-chip">
+            <IconeCalendario />
+            {projeto.ano}
+          </span>
+        )}
+        {projeto.e_remoto && (
+          <span className="ui-chip ui-chip-success">
+            <IconeGlobo />
+            Remoto
+          </span>
+        )}
       </div>
     </>
   );

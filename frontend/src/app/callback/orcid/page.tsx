@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { TOKEN_KEY } from "@/lib/constants";
 import type { LoginResponse } from "@/types/user";
-import styles from "./callback.module.css";
+import styles from "../../login/conta.module.css";
 
 function OrcidCallbackContent() {
   const router = useRouter();
@@ -54,30 +54,52 @@ function OrcidCallbackContent() {
 
   if (erroParametros || status === "error") {
     return (
-      <div className={styles.page}>
-        <div className={styles.card}>
-          <span className={styles.icon}>❌</span>
-          <h2 className={styles.title}>Erro na Autenticação</h2>
-          <p className={styles.message}>{erroParametros || errorMsg}</p>
-          <button
-            onClick={() => router.push("/login")}
-            className={styles.button}
-          >
-            Voltar ao Login
-          </button>
+      <div className={styles.pagina}>
+        <div className={`ui-card animate-fade-in ${styles.cartao}`}>
+          <div className={styles.estado} role="alert">
+            <span className={`${styles.estadoIcone} ${styles.estadoErro}`}>
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+            </span>
+            <h1 className={styles.titulo}>Erro na autenticação</h1>
+            <p className={styles.estadoTexto}>{erroParametros || errorMsg}</p>
+            <div className={styles.estadoAcoes}>
+              <button
+                type="button"
+                onClick={() => router.push("/login")}
+                className="ui-btn ui-btn-primary"
+              >
+                Voltar ao login
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={styles.page}>
-      <div className={styles.card}>
-        <div className={styles.spinner} />
-        <h2 className={styles.title}>Autenticando com ORCID...</h2>
-        <p className={styles.message}>
-          Estamos processando sua autenticação. Aguarde um momento.
-        </p>
+    <div className={styles.pagina}>
+      <div className={`ui-card animate-fade-in ${styles.cartao}`}>
+        <div className={styles.estado} aria-busy="true">
+          <div className={styles.spinner} aria-hidden="true" />
+          <h1 className={styles.titulo}>Autenticando com ORCID...</h1>
+          <p className={styles.estadoTexto}>
+            Estamos processando sua autenticação. Aguarde um momento.
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -87,10 +109,12 @@ export default function OrcidCallbackPage() {
   return (
     <Suspense
       fallback={
-        <div className={styles.page}>
-          <div className={styles.card}>
-            <div className={styles.spinner} />
-            <h2 className={styles.title}>Carregando...</h2>
+        <div className={styles.pagina}>
+          <div className={`ui-card ${styles.cartao}`}>
+            <div className={styles.estado}>
+              <div className={styles.spinner} aria-hidden="true" />
+              <p className={styles.estadoTexto}>Carregando...</p>
+            </div>
           </div>
         </div>
       }

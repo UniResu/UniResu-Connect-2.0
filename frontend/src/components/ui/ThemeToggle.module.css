@@ -16,7 +16,7 @@
 
 .botao:hover {
   background: var(--header-hover);
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: var(--header-border-strong);
 }
 
 .botao:focus-visible {

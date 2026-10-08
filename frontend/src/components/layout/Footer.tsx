@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { IconePlaneta } from "@/components/ui/Icones";
 import styles from "./Footer.module.css";
 
 /** Rodapé escuro nos dois temas, no mesmo tom do cabeçalho. */
@@ -7,7 +8,10 @@ export default function Footer() {
     <footer className={styles.footer}>
       <div className={styles.conteudo}>
         <div className={styles.marca}>
-          <span className={styles.nome}>UniResu Connect</span>
+          <span className={styles.nome}>
+            <IconePlaneta tamanho={22} />
+            UniResu Connect
+          </span>
           <span className={styles.lema}>Conectando a comunidade acadêmica</span>
         </div>
         <nav className={styles.links} aria-label="Rodapé">

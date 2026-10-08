@@ -1,151 +1,286 @@
-.page {
+/* Busca de projetos: fundo próprio da página (lilás frio) com brilho radial
+   no topo, cabeçalho, painel de filtros em card e a lista de cards. Só
+   layout e espaçamento aqui; cores, raios e sombras vêm dos tokens e os
+   controles usam as classes globais ui-*. */
+
+.pagina {
+  flex: 1;
+  background-color: var(--page-projetos-bg);
+  background-image: radial-gradient(ellipse at top, var(--page-projetos-glow), transparent 60%);
+  background-repeat: no-repeat;
+  background-size: 100% 640px;
+}
+
+.container {
   max-width: var(--max-width);
   margin: 0 auto;
-  padding: var(--space-2xl) var(--space-lg);
+  padding: var(--space-2xl) var(--space-lg) var(--space-3xl);
 }
 
-.header { text-align: center; margin-bottom: var(--space-2xl); animation: fadeIn 0.4s ease; }
-.title { font-size: var(--font-size-3xl); font-weight: 700; color: var(--text-primary); margin-bottom: var(--space-xs); }
-.subtitle { color: var(--text-secondary); font-size: var(--font-size-lg); }
+/* ── Painel de filtros ── */
 
-/* ── Filters ── */
-
-.filters {
-  margin-bottom: var(--space-2xl);
+.filtros {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-xl);
 }
 
-.searchGroup {
+.linhaBusca {
   display: flex;
   gap: var(--space-sm);
-  margin-bottom: var(--space-md);
 }
 
-.searchInput {
+.campoBusca {
+  position: relative;
   flex: 1;
-  padding: 0.875rem var(--space-lg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  font-size: var(--font-size-base);
-  font-family: var(--font-family);
-  color: var(--text-primary);
-  outline: none;
-  transition: all var(--transition-fast);
+  min-width: 0;
 }
-.searchInput::placeholder { color: var(--text-muted); }
-.searchInput:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-100); }
 
-.searchButton {
-  padding: 0.875rem var(--space-xl);
-  background: var(--primary);
-  color: white;
-  font-weight: 600;
-  border: none;
-  border-radius: var(--radius-xl);
+.iconeBusca {
+  position: absolute;
+  left: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+/* `.campoBusca .inputBusca` vence o `.ui-field` global sem depender da ordem dos CSS. */
+.campoBusca .inputBusca {
+  padding-left: 2.6rem;
+  padding-right: 2.9rem;
+}
+
+.limparBusca {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  bottom: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-muted);
   cursor: pointer;
-  transition: all var(--transition-fast);
-  white-space: nowrap;
-}
-.searchButton:hover { background: var(--primary-dark); transform: translateY(-1px); }
-
-.filterRow {
-  display: flex;
-  gap: var(--space-md);
-  align-items: center;
-  flex-wrap: wrap;
+  transition: background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.filterInput {
-  padding: 0.625rem var(--space-md);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  font-size: var(--font-size-sm);
-  font-family: var(--font-family);
+.limparBusca:hover {
+  background: var(--surface-2);
   color: var(--text-primary);
+}
+
+.limparBusca:focus-visible {
   outline: none;
-  max-width: 220px;
-  transition: border-color var(--transition-fast);
-}
-.filterInput:focus { border-color: var(--primary); }
-
-/* Seleção múltipla (campi e unidades) alinhada aos demais filtros. */
-.filterMulti {
-  width: 240px;
-  max-width: 100%;
+  box-shadow: var(--ring);
 }
 
-.checkboxLabel {
+/* Controles de mesma altura (2.75rem, pelo ui-field), em colunas iguais. */
+.grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--space-sm);
+}
+
+.grade > * {
+  min-width: 0;
+}
+
+.linhaExtras {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-xs);
+  justify-content: space-between;
+  gap: var(--space-sm) var(--space-md);
+}
+
+.marcar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 2.75rem;
+  padding: 0 var(--space-xs);
   font-size: var(--font-size-sm);
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   cursor: pointer;
 }
 
-.checkbox {
+.marcar input {
   width: 18px;
   height: 18px;
+  margin: 0;
   accent-color: var(--primary);
   cursor: pointer;
 }
 
-/* ── Projects List ── */
+/* ── Aviso do link direto ── */
 
-.projetosList {
+.avisoLink {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+  padding: var(--space-sm) var(--space-sm) var(--space-sm) var(--space-md);
+  border-radius: var(--radius-control);
+  background: var(--info-bg);
+  color: var(--info-fg);
+  font-size: var(--font-size-sm);
+}
+
+.avisoIcone {
+  flex-shrink: 0;
+}
+
+.avisoTexto {
+  flex: 1;
+  min-width: 0;
+}
+
+.avisoFechar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.avisoFechar:hover {
+  background: var(--surface);
+}
+
+.avisoFechar:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+/* ── Resultados ── */
+
+.resultadosTopo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  min-height: 1.5rem;
+  margin-bottom: var(--space-md);
+  padding: 0 var(--space-xs);
+}
+
+.contagem {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.atualizando {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+@keyframes girar {
+  to { transform: rotate(360deg); }
+}
+
+.girando {
+  animation: girar 0.9s linear infinite;
+}
+
+.lista {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  transition: opacity var(--transition-fast);
+}
+
+.listaAtualizando {
+  opacity: 0.6;
 }
 
 /* O card em si vive em components/projetos/ProjetoCard (compartilhado com a página inicial). */
 
-/* ── Empty State ── */
-
-.emptyState {
-  text-align: center;
-  padding: var(--space-3xl);
-  color: var(--text-muted);
-}
-.emptyIcon { font-size: 3rem; display: block; margin-bottom: var(--space-md); }
-.emptyState h3 { font-size: var(--font-size-xl); color: var(--text-secondary); margin-bottom: var(--space-xs); }
-
-/* ── Skeleton ── */
-
-.loadingGrid { display: flex; flex-direction: column; gap: var(--space-md); }
-.skeletonCard {
-  height: 140px;
-  background: linear-gradient(90deg, var(--bg-card) 25%, var(--border-light) 50%, var(--bg-card) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: var(--radius-xl);
+div.esqueleto {
+  height: 168px;
+  border-radius: var(--radius-card);
 }
 
-@media (max-width: 640px) {
-  .searchGroup { flex-direction: column; }
-}
-
-.updatedAt {
-  margin-top: var(--space-sm);
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
-}
-
-.loadMoreWrapper {
+.maisWrapper {
   display: flex;
   justify-content: center;
   margin-top: var(--space-xl);
 }
 
-.loadMoreButton {
-  padding: 0.75rem var(--space-xl);
-  background: var(--bg-primary);
-  color: var(--primary);
-  font-weight: 600;
-  border: 1px solid var(--primary-200);
-  border-radius: var(--radius-xl);
-  cursor: pointer;
-  transition: all var(--transition-fast);
+/* ── Vazio e erro ── */
+
+.vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-2xl) var(--space-lg);
+  text-align: center;
 }
-.loadMoreButton:hover:not(:disabled) { background: var(--primary-50); transform: translateY(-1px); }
-.loadMoreButton:disabled { opacity: 0.7; cursor: wait; }
+
+.vazioIcone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: var(--space-xs);
+  border-radius: var(--radius-chip);
+  background: var(--surface-3);
+  color: var(--text-secondary);
+}
+
+/* Nave da marca no estado vazio: círculo maior em tom de marca. */
+.vazioMarca {
+  width: 4rem;
+  height: 4rem;
+  background: var(--primary-50);
+  color: var(--text-accent);
+}
+
+.vazioTitulo {
+  font-size: var(--font-size-xl);
+  color: var(--text-primary);
+}
+
+.vazioTexto {
+  max-width: 36rem;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-sm);
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding: var(--space-xl) var(--space-md) var(--space-2xl);
+  }
+
+  .filtros {
+    padding: var(--space-md);
+  }
+
+  .linhaExtras {
+    justify-content: flex-start;
+  }
+
+  .maisWrapper > button {
+    width: 100%;
+  }
+}

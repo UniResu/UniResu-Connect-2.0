@@ -1,102 +1,33 @@
 import styles from "./AvatarMembro.module.css";
 
+/* Partículas e títulos que não entram nas iniciais ("Pedro de Magalhães
+   Leitão" vira "PL"; "Prof. Dr. Carlos Eduardo Raymundo" vira "CR"). */
+const PARTICULAS = new Set(["de", "da", "do", "das", "dos", "e"]);
+const TITULOS = /^(prof|profa|dr|dra|me|ma|msc|phd)\.?$/i;
+
+/** Primeira letra do primeiro e do último nome, sem títulos nem partículas. */
+export function iniciaisDoNome(nome: string): string {
+  const partes = nome
+    .trim()
+    .split(/\s+/)
+    .filter((parte) => parte && !TITULOS.test(parte) && !PARTICULAS.has(parte.toLowerCase()));
+  if (partes.length === 0) return "";
+  const primeira = partes[0].charAt(0);
+  const ultima = partes.length > 1 ? partes[partes.length - 1].charAt(0) : "";
+  return (primeira + ultima).toLocaleUpperCase("pt-BR");
+}
+
 /**
  * Avatar dos membros da equipe (seção "Quem somos").
  *
- * Ninguém tem foto, então o avatar é o placeholder clássico de perfil (cabeça
- * e busto em silhueta) sobre o mesmo círculo em degradê de antes, com um
- * selo pequeno no canto trazendo o símbolo da função da pessoa naquele
- * card. Tudo em SVG inline, sem dependência nova.
+ * Ninguém tem foto, então o avatar mostra as iniciais sobre uma pílula em
+ * degradê de marca. É decorativo para leitores de tela: o nome e o cargo já
+ * estão no texto logo abaixo, e anunciar o avatar repetiria tudo.
  */
-export type FuncaoMembro = "aluno" | "dev" | "cto" | "ceo" | "cmo" | "cso" | "orientador";
-
-function IconeFuncao({ funcao }: { funcao: FuncaoMembro }) {
-  // Traços no estilo Lucide/Feather (24x24, stroke 2), cor herdada do selo.
-  const comum = {
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 2.2,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-    "aria-hidden": true,
-    focusable: false,
-  };
-  switch (funcao) {
-    case "aluno": // capelo de formatura
-      return (
-        <svg {...comum}>
-          <path d="M22 10 12 5 2 10l10 5 10-5z" />
-          <path d="M6 12v5c3 3 9 3 12 0v-5" />
-          <path d="M22 10v6" />
-        </svg>
-      );
-    case "dev": // código
-      return (
-        <svg {...comum}>
-          <polyline points="16 18 22 12 16 6" />
-          <polyline points="8 6 2 12 8 18" />
-        </svg>
-      );
-    case "cto": // processador
-      return (
-        <svg {...comum}>
-          <rect x="5" y="5" width="14" height="14" rx="2" />
-          <rect x="9.5" y="9.5" width="5" height="5" />
-          <path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3" />
-        </svg>
-      );
-    case "ceo": // maleta
-      return (
-        <svg {...comum}>
-          <rect x="2.5" y="7" width="19" height="13" rx="2" />
-          <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
-          <path d="M2.5 13h19" />
-        </svg>
-      );
-    case "cmo": // megafone
-      return (
-        <svg {...comum}>
-          <path d="m3 11 18-5v12L3 14v-3z" />
-          <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
-        </svg>
-      );
-    case "cso": // átomo: ciência como método, não bancada de laboratório
-      return (
-        <svg {...comum} strokeWidth={2}>
-          <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
-          <path d="M20.2 20.2c2.04-2.03.02-7.36-4.5-11.9-4.54-4.52-9.87-6.54-11.9-4.5-2.04 2.03-.02 7.36 4.5 11.9 4.54 4.52 9.87 6.54 11.9 4.5Z" />
-          <path d="M15.7 15.7c4.52-4.54 6.54-9.87 4.5-11.9-2.03-2.04-7.36-.02-11.9 4.5-4.52 4.54-6.54 9.87-4.5 11.9 2.03 2.04 7.36.02 11.9-4.5Z" />
-        </svg>
-      );
-    case "orientador": // livro aberto
-      return (
-        <svg {...comum}>
-          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-        </svg>
-      );
-  }
-}
-
-export default function AvatarMembro({ funcao }: { nome?: string; funcao?: FuncaoMembro }) {
-  // Decorativo para leitores de tela: o nome e a função já estão no texto
-  // logo abaixo (e no título do card), então anunciar o avatar repetiria tudo.
+export default function AvatarMembro({ nome }: { nome: string }) {
   return (
-    <div className={styles.wrap} aria-hidden="true">
-      <div className={styles.circulo}>
-        {/* Silhueta de perfil: cabeça e busto, cortados pelo círculo como nos
-            placeholders de redes sociais. */}
-        <svg className={styles.pessoa} viewBox="0 0 64 64" aria-hidden="true" focusable="false">
-          <circle cx="32" cy="25" r="11.5" />
-          <path d="M7 68c0-15.5 11-25 25-25s25 9.5 25 25z" />
-        </svg>
-      </div>
-      {funcao && (
-        <span className={styles.selo} data-funcao={funcao}>
-          <IconeFuncao funcao={funcao} />
-        </span>
-      )}
-    </div>
+    <span className={styles.avatar} aria-hidden="true">
+      {iniciaisDoNome(nome)}
+    </span>
   );
 }

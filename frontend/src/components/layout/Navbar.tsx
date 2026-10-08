@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeToggle from "@/components/ui/ThemeToggle";
+import { IconeSetaBaixo } from "@/components/ui/Icones";
 import styles from "./Navbar.module.css";
 
 const LINKS = [
@@ -96,7 +97,9 @@ function NavbarConteudo() {
                 >
                   <div className={styles.avatar}>{inicial}</div>
                   <span className={styles.userName}>{primeiroNome}</span>
-                  <span className={styles.dropdownArrow}>▾</span>
+                  <span className={`${styles.dropdownArrow} ${dropdownOpen ? styles.dropdownArrowAberta : ""}`}>
+                    <IconeSetaBaixo tamanho={16} />
+                  </span>
                 </button>
 
                 {dropdownOpen && (

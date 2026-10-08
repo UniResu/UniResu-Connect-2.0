@@ -1,355 +1,254 @@
-.page {
-  max-width: var(--max-width);
-  margin: 0 auto;
-  padding: var(--space-2xl) var(--space-lg);
+/* Gerenciar projetos (docente): fundo da área de projetos, lista em cards com
+   chips de tipo e situação, formulário em card com grade de duas colunas. Só
+   tokens; botões, campos, cards e chips vêm das classes globais ui-*. */
+
+.pagina {
+  flex: 1;
+  background-color: var(--page-projetos-bg);
+  background-image: radial-gradient(ellipse at top, var(--page-projetos-glow), transparent 60%);
+  background-repeat: no-repeat;
+  background-size: 100% 640px;
 }
 
-.pageTitle {
-  font-size: var(--font-size-3xl);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: var(--space-xl);
-}
-
-/* ── Botão Novo Projeto ── */
-
-.btnNovo {
-  display: block;
+.container {
   width: 100%;
-  padding: 1rem;
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
-  color: white;
-  font-weight: 700;
-  font-size: var(--font-size-lg);
-  border: none;
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  transition: all var(--transition-normal);
-  margin-bottom: var(--space-2xl);
-  text-align: center;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--space-2xl) var(--space-lg) var(--space-3xl);
 }
-.btnNovo:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(76, 5, 104, 0.35);
+
+.topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.topoTexto {
+  min-width: 0;
+}
+
+.esqueleto {
+  height: 128px;
+  border-radius: var(--radius-card);
+}
+
+.esqueleto + .esqueleto {
+  margin-top: var(--space-md);
 }
 
 /* ── Formulário ── */
 
-.formCard {
-  background: var(--surface);
-  border: 1px solid var(--surface-border);
-  border-radius: var(--radius-xl);
-  padding: var(--space-2xl);
-  margin-bottom: var(--space-2xl);
-  box-shadow: var(--surface-highlight), var(--surface-shadow);
-  animation: slideDown 0.3s ease;
+.formulario {
+  margin-bottom: var(--space-xl);
+  overflow: hidden;
 }
 
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to   { opacity: 1; transform: translateY(0); }
+.formTopo {
+  padding: var(--space-xl) var(--space-xl) 0;
 }
 
-.formTitle {
+.formTitulo {
   font-size: var(--font-size-xl);
   font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: var(--space-xl);
 }
 
-.formGrid {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-}
-
-.formGroup {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.formLabel {
+.formDescricao {
+  margin-top: var(--space-xs);
   font-size: var(--font-size-sm);
-  font-weight: 600;
   color: var(--text-secondary);
 }
 
-.formInput,
-.formSelect,
-.formTextarea {
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-base);
-  font-family: var(--font-family);
-  color: var(--text-primary);
-  outline: none;
-  transition: border-color var(--transition-fast);
-  width: 100%;
-}
-.formInput:focus,
-.formSelect:focus,
-.formTextarea:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-100);
-}
-
-.formTextarea {
-  min-height: 100px;
-  resize: vertical;
-}
-
-.formRow {
+.grade {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-md);
+  gap: var(--space-md) var(--space-lg);
+  padding: var(--space-xl);
 }
 
-.formActions {
+.campo {
+  min-width: 0;
+}
+
+.inteiro {
+  grid-column: 1 / -1;
+}
+
+.rodape {
   display: flex;
-  gap: var(--space-md);
-  margin-top: var(--space-md);
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-lg) var(--space-xl);
+  border-top: 1px solid var(--border-light);
+  background: var(--surface-2);
 }
 
-.btnSalvar {
-  padding: 0.75rem 2rem;
-  background: var(--primary);
-  color: white;
-  font-weight: 600;
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-.btnSalvar:hover {
-  background: var(--primary-dark);
-}
-.btnSalvar:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
+/* ── Lista ── */
 
-.btnCancelar {
-  padding: 0.75rem 2rem;
-  background: none;
-  color: var(--text-secondary);
-  font-weight: 500;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-.btnCancelar:hover {
-  border-color: var(--text-primary);
-  color: var(--text-primary);
-}
-
-/* ── Lista de Projetos ── */
-
-.projetosList {
+.lista {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.projetoCard {
-  background: var(--surface);
-  border: 1px solid var(--surface-border);
-  border-radius: var(--radius-xl);
-  padding: var(--space-xl);
-  box-shadow: var(--surface-highlight), var(--surface-shadow);
-  transition: all var(--transition-normal);
-}
-.projetoCard:hover {
-  border-color: var(--primary-200);
-  box-shadow: var(--surface-highlight), var(--shadow-lg);
-}
-
-.projetoHeader {
+.projeto {
   display: flex;
-  justify-content: space-between;
   align-items: flex-start;
-  gap: var(--space-md);
+  gap: var(--space-lg);
+  padding: var(--space-lg) var(--space-xl);
 }
 
-.projetoInfo {
+.projetoCorpo {
   flex: 1;
+  min-width: 0;
+}
+
+.projetoChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-sm);
+  margin-bottom: var(--space-sm);
 }
 
 .projetoTitulo {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--text-primary);
   margin-bottom: var(--space-xs);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
-.projetoDesc {
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-  line-height: 1.5;
+.projetoResumo {
   display: -webkit-box;
   -webkit-line-clamp: 2;
-  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  color: var(--text-secondary);
 }
 
 .projetoMeta {
   display: flex;
   flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-md);
+  margin-top: var(--space-sm);
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.projetoMeta span {
+  overflow-wrap: anywhere;
+}
+
+.projetoAcoes {
+  display: flex;
+  flex-shrink: 0;
   gap: var(--space-sm);
+}
+
+/* ── Estado vazio e acesso restrito ── */
+
+.vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-2xl) var(--space-lg);
+  text-align: center;
+}
+
+.vazioIcone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: var(--space-xs);
+  border-radius: var(--radius-chip);
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+
+.vazioTitulo {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+}
+
+.vazioTexto {
+  max-width: 44ch;
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.vazioAcao {
   margin-top: var(--space-sm);
 }
 
-.metaTag {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  padding: var(--space-xs) var(--space-md);
-  background: var(--bg-card);
-  border-radius: var(--radius-full);
-  font-size: var(--font-size-xs);
-  font-weight: 500;
+/* ── Confirmação de exclusão (dentro do Modal compartilhado) ── */
+
+.modalTexto {
   color: var(--text-secondary);
-}
-.metaTipo {
-  color: #e15cff;
-  font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
-/* ── Botões de Ação ── */
-
-.projetoActions {
+.modalAcoes {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: var(--space-sm);
-  flex-shrink: 0;
-  align-items: flex-start;
+  margin-top: var(--space-lg);
 }
 
-.btnEditar {
-  padding: var(--space-xs) var(--space-md);
-  background: var(--primary);
-  color: white;
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-.btnEditar:hover {
-  background: var(--primary-dark);
-}
-
-.btnExcluir {
-  padding: var(--space-xs) var(--space-md);
-  background: var(--error, #ef4444);
-  color: white;
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-.btnExcluir:hover {
-  filter: brightness(0.9);
-}
-
-/* ── Empty State ── */
-
-.emptyState {
-  text-align: center;
-  padding: var(--space-3xl);
-  color: var(--text-muted);
-}
-.emptyIcon {
-  font-size: 3rem;
-  display: block;
-  margin-bottom: var(--space-md);
-}
-.emptyState h3 {
-  font-size: var(--font-size-xl);
-  color: var(--text-secondary);
-  margin-bottom: var(--space-xs);
-}
-
-/* ── Aviso de Acesso Negado ── */
-
-.accessDenied {
-  text-align: center;
-  padding: var(--space-3xl);
-}
-.accessDenied h2 {
-  font-size: var(--font-size-2xl);
-  color: var(--text-primary);
-  margin-bottom: var(--space-md);
-}
-.accessDenied p {
-  color: var(--text-secondary);
-}
-
-/* ── Confirmação de Exclusão ── */
-
-.confirmOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 200;
-}
-
-.confirmModal {
-  background: var(--surface);
-  backdrop-filter: var(--surface-blur);
-  -webkit-backdrop-filter: var(--surface-blur);
-  border: 1px solid var(--surface-border);
-  border-radius: var(--radius-xl);
-  padding: var(--space-2xl);
-  max-width: 400px;
-  width: 90%;
-  text-align: center;
-  box-shadow: var(--surface-highlight), var(--shadow-xl);
-}
-
-.confirmModal h3 {
-  margin-bottom: var(--space-md);
-  font-size: var(--font-size-xl);
-}
-
-.confirmModal p {
-  margin-bottom: var(--space-xl);
-  color: var(--text-secondary);
-}
-
-.confirmActions {
-  display: flex;
-  gap: var(--space-md);
-  justify-content: center;
-}
-
-/* ── Loading ── */
-
-.loadingState {
-  text-align: center;
-  padding: var(--space-3xl);
-  color: var(--text-muted);
-  font-size: var(--font-size-lg);
-}
-
-/* ── Responsive ── */
+/* ── Celular ── */
 
 @media (max-width: 640px) {
-  .formRow {
+  .container {
+    padding: var(--space-xl) var(--space-md) var(--space-2xl);
+  }
+
+  .topo > a,
+  .topo > button {
+    width: 100%;
+  }
+
+  .formTopo {
+    padding: var(--space-lg) var(--space-lg) 0;
+  }
+
+  .grade {
     grid-template-columns: 1fr;
+    padding: var(--space-lg);
   }
-  .projetoHeader {
+
+  .rodape {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    padding: var(--space-md) var(--space-lg);
+  }
+
+  .projeto {
     flex-direction: column;
+    gap: var(--space-md);
+    padding: var(--space-lg);
   }
-  .projetoActions {
-    align-self: flex-end;
+
+  .projetoAcoes {
+    width: 100%;
+  }
+
+  .projetoAcoes > * {
+    flex: 1;
+  }
+
+  .modalAcoes > * {
+    flex: 1;
   }
 }

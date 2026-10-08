@@ -4,7 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { SCRIPT_TEMA } from "@/lib/tema";
+import { COR_TEMA, SCRIPT_TEMA } from "@/lib/tema";
 
 /**
  * Fonte do site (Plus Jakarta Sans, licença SIL OFL), servida pelo próprio
@@ -25,11 +25,10 @@ export const metadata: Metadata = {
     "Plataforma que conecta alunos, professores e pesquisadores em uma rede de oportunidades, conhecimento e colaboração universitária.",
 };
 
+// Uma única meta theme-color: o script do tema troca o valor junto com o
+// atributo data-theme, para a barra do navegador acompanhar a escolha salva.
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f5fa" },
-    { media: "(prefers-color-scheme: dark)", color: "#0f0b18" },
-  ],
+  themeColor: COR_TEMA.light,
 };
 
 export default function RootLayout({

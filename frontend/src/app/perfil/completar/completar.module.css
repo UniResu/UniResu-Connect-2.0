@@ -1,0 +1,136 @@
+/* Completar perfil (depois do login via ORCID): um card com o formulário em
+   grupos, aceites e as ações no rodapé. Campos e botões vêm das classes
+   globais ui-*; aqui fica só o layout. */
+
+.pagina {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-lg) var(--space-3xl);
+}
+
+.esqueleto {
+  height: 420px;
+  border-radius: var(--radius-card);
+}
+
+.cartao {
+  overflow: hidden;
+}
+
+.cabecalho {
+  padding: var(--space-xl) var(--space-xl) 0;
+}
+
+.titulo {
+  margin-bottom: var(--space-xs);
+  font-size: var(--font-size-2xl);
+  font-weight: 800;
+}
+
+.intro {
+  font-size: var(--font-size-base);
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.corpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  padding: var(--space-xl);
+}
+
+.alerta {
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-control);
+  background: var(--error-bg);
+  color: var(--error-fg);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.grupo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
+.grupoTitulo {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--text-secondary);
+}
+
+.campo {
+  min-width: 0;
+}
+
+.par {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+
+.aceites {
+  display: flex;
+  flex-direction: column;
+}
+
+.aceite {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  min-height: 2.75rem;
+  padding: var(--space-sm) 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.aceite input {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-lg) var(--space-xl);
+  border-top: 1px solid var(--border-light);
+  background: var(--surface-2);
+}
+
+@media (max-width: 640px) {
+  .pagina {
+    padding: var(--space-lg) var(--space-md) var(--space-2xl);
+  }
+
+  .cabecalho {
+    padding: var(--space-lg) var(--space-lg) 0;
+  }
+
+  .corpo {
+    padding: var(--space-lg);
+  }
+
+  .par {
+    grid-template-columns: 1fr;
+  }
+
+  .rodape {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    padding: var(--space-md) var(--space-lg);
+  }
+}

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * ForumPage, v4 (threads, estilo "Stack Overflow ultraminimalista")
+ * ForumPage, v5 (threads minimalistas sobre o sistema de design)
  *
  * O fórum é uma lista de perguntas; o objetivo é expor conteúdo, não
  * interatividade. Regras de negócio:
@@ -34,8 +34,17 @@ import {
   type TipoVoto,
   type Topico,
 } from "./_componentes/forum";
-import { AcoesAutor, CorpoPergunta, FormPergunta, MetaPergunta, Votos } from "./_componentes/Pergunta";
+import {
+  AcoesAutor,
+  ChipsPergunta,
+  CorpoPergunta,
+  FormPergunta,
+  Icone,
+  MetaPergunta,
+  Votos,
+} from "./_componentes/Pergunta";
 import { Respostas } from "./_componentes/Respostas";
+import { IconeAlien } from "@/components/ui/Icones";
 import styles from "./forum.module.css";
 
 type Ordem = "recentes" | "votadas";
@@ -103,17 +112,22 @@ function LinhaPergunta({
     <li className={`${styles.linha} ${aberta ? styles.linhaAberta : ""}`}>
       {/* O <button> dentro do <h2> é o controle acessível; o clique no cabeçalho inteiro também abre. */}
       <div className={styles.linhaCabecalho} onClick={onAbrir}>
-        <h2 className={styles.linhaTitulo}>
-          <button type="button" className={styles.linhaTituloBtn} aria-expanded={aberta}>
-            {topico.titulo}
-          </button>
-        </h2>
-        {!aberta && conteudo && <p className={styles.resumo}>{resumo(conteudo)}</p>}
-        <MetaPergunta topico={topico} />
+        <div className={styles.linhaTexto}>
+          <h2 className={styles.linhaTitulo}>
+            <button type="button" className={styles.linhaTituloBtn} aria-expanded={aberta}>
+              {topico.titulo}
+            </button>
+          </h2>
+          {!aberta && conteudo && <p className={styles.resumo}>{resumo(conteudo)}</p>}
+          <MetaPergunta topico={topico} />
+        </div>
+        <div className={styles.linhaChips}>
+          <ChipsPergunta topico={topico} />
+        </div>
       </div>
 
       {aberta && (
-        <div className={styles.thread}>
+        <div className={`${styles.thread} animate-fade-in`}>
           {editando ? (
             <FormPergunta
               titulo={topico.titulo}
@@ -128,9 +142,9 @@ function LinhaPergunta({
               <div className={styles.rodape}>
                 <Votos topico={topico} user={user} votando={votando} onVotar={(tipo) => onVotar(topico.id, tipo)} />
 
-                <div className={styles.acoesAutor}>
+                <div className={styles.acoes}>
                   {/* Endereço próprio da pergunta, para compartilhar ou ler com todas as respostas */}
-                  <Link href={`/forum/${topico.id}`} className={styles.acaoTexto}>
+                  <Link href={`/forum/${topico.id}`} className="ui-btn ui-btn-ghost ui-btn-sm">
                     Página da pergunta
                   </Link>
                   {/* [R1] Só o autor vê Editar/Excluir */}
@@ -363,131 +377,162 @@ export default function ForumPage() {
 
   // ── Render ──
   return (
-    <div className={styles.page}>
-      <header className={styles.cabecalho}>
-        <div>
-          <h1 className={styles.titulo}>Fórum Acadêmico</h1>
-          <p className={styles.subtitulo}>Perguntas sobre pesquisa, extensão e vida universitária.</p>
+    <div className={styles.pagina}>
+      <div className={styles.container}>
+        <header className={`ui-page-header ${styles.cabecalho}`}>
+          <div className={styles.tituloLinha}>
+            <span className={styles.tituloMarca} aria-hidden="true">
+              <IconeAlien tamanho={26} />
+            </span>
+            <div>
+              <h1 className="ui-page-title">Fórum</h1>
+              <p className="ui-page-subtitle">Perguntas e respostas sobre pesquisa, extensão e vida universitária.</p>
+            </div>
+          </div>
+
+          {/* [R4] Visitantes veem a lista e a dica para entrar */}
+          {isAuthenticated ? (
+            <button
+              type="button"
+              className={mostrarForm ? "ui-btn ui-btn-secondary" : "ui-btn ui-btn-primary"}
+              onClick={() => setMostrarForm((v) => !v)}
+              aria-expanded={mostrarForm}
+            >
+              {mostrarForm ? (
+                "Cancelar"
+              ) : (
+                <>
+                  <Icone nome="mais" tamanho={18} />
+                  Fazer uma pergunta
+                </>
+              )}
+            </button>
+          ) : (
+            <p className={styles.dicaLogin}>
+              <Link href="/login">Entre</Link> para fazer uma pergunta.
+            </p>
+          )}
+        </header>
+
+        {isAuthenticated && mostrarForm && (
+          <form onSubmit={publicar} className={`ui-card ${styles.formCard} ${styles.formNova}`}>
+            <div>
+              <label htmlFor="forum-novo-titulo" className="ui-label">
+                Título
+              </label>
+              <input
+                id="forum-novo-titulo"
+                type="text"
+                value={novoTitulo}
+                onChange={(e) => setNovoTitulo(e.target.value)}
+                placeholder="Resuma a dúvida em uma frase"
+                className="ui-field"
+                maxLength={200}
+                required
+                autoFocus
+              />
+            </div>
+            <div>
+              <label htmlFor="forum-novo-conteudo" className="ui-label">
+                Conteúdo
+              </label>
+              <textarea
+                id="forum-novo-conteudo"
+                value={novoConteudo}
+                onChange={(e) => setNovoConteudo(e.target.value)}
+                placeholder="Dê contexto: curso, o que você já tentou e o que precisa saber. Separe parágrafos com uma linha em branco."
+                className="ui-field"
+                rows={6}
+                required
+              />
+            </div>
+            <div className={styles.formAcoes}>
+              <span className={styles.dicaForm}>Publicada como @{user?.username || "você"}.</span>
+              <button type="submit" className="ui-btn ui-btn-primary" disabled={publicando}>
+                {publicando ? "Publicando..." : "Publicar pergunta"}
+              </button>
+            </div>
+          </form>
+        )}
+
+        <div className={styles.barra}>
+          <div className={styles.buscaWrap}>
+            <label htmlFor="forum-busca" className="sr-only">
+              Buscar nas perguntas
+            </label>
+            <span className={styles.buscaIcone}>
+              <Icone nome="busca" tamanho={18} />
+            </span>
+            <input
+              id="forum-busca"
+              type="search"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar nas perguntas"
+              className={`ui-field ${styles.busca}`}
+            />
+          </div>
+          <label htmlFor="forum-ordem" className="sr-only">
+            Ordenar por
+          </label>
+          <select
+            id="forum-ordem"
+            className={`ui-field ${styles.ordem}`}
+            value={ordem}
+            onChange={(e) => setOrdem(e.target.value as Ordem)}
+          >
+            <option value="recentes">Mais recentes</option>
+            <option value="votadas">Mais votadas</option>
+          </select>
         </div>
 
-        {/* [R4] Visitantes veem a lista e a dica para entrar */}
-        {isAuthenticated ? (
-          <button type="button" className={styles.btnPrimario} onClick={() => setMostrarForm((v) => !v)}>
-            {mostrarForm ? "Cancelar" : "Fazer uma pergunta"}
-          </button>
-        ) : (
-          <p className={styles.dicaLogin}>
-            <Link href="/login">Entre</Link> para fazer uma pergunta.
+        {erro && (
+          <p className={styles.erro} role="alert">
+            {erro}{" "}
+            {topicos.length === 0 && !carregando && (
+              <button type="button" className="ui-btn ui-btn-secondary ui-btn-sm" onClick={() => carregar()}>
+                Tentar novamente
+              </button>
+            )}
           </p>
         )}
-      </header>
 
-      {isAuthenticated && mostrarForm && (
-        <form onSubmit={publicar} className={styles.formPergunta}>
-          <input
-            type="text"
-            value={novoTitulo}
-            onChange={(e) => setNovoTitulo(e.target.value)}
-            placeholder="Título: resuma a dúvida em uma frase"
-            className={styles.campo}
-            maxLength={200}
-            required
-            autoFocus
-            aria-label="Título da pergunta"
-          />
-          <textarea
-            value={novoConteudo}
-            onChange={(e) => setNovoConteudo(e.target.value)}
-            placeholder="Dê contexto: curso, o que você já tentou e o que precisa saber. Separe parágrafos com uma linha em branco."
-            className={styles.campo}
-            rows={6}
-            required
-            aria-label="Conteúdo da pergunta"
-          />
-          <div className={styles.formAcoes}>
-            <span className={styles.dicaForm}>Publicada como @{user?.username || "você"}.</span>
-            <button type="submit" className={styles.btnPrimario} disabled={publicando}>
-              {publicando ? "Publicando..." : "Publicar pergunta"}
-            </button>
+        {carregando ? (
+          <div aria-busy="true">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className={`skeleton ${styles.esqueleto}`} />
+            ))}
           </div>
-        </form>
-      )}
-
-      <div className={styles.barra}>
-        <input
-          type="search"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar nas perguntas"
-          className={styles.busca}
-          aria-label="Buscar nas perguntas"
-        />
-        <div className={styles.ordem} role="group" aria-label="Ordenar">
-          <button
-            type="button"
-            className={styles.ordemBtn}
-            aria-pressed={ordem === "recentes"}
-            onClick={() => setOrdem("recentes")}
-          >
-            Recentes
-          </button>
-          <button
-            type="button"
-            className={styles.ordemBtn}
-            aria-pressed={ordem === "votadas"}
-            onClick={() => setOrdem("votadas")}
-          >
-            Mais votadas
-          </button>
-        </div>
+        ) : erro && topicos.length === 0 ? null : (
+          <>
+            <p className={styles.contagem}>{totalFiltrado}</p>
+            {visiveis.length === 0 ? (
+              <p className={styles.vazio}>
+                {topicos.length === 0 ? "Nenhuma pergunta ainda." : "Nenhuma pergunta corresponde à busca."}
+              </p>
+            ) : (
+              <ul className={styles.lista}>
+                {visiveis.map((topico) => (
+                  <LinhaPergunta
+                    key={topico.id}
+                    topico={topico}
+                    user={user}
+                    aberta={abertoId === topico.id}
+                    votando={votandoId === topico.id}
+                    falhouRespostas={falhaRespostasId === topico.id}
+                    onAbrir={() => abrir(topico.id)}
+                    onEditar={editar}
+                    onExcluir={excluir}
+                    onVotar={votar}
+                    onMudarRespostas={mudarRespostas}
+                    onRecarregarRespostas={carregarDetalhe}
+                  />
+                ))}
+              </ul>
+            )}
+          </>
+        )}
       </div>
-
-      {erro && (
-        <p className={styles.erro} role="alert">
-          {erro}{" "}
-          {topicos.length === 0 && !carregando && (
-            <button type="button" className={styles.btnSecundario} onClick={() => carregar()}>
-              Tentar novamente
-            </button>
-          )}
-        </p>
-      )}
-
-      {carregando ? (
-        <div aria-busy="true">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className={styles.esqueleto} />
-          ))}
-        </div>
-      ) : erro && topicos.length === 0 ? null : (
-        <>
-          <p className={styles.contagem}>{totalFiltrado}</p>
-          {visiveis.length === 0 ? (
-            <p className={styles.vazio}>
-              {topicos.length === 0 ? "Nenhuma pergunta ainda." : "Nenhuma pergunta corresponde à busca."}
-            </p>
-          ) : (
-            <ul className={styles.lista}>
-              {visiveis.map((topico) => (
-                <LinhaPergunta
-                  key={topico.id}
-                  topico={topico}
-                  user={user}
-                  aberta={abertoId === topico.id}
-                  votando={votandoId === topico.id}
-                  falhouRespostas={falhaRespostasId === topico.id}
-                  onAbrir={() => abrir(topico.id)}
-                  onEditar={editar}
-                  onExcluir={excluir}
-                  onVotar={votar}
-                  onMudarRespostas={mudarRespostas}
-                  onRecarregarRespostas={carregarDetalhe}
-                />
-              ))}
-            </ul>
-          )}
-        </>
-      )}
     </div>
   );
 }

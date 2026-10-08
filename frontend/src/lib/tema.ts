@@ -11,8 +11,11 @@ export type Tema = "light" | "dark";
 
 export const CHAVE_TEMA = "uniresu-tema";
 
+/** Cor da barra do navegador em cada tema (a meta theme-color não lê CSS). */
+export const COR_TEMA: Record<Tema, string> = { light: "#f6f5fa", dark: "#0f0b18" };
+
 /** Código do script inline (sem dependências, roda antes do React). */
-export const SCRIPT_TEMA = `(function(){try{var t=localStorage.getItem(${JSON.stringify(CHAVE_TEMA)});if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.setAttribute("data-theme",t)}catch(e){document.documentElement.setAttribute("data-theme","light")}})();`;
+export const SCRIPT_TEMA = `(function(){var c=${JSON.stringify(COR_TEMA)};function a(t){document.documentElement.setAttribute("data-theme",t);var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",c[t])}try{var t=localStorage.getItem(${JSON.stringify(CHAVE_TEMA)});if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}a(t)}catch(e){a("light")}})();`;
 
 export function temaDoSistema(): Tema {
   if (typeof window === "undefined") return "light";
@@ -36,6 +39,7 @@ export function temaAtual(): Tema {
 
 export function aplicarTema(tema: Tema, salvar = true) {
   document.documentElement.setAttribute("data-theme", tema);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", COR_TEMA[tema]);
   if (salvar) {
     try {
       localStorage.setItem(CHAVE_TEMA, tema);

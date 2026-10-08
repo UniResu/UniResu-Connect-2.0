@@ -3,7 +3,7 @@
 import { useState, FormEvent } from "react";
 import { api } from "@/lib/api";
 import Link from "next/link";
-import styles from "./recuperar.module.css";
+import styles from "../login/conta.module.css";
 
 export default function RecuperarSenhaPage() {
   const [email, setEmail] = useState("");
@@ -27,25 +27,29 @@ export default function RecuperarSenhaPage() {
   }
 
   return (
-    <div className={styles.page}>
-      <div className={styles.card}>
-        <div className={styles.header}>
-          <h1 className={styles.title}>Recuperar Senha</h1>
-          <p className={styles.subtitle}>
+    <div className={styles.pagina}>
+      <div className={`ui-card animate-fade-in ${styles.cartao}`}>
+        <header className={styles.topo}>
+          <h1 className={styles.titulo}>Recuperar senha</h1>
+          <p className={styles.subtitulo}>
             Informe o e-mail da sua conta para receber as instruções de recuperação.
           </p>
-        </div>
+        </header>
 
         {status === "success" ? (
-          <div className={styles.successMessage}>
+          <div className={`${styles.aviso} ${styles.avisoSucesso}`} role="status">
             <p>{message}</p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className={styles.form}>
-            {status === "error" && <div className={styles.errorMessage}>{message}</div>}
+          <form onSubmit={handleSubmit} className={styles.formulario}>
+            {status === "error" && (
+              <div className={`${styles.aviso} ${styles.avisoErro}`} role="alert">
+                <p>{message}</p>
+              </div>
+            )}
 
-            <div className={styles.fieldGroup}>
-              <label htmlFor="email" className={styles.label}>
+            <div className={styles.campo}>
+              <label htmlFor="email" className="ui-label">
                 E-mail
               </label>
               <input
@@ -53,28 +57,29 @@ export default function RecuperarSenhaPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="seu.email@instituicao.br"
+                placeholder="voce@universidade.edu.br"
+                autoComplete="email"
                 required
-                className={styles.input}
+                className="ui-field"
               />
             </div>
 
             <button
               type="submit"
               disabled={status === "loading"}
-              className={styles.submitButton}
+              className={`ui-btn ui-btn-primary ${styles.botaoLargo}`}
             >
-              {status === "loading" ? "Enviando solicitacão..." : "Enviar link de recuperação"}
+              {status === "loading" ? "Enviando solicitação..." : "Enviar link de recuperação"}
             </button>
           </form>
         )}
 
-        <div className={styles.footer}>
+        <p className={styles.rodape}>
           Lembrou sua senha?{" "}
           <Link href="/login" className={styles.link}>
-            Fazer login
+            Entrar
           </Link>
-        </div>
+        </p>
       </div>
     </div>
   );
