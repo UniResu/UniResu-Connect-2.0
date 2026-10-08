@@ -42,6 +42,7 @@ import {
   type Resposta,
 } from "./forum";
 import { AcoesAutor } from "./Pergunta";
+import { IconeNaveTransmite } from "@/components/ui/Icones";
 import styles from "../forum.module.css";
 
 /** Erro mostrado na seção; `acao` acrescenta o link que resolve o problema. */
@@ -286,7 +287,12 @@ export function Respostas({ topicoId, estado, modo, onMudar, falhou, onRecarrega
         )
       ) : (
         <>
-          {total > 0 && <Titulo className={styles.respostasTitulo}>{plural(total, "resposta", "respostas")}</Titulo>}
+          {total > 0 && (
+            <Titulo className={styles.respostasTitulo}>
+              <IconeNaveTransmite tamanho={18} />
+              {plural(total, "resposta", "respostas")}
+            </Titulo>
+          )}
 
           {visiveis.length > 0 && (
             <ol className={styles.listaRespostas}>

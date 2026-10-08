@@ -12,6 +12,7 @@
 import { useId, useState } from "react";
 import Link from "next/link";
 import type { User } from "@/types/user";
+import { IconeNaveDesce, IconeNaveSobe, IconeNaveTransmite } from "@/components/ui/Icones";
 import {
   conteudoDe,
   dataCompleta,
@@ -26,25 +27,13 @@ import styles from "../forum.module.css";
 
 // ── Ícones (SVG inline no estilo Lucide: traço 2, sem emoji) ─────────────
 
-type NomeIcone = "busca" | "cima" | "baixo" | "esquerda" | "mais";
+type NomeIcone = "busca" | "esquerda" | "mais";
 
 const CAMINHOS: Record<NomeIcone, React.ReactNode> = {
   busca: (
     <>
       <circle cx="11" cy="11" r="8" />
       <path d="m21 21-4.3-4.3" />
-    </>
-  ),
-  cima: (
-    <>
-      <path d="M12 19V5" />
-      <path d="m5 12 7-7 7 7" />
-    </>
-  ),
-  baixo: (
-    <>
-      <path d="M12 5v14" />
-      <path d="m19 12-7 7-7-7" />
     </>
   ),
   esquerda: (
@@ -102,8 +91,12 @@ export function ChipsPergunta({ topico }: { topico: Topico }) {
   const respostas = topico.total_respostas ?? 0;
   return (
     <>
-      <span className="ui-chip">{plural(votosDe(topico), "voto", "votos")}</span>
-      <span className={respostas > 0 ? "ui-chip ui-chip-primary" : "ui-chip"}>
+      <span className="ui-chip" title="Votos">
+        <IconeNaveSobe />
+        {plural(votosDe(topico), "voto", "votos")}
+      </span>
+      <span className={respostas > 0 ? "ui-chip ui-chip-primary" : "ui-chip"} title="Respostas">
+        <IconeNaveTransmite />
         {plural(respostas, "resposta", "respostas")}
       </span>
     </>
@@ -211,7 +204,8 @@ export function FormPergunta({ titulo, conteudo, onCancelar, onSalvar }: FormPer
   );
 }
 
-// ── Votos: setas para quem está logado, total e convite para visitantes ──
+// ── Votos: a nave sobe (a favor) ou desce com o feixe (contra), total e
+// convite para visitantes ──
 
 interface VotosProps {
   topico: Topico;
@@ -249,7 +243,7 @@ export function Votos({ topico, user, votando, onVotar }: VotosProps) {
         aria-label="Votar a favor"
         title="Votar a favor"
       >
-        <Icone nome="cima" tamanho={18} />
+        <IconeNaveSobe tamanho={22} />
       </button>
       <span className={styles.votosTotal} aria-live="polite">
         {total}
@@ -263,7 +257,7 @@ export function Votos({ topico, user, votando, onVotar }: VotosProps) {
         aria-label="Votar contra"
         title="Votar contra"
       >
-        <Icone nome="baixo" tamanho={18} />
+        <IconeNaveDesce tamanho={22} />
       </button>
       <span className={styles.votosRotulo}>{Math.abs(total) === 1 ? "voto" : "votos"}</span>
     </div>

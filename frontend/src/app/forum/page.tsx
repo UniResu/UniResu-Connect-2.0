@@ -44,7 +44,7 @@ import {
   Votos,
 } from "./_componentes/Pergunta";
 import { Respostas } from "./_componentes/Respostas";
-import { IconeAlien } from "@/components/ui/Icones";
+import { IconeAlien, IconeUfo } from "@/components/ui/Icones";
 import styles from "./forum.module.css";
 
 type Ordem = "recentes" | "votadas";
@@ -508,7 +508,10 @@ export default function ForumPage() {
             <p className={styles.contagem}>{totalFiltrado}</p>
             {visiveis.length === 0 ? (
               <p className={styles.vazio}>
-                {topicos.length === 0 ? "Nenhuma pergunta ainda." : "Nenhuma pergunta corresponde à busca."}
+                <IconeUfo tamanho={32} />
+                {topicos.length === 0
+                  ? "Nenhuma pergunta ainda. Que tal abrir a primeira transmissão?"
+                  : "Nenhuma pergunta corresponde à busca."}
               </p>
             ) : (
               <ul className={styles.lista}>

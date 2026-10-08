@@ -258,6 +258,44 @@ export function IconeUfo(p: Props) {
   );
 }
 
+/* Variações do disco voador para o fórum: a nave subindo (voto a favor), a
+   nave com o feixe descendo (voto contra) e a nave transmitindo (respostas).
+   O domo se apoia exatamente na borda de cima do disco, para o desenho não
+   embolar em 14 a 22px. */
+
+export function IconeNaveSobe(p: Props) {
+  return (
+    <svg {...base(p)}>
+      <path d="m8.5 6.5 3.5-3.5 3.5 3.5" />
+      <path d="M8 14.31a4 4 0 0 1 8 0" />
+      <ellipse cx="12" cy="17" rx="9" ry="3" />
+      <path d="M8 17.2h.01M12 17.6h.01M16 17.2h.01" />
+    </svg>
+  );
+}
+
+export function IconeNaveDesce(p: Props) {
+  return (
+    <svg {...base(p)}>
+      <path d="M8 4.81a4 4 0 0 1 8 0" />
+      <ellipse cx="12" cy="7.5" rx="9" ry="3" />
+      <path d="M8.5 11 6.5 17M15.5 11l2 6" />
+      <path d="m9.5 16.5 2.5 2.5 2.5-2.5" />
+    </svg>
+  );
+}
+
+export function IconeNaveTransmite(p: Props) {
+  return (
+    <svg {...base(p)}>
+      <path d="M6.5 14.24a3 3 0 0 1 6 0" />
+      <ellipse cx="9.5" cy="16.5" rx="7" ry="2.5" />
+      <path d="M15.5 9.5a3 3 0 0 1 3 3" />
+      <path d="M15.5 5.5a7 7 0 0 1 7 7" />
+    </svg>
+  );
+}
+
 export function IconePlaneta(p: Props) {
   return (
     <svg {...base(p)}>
