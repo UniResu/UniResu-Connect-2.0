@@ -27,6 +27,10 @@ on:
         description: "Só uma linha por URL (status, tamanho e marcadores encontrados no corpo); serve para testar dezenas de portais de uma vez"
         type: boolean
         default: false
+      procurar:
+        description: "Modo resumo: termos extras (separados por |) a procurar no corpo, ex.: um trecho do título"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -43,6 +47,7 @@ jobs:
           CAUDA: ${{ inputs.cauda }}
           CSV_COLUNAS: ${{ inputs.csv_colunas }}
           RESUMO: ${{ inputs.resumo }}
+          PROCURAR: ${{ inputs.procurar }}
         run: |
           for url in $URLS; do
             if [ "$RESUMO" = "true" ]; then
@@ -58,6 +63,14 @@ jobs:
                        "Situação" "login" "senha" "javax.faces" "SIGAA" "Erro" "indisponível"; do
                 grep -a -q -i -- "$m" /tmp/b.bin 2>/dev/null && achados="$achados [$m]"
               done
+              if [ -n "$PROCURAR" ]; then
+                IFS='|' read -ra extras <<< "$PROCURAR"
+                for m in "${extras[@]}"; do
+                  [ -n "$m" ] && grep -a -q -i -- "$m" /tmp/b.bin 2>/dev/null && achados="$achados [$m]"
+                done
+              fi
+              titulo=$(grep -a -o -i '<title>[^<]*' /tmp/b.bin 2>/dev/null | head -1 | cut -c8-90)
+              achados="$achados${titulo:+ | title: $titulo}"
               final=$(grep -a -i '^location:' /tmp/h.txt 2>/dev/null | tail -1 | tr -d '\r' | cut -c11- | cut -c1-120)
               echo "RESUMO | $url | HTTP ${status:--} $erro | ${tamanho} bytes |$achados${final:+ | redirecionou para: $final}"
               continue
