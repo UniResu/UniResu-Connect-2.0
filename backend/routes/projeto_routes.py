@@ -6,6 +6,7 @@ from fastapi import APIRouter, Query, Depends, HTTPException, status
 from typing import List, Literal, Optional
 from controllers.projeto_controller import (
     buscar_projetos_controller,
+    obter_projeto_publico_controller,
     listar_unidades_controller,
     listar_instituicoes_controller,
     listar_filtros_controller,
@@ -129,6 +130,16 @@ async def meus_projetos(usuario: dict = Depends(get_usuario_com_perfil_completo)
     """Lista os projetos do professor/pesquisador logado."""
     verificar_papel(usuario)
     return await listar_meus_projetos(usuario)
+
+
+@router.get("/projetos/{projeto_id}", response_model=ProjetoPublicoResponse)
+async def obter_projeto_route(projeto_id: str):
+    """Um projeto visível pelo id, no formato da busca pública (sem contatos).
+    Usado pelos links diretos (ex.: cards da página inicial)."""
+    projeto = await obter_projeto_publico_controller(projeto_id)
+    if not projeto:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Projeto não encontrado.")
+    return projeto
 
 
 @router.post("/projetos", response_model=ProjetoResponse, status_code=status.HTTP_201_CREATED)

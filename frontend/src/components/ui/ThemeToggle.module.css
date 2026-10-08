@@ -1,0 +1,47 @@
+.botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--header-hover);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--header-fg);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.botao:hover {
+  background: var(--header-hover);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.botao:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.icone {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+}
+
+.icone svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Versão com texto (menu do celular): ocupa a linha inteira como os outros itens. */
+.rotulado {
+  width: 100%;
+  height: auto;
+  justify-content: flex-start;
+  padding: 0.8rem var(--space-sm);
+  border: none;
+  font-weight: 500;
+  font-size: var(--font-size-base);
+}

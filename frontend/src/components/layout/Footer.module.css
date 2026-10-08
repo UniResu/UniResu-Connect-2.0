@@ -1,0 +1,60 @@
+.footer {
+  margin-top: auto;
+  padding: var(--space-2xl) var(--space-lg) var(--space-xl);
+  background: var(--footer-bg);
+  color: var(--text-on-dark-muted);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.conteudo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-xl);
+  flex-wrap: wrap;
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+
+.marca {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.nome {
+  color: var(--text-on-dark);
+  font-weight: 800;
+  letter-spacing: var(--heading-tracking);
+  font-size: var(--font-size-lg);
+}
+
+.lema {
+  font-size: var(--font-size-sm);
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm) var(--space-lg);
+}
+
+.links a {
+  color: var(--text-on-dark-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  padding: 0.25rem 0;
+}
+
+.links a:hover {
+  color: var(--text-on-dark);
+}
+
+.copy {
+  max-width: var(--max-width);
+  margin: var(--space-xl) auto 0;
+  padding-top: var(--space-md);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: var(--font-size-xs);
+  color: var(--text-on-dark-muted);
+}

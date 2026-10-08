@@ -54,15 +54,16 @@ PERGUNTAS: List[Dict[str, Any]] = [
         "titulo": "Como encontro um projeto de pesquisa para participar (iniciação científica)?",
         "conteudo": (
             "Comece pela aba Projetos Acadêmicos aqui na plataforma: ela reúne os projetos de pesquisa e "
-            "extensão em andamento coletados do SIGAA/UNIR e dos portais da UNIRIO, além dos cadastrados pelos "
-            "próprios professores. Filtre por módulo (pesquisa), instituição e unidade, leia o resumo e veja quem "
-            "coordena. Se o projeto tiver contato, dá para se candidatar ali mesmo com uma carta de intenção.\n\n"
+            "extensão em andamento coletados dos portais públicos das universidades, além dos cadastrados pelos "
+            "próprios professores. Filtre por módulo (pesquisa), instituição, campus e unidade, leia o resumo e "
+            "veja quem coordena. Se o projeto tiver contato, dá para se candidatar ali mesmo com uma carta de "
+            "intenção.\n\n"
             "Fora da plataforma, os caminhos clássicos são: perguntar aos professores das disciplinas de que você "
             "mais gosta se eles orientam iniciação científica, olhar o Currículo Lattes deles (a seção de projetos "
             "mostra o que está ativo), consultar o Diretório dos Grupos de Pesquisa do CNPq pela sua instituição e "
             "acompanhar os editais de PIBIC/PIBITI da pró-reitoria de pesquisa, que normalmente saem uma vez por ano.\n\n"
-            "Não precisa esperar bolsa para começar. Muitos projetos aceitam estudantes voluntários (na maioria das "
-            "universidades isso se chama PIVIC ou IC voluntária), e a experiência conta no currículo do mesmo jeito: "
+            "Não precisa esperar bolsa para começar. Muitos projetos aceitam estudantes voluntários (a chamada "
+            "iniciação científica voluntária), e a experiência conta no currículo do mesmo jeito: "
             "você recebe orientação, participa das reuniões do grupo e pode apresentar resultados em eventos.\n\n"
             "Dica prática: procure projetos ligados a disciplinas em que você foi bem e que tenham a ver com o que "
             "quer fazer depois da graduação. Um professor nota rapidamente quem leu o resumo do projeto antes de "
@@ -157,9 +158,8 @@ PERGUNTAS: List[Dict[str, Any]] = [
         "conteudo": (
             "A maior parte das bolsas de iniciação científica vem de programas do CNPq, que distribui cotas anuais "
             "às universidades: PIBIC (pesquisa), PIBITI (desenvolvimento tecnológico e inovação) e PIBIC-Af (ações "
-            "afirmativas). As fundações estaduais de amparo à pesquisa, as FAPs (como a FAPERO em Rondônia e a FAPERJ "
-            "no Rio de Janeiro), também financiam cotas, e as próprias instituições costumam manter bolsas com "
-            "recursos próprios.\n\n"
+            "afirmativas). As fundações estaduais de amparo à pesquisa, as FAPs (cada estado tem a sua), também "
+            "financiam cotas, e as próprias instituições costumam manter bolsas com recursos próprios.\n\n"
             "Quem distribui essas cotas é a pró-reitoria de pesquisa da sua universidade (PROPESQ, PRPPG ou nome "
             "equivalente), por meio de um edital interno, normalmente anual e publicado no primeiro semestre. Quem "
             "se inscreve é o(a) professor(a) orientador(a), com um plano de trabalho para o estudante; por isso o "
@@ -353,7 +353,7 @@ PERGUNTAS: List[Dict[str, Any]] = [
         "dias_atras": 2, "hora": 13,
         "titulo": "Não consegui bolsa. Vale a pena fazer iniciação científica como voluntário(a)?",
         "conteudo": (
-            "Vale, e muito. A iniciação científica voluntária (PIVIC, ICV ou nome equivalente na sua instituição) "
+            "Vale, e muito. A iniciação científica voluntária (cada instituição dá um nome ao programa) "
             "segue o mesmo plano de trabalho, tem o mesmo orientador, exige os mesmos relatórios e dá o mesmo "
             "certificado da modalidade com bolsa. Para quem avalia um currículo depois, um resumo apresentado em "
             "evento ou um artigo publicado valem igual, com ou sem bolsa.\n\n"
@@ -368,6 +368,34 @@ PERGUNTAS: List[Dict[str, Any]] = [
         ),
     },
 ]
+
+
+# Primeira postagem do fórum, assinada por um dos fundadores com a conta
+# pessoal dele (identificada pelo e-mail). Entra com data anterior a tudo o
+# que já existe no fórum, para abrir a linha do tempo; se a conta não existir
+# no banco, a postagem não é criada (nunca sai em nome de outra pessoa).
+POST_FUNDADOR: Dict[str, Any] = {
+    "seed_chave": "boas-vindas-fundador",
+    "autor_email": "matheusmggabriel@gmail.com",
+    "titulo": "Bem-vindas e bem-vindos ao fórum do UniResu Connect",
+    "conteudo": (
+        "Este fórum nasceu de uma dificuldade que todo estudante conhece: descobrir onde estão os projetos de "
+        "pesquisa e extensão da própria universidade, quem os coordena e como entrar em um deles. A plataforma "
+        "reúne os projetos em andamento num lugar só, e este espaço existe para o que a lista não resolve "
+        "sozinha: as dúvidas, as trocas de experiência e os avisos entre quem está começando e quem já passou "
+        "por isso.\n\n"
+        "Use o fórum para perguntar o que não encontrou nos editais, contar como foi a sua seleção, indicar "
+        "eventos e oportunidades e pedir opinião sobre uma carta de intenção ou um primeiro resumo. Responda "
+        "quando souber ajudar: uma resposta curta e concreta vale mais do que um texto longo cheio de "
+        "generalidades.\n\n"
+        "Três combinados mantêm o espaço útil para todo mundo. Respeito sempre, inclusive na discordância. "
+        "Nada de dados pessoais de terceiros nem de conteúdo que não seja seu. E, antes de abrir uma pergunta, "
+        "vale uma busca rápida: muitas já têm resposta na lista. O código de conduta completo aparece no "
+        "registro e vale para todas as interações aqui.\n\n"
+        "Sejam bem-vindas e bem-vindos. A plataforma é feita por estudantes e cresce com o que a comunidade "
+        "traz para cá."
+    ),
+}
 
 
 async def garantir_usuario_sistema(db) -> Dict[str, Any]:
@@ -449,7 +477,38 @@ async def seed_forum(db, agora: Optional[datetime] = None) -> int:
             continue  # outro processo inseriu a mesma pergunta neste instante
         if resultado.upserted_id is not None:
             inseridos += 1
+    inseridos += await seed_post_fundador(db, agora)
     return inseridos
+
+
+async def seed_post_fundador(db, agora: datetime) -> int:
+    """Insere a postagem de boas-vindas do fundador, datada um dia antes da
+    postagem mais antiga do fórum (ou 90 dias atrás, se o fórum estiver vazio).
+    Só entra se a conta do autor existir; devolve 1 se inseriu, senão 0."""
+    if await db.topicos_forum.find_one({"seed": SEED_VERSAO, "seed_chave": POST_FUNDADOR["seed_chave"]}):
+        return 0
+    autor = await db.usuarios.find_one({"email": POST_FUNDADOR["autor_email"]}, {"_id": 1})
+    if not autor:
+        return 0
+    mais_antigo = await db.topicos_forum.find_one({}, {"data_criacao": 1}, sort=[("data_criacao", 1)])
+    if mais_antigo and mais_antigo.get("data_criacao"):
+        referencia = mais_antigo["data_criacao"]
+        if referencia.tzinfo is None:
+            referencia = referencia.replace(tzinfo=timezone.utc)
+        data = (referencia - timedelta(days=1)).replace(hour=10, minute=0, second=0, microsecond=0)
+    else:
+        data = (agora - timedelta(days=90)).replace(hour=10, minute=0, second=0, microsecond=0)
+    topico = montar_topico({**POST_FUNDADOR, "dias_atras": 0, "hora": 10}, str(autor["_id"]), agora)
+    topico["data_criacao"] = data
+    try:
+        resultado = await db.topicos_forum.update_one(
+            {"seed": SEED_VERSAO, "seed_chave": POST_FUNDADOR["seed_chave"]},
+            {"$setOnInsert": topico},
+            upsert=True,
+        )
+    except DuplicateKeyError:
+        return 0
+    return 1 if resultado.upserted_id is not None else 0
 
 
 async def main() -> int:

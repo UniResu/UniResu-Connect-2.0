@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 import styles from "./Navbar.module.css";
 
 const LINKS = [
@@ -83,6 +84,7 @@ function NavbarConteudo() {
 
         {/* Ações (desktop): no celular tudo isso vive dentro do menu hambúrguer */}
         <div className={styles.navActions}>
+          <ThemeToggle />
           {isAuthenticated ? (
             <div className={styles.userMenu}>
               <div className={styles.dropdownWrapper} ref={dropdownRef}>
@@ -159,6 +161,10 @@ function NavbarConteudo() {
             </li>
           ))}
         </ul>
+
+        <div className={styles.mobileDivider} />
+
+        <ThemeToggle rotulado className={styles.mobileTema} />
 
         <div className={styles.mobileDivider} />
 

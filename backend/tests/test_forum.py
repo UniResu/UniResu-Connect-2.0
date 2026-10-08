@@ -186,6 +186,25 @@ async def test_seed_e_idempotente_e_cria_usuario_de_sistema_uma_vez(api, db):
     assert {t["autor_nome"] for t in lista} == {"Equipe UniResu"}
 
 
+async def test_seed_post_do_fundador_abre_a_linha_do_tempo(db):
+    agora = datetime(2026, 10, 7, 12, tzinfo=timezone.utc)
+    # Sem a conta do fundador no banco, a postagem não é criada em nome de ninguém.
+    assert await seed.seed_forum(db, agora=agora) == len(seed.PERGUNTAS)
+    assert await db.topicos_forum.count_documents({"seed_chave": seed.POST_FUNDADOR["seed_chave"]}) == 0
+
+    fundador = await db.usuarios.insert_one({"email": seed.POST_FUNDADOR["autor_email"], "nome": "Matheus Gabriel",
+                                             "username": "matheus-gabriel", "papel": "aluno"})
+    assert await seed.seed_forum(db, agora=agora) == 1
+    assert await seed.seed_forum(db, agora=agora) == 0  # idempotente
+
+    post = await db.topicos_forum.find_one({"seed_chave": seed.POST_FUNDADOR["seed_chave"]})
+    assert post["autor_id"] == str(fundador.inserted_id) and "autor_email" not in post
+    assert post["seed"] == seed.SEED_VERSAO
+    assert len(post["conteudo_original"]) >= 600 and "·" not in post["titulo"] + post["conteudo_original"]
+    outros = await db.topicos_forum.find({"seed_chave": {"$ne": seed.POST_FUNDADOR["seed_chave"]}}).to_list(100)
+    assert all(post["data_criacao"] < t["data_criacao"] for t in outros)
+
+
 async def test_seed_completa_conta_de_sistema_antiga(db):
     antigo = await db.usuarios.insert_one({"email": "forum@uniresu.org", "nome": "Equipe UniResu", "papel": "professor"})
     usuario = await seed.garantir_usuario_sistema(db)

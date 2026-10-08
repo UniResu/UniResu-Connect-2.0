@@ -5,47 +5,11 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import type { User } from "@/types/user";
+import { formatarData, formatarSituacao, type Projeto } from "@/types/projeto";
 import MultiSelect from "@/components/ui/MultiSelect";
+import ProjetoCard from "@/components/projetos/ProjetoCard";
 import styles from "./projetos.module.css";
 import modalStyles from "./modal.module.css";
-
-interface Projeto {
-  id: string;
-  titulo: string;
-  descricao?: string;
-  instituicao?: string;
-  tipo?: string;
-  dataPublicacao?: string;
-  local?: string;
-  area_estudo?: string;
-  /** Grande área do CNPq em que o projeto foi classificado. */
-  area_conhecimento?: string;
-  e_remoto?: boolean;
-  modalidade?: string;
-  nome_professor?: string;
-  /** Extensão no SIGAA: quem assina como responsável pela ação (pode ser discente). */
-  responsavel_acao?: string;
-  tem_contato: boolean;
-  // Projetos importados de fontes externas (SIGAA/UNIR, portais da UNIRIO, dados abertos da UFV)
-  origem?: "sigaa" | "unirio" | "ufv" | string;
-  modulo?: "pesquisa" | "extensao";
-  tipo_sigaa?: "pesquisa" | "extensao";
-  codigo?: string;
-  unidade?: string;
-  /** Campus deduzido da unidade (ver backend/services/campi.py). */
-  campus?: string;
-  situacao?: string;
-  ano?: string;
-  categoria?: string;
-  link_detalhe?: string;
-  periodo_inicio?: string;
-  periodo_fim?: string;
-  area_tematica?: string;
-  palavras_chave?: string[];
-  linhas_extensao?: string[];
-  grupo_pesquisa?: string;
-  financiamento?: string;
-}
 
 interface UnidadeFiltro {
   nome: string;
@@ -128,35 +92,6 @@ const CARTA_PLACEHOLDER = `Quem sou: curso, período e o que já estudei ou fiz 
 Por que este projeto: o que me interessa nele e como posso contribuir.
 
 Disponibilidade: quantas horas por semana, em quais turnos e a partir de quando.`;
-
-function formatarData(iso?: string) {
-  if (!iso) return "";
-  const [ano, mes, dia] = iso.slice(0, 10).split("-");
-  return `${dia}/${mes}/${ano}`;
-}
-
-/** "EM EXECUÇÃO" → "Em execução" (os portais publicam tudo em caixa alta). */
-function formatarSituacao(situacao?: string) {
-  if (!situacao) return "";
-  const s = situacao.trim();
-  if (s !== s.toUpperCase()) return s;
-  return s.charAt(0) + s.slice(1).toLowerCase();
-}
-
-type SituacaoTom = "ativa" | "encerrada" | "futura" | "neutra";
-
-function tomDaSituacao(situacao?: string): SituacaoTom {
-  const s = (situacao || "").toUpperCase();
-  if (!s) return "neutra";
-  if (s.includes("EXECU") || s.includes("ANDAMENTO")) return "ativa";
-  if (s.includes("NÃO INICIADO") || s.includes("NAO INICIADO")) return "futura";
-  if (s.includes("FINALIZ") || s.includes("CONCLU") || s.includes("ENCERR")) return "encerrada";
-  return "neutra";
-}
-
-function moduloDoProjeto(projeto: Projeto) {
-  return projeto.modulo || projeto.tipo_sigaa;
-}
 
 function cursoPeriodoDoUsuario(user: User | null) {
   if (!user?.curso) return "";
@@ -547,89 +482,8 @@ export default function ProjetosPage() {
       ) : (
         <>
           <div className={styles.projetosList}>
-            {projetos.map((projeto, i) => (
-              <article
-                key={projeto.id}
-                className={styles.projetoCard}
-                style={{ animationDelay: `${(i % PAGE_SIZE) * 0.06}s`, cursor: "pointer" }}
-                onClick={() => abrirProjeto(projeto)}
-              >
-                <div className={styles.projetoContent}>
-                  <h3 className={styles.projetoTitulo}>{projeto.titulo}</h3>
-                  {projeto.nome_professor && (
-                    <p className={styles.projetoCoordenador}>
-                      Coordenação: {projeto.nome_professor}
-                    </p>
-                  )}
-                  {projeto.descricao && (
-                    <p className={styles.projetoDesc}>{projeto.descricao}</p>
-                  )}
-                </div>
-                {/*
-                  Tags em ordem fixa, do mais geral ao mais específico:
-                  tipo (Pesquisa/Extensão) → área do conhecimento → instituição → campus → unidade → ano → remoto.
-                  A situação fica fora do grupo, à direita, como indicador de estado,
-                  para não virar um item solto quando as tags quebram de linha.
-                */}
-                <div className={styles.projetoMeta}>
-                  <div className={styles.metaTags}>
-                    {projeto.tipo && (
-                      <span
-                        className={`${styles.metaTag} ${
-                          moduloDoProjeto(projeto) === "pesquisa"
-                            ? styles.metaPesquisa
-                            : moduloDoProjeto(projeto) === "extensao"
-                              ? styles.metaExtensao
-                              : ""
-                        }`}
-                      >
-                        {projeto.tipo}
-                      </span>
-                    )}
-                    {projeto.area_conhecimento && (
-                      <span
-                        className={`${styles.metaTag} ${styles.metaArea}`}
-                        title="Área do conhecimento (grande área do CNPq)"
-                      >
-                        {projeto.area_conhecimento}
-                      </span>
-                    )}
-                    {projeto.instituicao && (
-                      // Sigla (UNIR, UNIRIO) para fontes externas; nome livre dos projetos
-                      // manuais recebe o mesmo tratamento longo da unidade.
-                      <span
-                        className={`${styles.metaTag} ${projeto.origem ? styles.metaInstituicao : styles.metaUnidade}`}
-                        title={projeto.instituicao}
-                      >
-                        {!projeto.origem && <span aria-hidden="true">🏛️</span>} {projeto.instituicao}
-                      </span>
-                    )}
-                    {projeto.unidade && (
-                      <span className={`${styles.metaTag} ${styles.metaUnidade}`} title={projeto.unidade}>
-                        <span aria-hidden="true">🏛️</span> {projeto.unidade}
-                      </span>
-                    )}
-                    {projeto.ano && (
-                      <span className={styles.metaTag}>
-                        <span aria-hidden="true">📅</span> {projeto.ano}
-                      </span>
-                    )}
-                    {projeto.e_remoto && (
-                      <span className={`${styles.metaTag} ${styles.metaRemoto}`}>
-                        <span aria-hidden="true">🌐</span> Remoto
-                      </span>
-                    )}
-                  </div>
-                  {projeto.situacao ? (
-                    <span className={`${styles.metaStatus} ${styles[`status_${tomDaSituacao(projeto.situacao)}`]}`}>
-                      <span className={styles.statusDot} aria-hidden="true" />
-                      {formatarSituacao(projeto.situacao)}
-                    </span>
-                  ) : projeto.dataPublicacao ? (
-                    <span className={styles.metaDate}>{projeto.dataPublicacao}</span>
-                  ) : null}
-                </div>
-              </article>
+            {projetos.map((projeto) => (
+              <ProjetoCard key={projeto.id} projeto={projeto} onClick={abrirProjeto} />
             ))}
           </div>
           {hasMore && (

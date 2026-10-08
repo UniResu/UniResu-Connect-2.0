@@ -2,9 +2,10 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  background: linear-gradient(180deg, #150020 0%, #0d0014 100%);
-  border-bottom: 2px solid #a242b5;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--header-border);
+  /* Sombra curta e discreta: a barra se separa da página sem chamar atenção. */
+  box-shadow: var(--header-shadow);
 }
 
 .navbar {
@@ -52,8 +53,8 @@
 .navLinks a {
   display: inline-block;
   padding: 0.6rem 1rem;
-  border-radius: var(--radius-md);
-  color: white;
+  border-radius: var(--radius-control);
+  color: var(--header-fg);
   font-weight: 500;
   font-size: var(--font-size-lg);
   line-height: 1.3;
@@ -78,8 +79,8 @@
 
 .navLinks a:hover,
 .navLinks a:focus-visible {
-  color: var(--primary-200);
-  background: rgba(255, 255, 255, 0.06);
+  color: var(--brand-300);
+  background: var(--header-hover);
 }
 
 .navLinks a:hover::after,
@@ -103,34 +104,40 @@
 }
 
 .btnLogin {
-  padding: 0.6rem var(--space-lg);
-  color: white;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 var(--space-lg);
+  color: var(--header-fg);
   font-weight: 500;
   font-size: var(--font-size-base);
   text-decoration: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   transition: background var(--transition-fast);
 }
 
 .btnLogin:hover {
-  background: var(--primary-dark);
+  background: var(--header-hover);
+  color: var(--header-fg);
 }
 
 .btnRegister {
-  padding: 0.6rem var(--space-lg);
-  background: var(--primary-light);
-  color: white;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 var(--space-lg);
+  background: var(--brand-500);
+  color: #ffffff;
   font-weight: 600;
   font-size: var(--font-size-base);
   text-decoration: none;
-  border-radius: var(--radius-md);
-  transition: all var(--transition-fast);
+  border-radius: var(--radius-control);
+  transition: background var(--transition-fast);
 }
 
 .btnRegister:hover {
-  background: var(--primary-dark);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+  background: var(--brand-400);
+  color: #ffffff;
 }
 
 /* ── User Menu + Dropdown ── */
@@ -151,21 +158,21 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: white;
+  color: var(--header-fg);
   padding: var(--space-xs) var(--space-sm);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   transition: background var(--transition-fast);
 }
 
 .avatarButton:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--header-hover);
 }
 
 .avatar {
   width: 36px;
   height: 36px;
-  border-radius: var(--radius-full);
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  border-radius: var(--radius-chip);
+  background: linear-gradient(135deg, var(--brand-700), var(--brand-500));
   color: white;
   display: flex;
   align-items: center;
@@ -192,12 +199,11 @@
   top: calc(100% + 8px);
   right: 0;
   min-width: 200px;
-  background: rgba(26, 0, 41, 0.95);
-  backdrop-filter: blur(12px);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+  background: #1a0029;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-lg);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: var(--space-xs) 0;
+  padding: var(--space-xs);
   animation: dropdownSlide 0.2s ease;
   z-index: 200;
 }
@@ -218,7 +224,8 @@
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  padding: 0.65rem 1.25rem;
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius-control);
   color: white;
   font-size: var(--font-size-sm);
   font-weight: 500;
@@ -227,8 +234,8 @@
 }
 
 .dropdownItem:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #cb89e0;
+  background: var(--header-hover);
+  color: var(--brand-300);
 }
 
 .dropdownDivider {
@@ -242,10 +249,11 @@
   align-items: center;
   gap: var(--space-sm);
   width: 100%;
-  padding: 0.65rem 1.25rem;
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius-control);
   background: none;
   border: none;
-  color: var(--error, #ef4444);
+  color: #f59a9a;
   font-size: var(--font-size-sm);
   font-weight: 500;
   cursor: pointer;
@@ -329,9 +337,9 @@
     right: 0;
     max-height: calc(100vh - 72px);
     overflow-y: auto;
-    background: linear-gradient(180deg, #150020 0%, #0d0014 100%);
-    border-bottom: 2px solid #a242b5;
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--header-border);
+    box-shadow: var(--shadow-lg);
     padding: var(--space-md) var(--space-lg) var(--space-xl);
     transform: translateY(-8px);
     opacity: 0;
@@ -396,7 +404,7 @@
     align-items: center;
     justify-content: center;
     padding: 0.85rem;
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-control);
     font-weight: 600;
     font-size: var(--font-size-base);
     text-decoration: none;
@@ -408,7 +416,11 @@
   }
 
   .mobileBtnRegister {
-    background: var(--primary-light);
+    background: var(--brand-500);
+  }
+
+  .mobileTema {
+    margin-top: var(--space-xs);
   }
 
   .mobileAccount {

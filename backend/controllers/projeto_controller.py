@@ -199,6 +199,18 @@ async def buscar_projetos_controller(
         return []
 
 
+async def obter_projeto_publico_controller(projeto_id: str) -> Optional[Dict[str, Any]]:
+    """Um projeto visível pelo id, no mesmo formato da busca (sem contatos).
+    Devolve None para id inválido, inexistente ou projeto oculto."""
+    try:
+        oid = ObjectId(projeto_id)
+    except Exception:
+        return None
+    db = Database.get_db()
+    doc = await db.projetos.find_one({"_id": oid, **filtro_visiveis()})
+    return formatar_projeto_publico(doc) if doc else None
+
+
 async def listar_unidades_controller(
     modulo: Optional[str] = None, instituicao: Optional[str] = None
 ) -> List[str]:
