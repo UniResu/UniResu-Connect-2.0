@@ -18,7 +18,7 @@ on:
       tarefa:
         description: "Tarefa (status = só lê e imprime um resumo do banco)"
         type: choice
-        options: [status, consultar, remover-projetos-teste, forum-listar, forum-remover]
+        options: [status, consultar, remover-projetos-teste, forum-listar, forum-remover, usuarios]
         default: status
       termo:
         description: "Tarefa consultar: trecho do título do projeto a procurar"
@@ -122,5 +122,13 @@ jobs:
           python -m jobs.forum_admin "${args[@]}"
         env:
           TOPICO_ID: ${{ inputs.topico_id }}
+          MONGO_URI: ${{ secrets.MONGO_URI_ADMIN || secrets.MONGO_URI }}
+          MONGO_DB_NAME: ${{ vars.MONGO_DB_NAME || 'UniResuDB' }}
+
+      - name: Procurar contas pelo nome
+        if: inputs.tarefa == 'usuarios'
+        run: python -m jobs.forum_admin usuarios "$TERMO"
+        env:
+          TERMO: ${{ inputs.termo }}
           MONGO_URI: ${{ secrets.MONGO_URI_ADMIN || secrets.MONGO_URI }}
           MONGO_DB_NAME: ${{ vars.MONGO_DB_NAME || 'UniResuDB' }}
