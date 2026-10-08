@@ -18,7 +18,7 @@ on:
       tarefa:
         description: "Tarefa (status = só lê e imprime um resumo do banco)"
         type: choice
-        options: [status, consultar, remover-projetos-teste]
+        options: [status, consultar, remover-projetos-teste, forum-listar, forum-remover]
         default: status
       termo:
         description: "Tarefa consultar: trecho do título do projeto a procurar"
@@ -30,6 +30,10 @@ on:
         default: ""
       modulo:
         description: "Tarefa consultar: pesquisa ou extensao (opcional)"
+        required: false
+        default: ""
+      topico_id:
+        description: "Tarefa forum-remover: id do tópico (veja em forum-listar)"
         required: false
         default: ""
       confirmar:
@@ -100,5 +104,23 @@ jobs:
           fi
           python -m jobs.remover_projetos_teste "${args[@]}"
         env:
+          MONGO_URI: ${{ secrets.MONGO_URI_ADMIN || secrets.MONGO_URI }}
+          MONGO_DB_NAME: ${{ vars.MONGO_DB_NAME || 'UniResuDB' }}
+
+      - name: Listar tópicos do fórum
+        if: inputs.tarefa == 'forum-listar'
+        run: python -m jobs.forum_admin listar
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI_ADMIN || secrets.MONGO_URI }}
+          MONGO_DB_NAME: ${{ vars.MONGO_DB_NAME || 'UniResuDB' }}
+
+      - name: Remover tópico do fórum
+        if: inputs.tarefa == 'forum-remover'
+        run: |
+          args=(remover "$TOPICO_ID")
+          if [ "${{ inputs.confirmar }}" = "true" ]; then args+=(--confirmar); fi
+          python -m jobs.forum_admin "${args[@]}"
+        env:
+          TOPICO_ID: ${{ inputs.topico_id }}
           MONGO_URI: ${{ secrets.MONGO_URI_ADMIN || secrets.MONGO_URI }}
           MONGO_DB_NAME: ${{ vars.MONGO_DB_NAME || 'UniResuDB' }}
