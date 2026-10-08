@@ -192,8 +192,9 @@ async def test_seed_post_do_fundador_abre_a_linha_do_tempo(db):
     assert await seed.seed_forum(db, agora=agora) == len(seed.PERGUNTAS)
     assert await db.topicos_forum.count_documents({"seed_chave": seed.POST_FUNDADOR["seed_chave"]}) == 0
 
-    fundador = await db.usuarios.insert_one({"email": seed.POST_FUNDADOR["autor_email"], "nome": "Matheus Gabriel",
-                                             "username": "matheus-gabriel", "papel": "aluno"})
+    # A conta é achada pelo username, mesmo com outro e-mail.
+    fundador = await db.usuarios.insert_one({"email": "outro@protonmail.com", "nome": "Matheus Gabriel Ramos",
+                                             "username": seed.POST_FUNDADOR["autor_username"], "papel": "aluno"})
     assert await seed.seed_forum(db, agora=agora) == 1
     assert await seed.seed_forum(db, agora=agora) == 0  # idempotente
 

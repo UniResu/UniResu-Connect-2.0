@@ -371,11 +371,12 @@ PERGUNTAS: List[Dict[str, Any]] = [
 
 
 # Primeira postagem do fórum, assinada por um dos fundadores com a conta
-# pessoal dele (identificada pelo e-mail). Entra com data anterior a tudo o
+# pessoal dele (identificada pelo username; o e-mail fica como alternativa). Entra com data anterior a tudo o
 # que já existe no fórum, para abrir a linha do tempo; se a conta não existir
 # no banco, a postagem não é criada (nunca sai em nome de outra pessoa).
 POST_FUNDADOR: Dict[str, Any] = {
     "seed_chave": "boas-vindas-fundador",
+    "autor_username": "matheus-gabriel-ramos",
     "autor_email": "matheusmggabriel@gmail.com",
     "titulo": "Bem-vindas e bem-vindos ao fórum do UniResu Connect",
     "conteudo": (
@@ -487,7 +488,10 @@ async def seed_post_fundador(db, agora: datetime) -> int:
     Só entra se a conta do autor existir; devolve 1 se inseriu, senão 0."""
     if await db.topicos_forum.find_one({"seed": SEED_VERSAO, "seed_chave": POST_FUNDADOR["seed_chave"]}):
         return 0
-    autor = await db.usuarios.find_one({"email": POST_FUNDADOR["autor_email"]}, {"_id": 1})
+    autor = await db.usuarios.find_one(
+        {"$or": [{"username": POST_FUNDADOR["autor_username"]}, {"email": POST_FUNDADOR["autor_email"]}]},
+        {"_id": 1},
+    )
     if not autor:
         return 0
     mais_antigo = await db.topicos_forum.find_one({}, {"data_criacao": 1}, sort=[("data_criacao", 1)])
@@ -498,7 +502,8 @@ async def seed_post_fundador(db, agora: datetime) -> int:
         data = (referencia - timedelta(days=1)).replace(hour=10, minute=0, second=0, microsecond=0)
     else:
         data = (agora - timedelta(days=90)).replace(hour=10, minute=0, second=0, microsecond=0)
-    topico = montar_topico({**POST_FUNDADOR, "dias_atras": 0, "hora": 10}, str(autor["_id"]), agora)
+    dados = {k: v for k, v in POST_FUNDADOR.items() if k not in ("autor_username", "autor_email")}
+    topico = montar_topico({**dados, "dias_atras": 0, "hora": 10}, str(autor["_id"]), agora)
     topico["data_criacao"] = data
     try:
         resultado = await db.topicos_forum.update_one(
