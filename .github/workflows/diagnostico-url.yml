@@ -31,6 +31,14 @@ on:
         description: "Modo resumo: termos extras (separados por |) a procurar no corpo, ex.: um trecho do título"
         required: false
         default: ""
+      texto:
+        description: "Converte HTML em texto (e PDF em texto) e imprime até 'bytes' caracteres, mais os links da página"
+        type: boolean
+        default: false
+      filtro_links:
+        description: "Modo texto: só lista links cujo endereço ou rótulo contenha um destes termos (separados por |)"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -48,8 +56,57 @@ jobs:
           CSV_COLUNAS: ${{ inputs.csv_colunas }}
           RESUMO: ${{ inputs.resumo }}
           PROCURAR: ${{ inputs.procurar }}
+          TEXTO: ${{ inputs.texto }}
+          FILTRO_LINKS: ${{ inputs.filtro_links }}
         run: |
+          if [ "$TEXTO" = "true" ]; then sudo apt-get install -y -qq poppler-utils >/dev/null 2>&1 || true; fi
           for url in $URLS; do
+            if [ "$TEXTO" = "true" ]; then
+              echo "=================================================================="
+              echo "URL: $url"
+              rm -f /tmp/b.bin
+              curl -sS -L -m 120 -A "UniResuConnect/2.1 (+https://uniresu.org; diagnostico)" -o /tmp/b.bin "$url" || echo "curl falhou ($?)"
+              if head -c 5 /tmp/b.bin | grep -q "%PDF"; then
+                pdftotext -layout /tmp/b.bin /tmp/t.txt && head -c "$BYTES" /tmp/t.txt
+                echo; echo "--- páginas: $(pdfinfo /tmp/b.bin 2>/dev/null | grep Pages)"
+                continue
+              fi
+              python3 - "$url" <<'PY2'
+          import html, os, re, sys
+          from html.parser import HTMLParser
+          from urllib.parse import urljoin
+          base = sys.argv[1]
+          dados = open("/tmp/b.bin", "rb").read().decode("utf-8", "replace")
+          class P(HTMLParser):
+              def __init__(self):
+                  super().__init__(); self.partes = []; self.links = []; self.pular = 0; self.href = None; self.rot = []
+              def handle_starttag(self, tag, attrs):
+                  if tag in ("script", "style", "noscript", "svg"): self.pular += 1
+                  if tag in ("p", "div", "li", "tr", "br", "h1", "h2", "h3", "h4", "td", "th", "section", "article"): self.partes.append("\n")
+                  if tag == "a":
+                      self.href = dict(attrs).get("href"); self.rot = []
+              def handle_endtag(self, tag):
+                  if tag in ("script", "style", "noscript", "svg") and self.pular: self.pular -= 1
+                  if tag == "a" and self.href:
+                      self.links.append((urljoin(base, self.href), " ".join("".join(self.rot).split())[:100])); self.href = None
+              def handle_data(self, d):
+                  if self.pular: return
+                  self.partes.append(d)
+                  if self.href is not None: self.rot.append(d)
+          p = P(); p.feed(dados)
+          texto = re.sub(r"\n\s*\n+", "\n", re.sub(r"[ \t\r\f\v]+", " ", "".join(p.partes)))
+          limite = int(os.environ.get("BYTES") or 6000)
+          print(texto[:limite])
+          filtro = [f.lower() for f in (os.environ.get("FILTRO_LINKS") or "").split("|") if f]
+          vistos = set()
+          print("--- links" + (f" (filtro: {filtro})" if filtro else ""))
+          for href, rot in p.links:
+              if href in vistos: continue
+              if filtro and not any(f in (href + " " + rot).lower() for f in filtro): continue
+              vistos.add(href); print(f"  {rot!r} -> {href}")
+          PY2
+              continue
+            fi
             if [ "$RESUMO" = "true" ]; then
               # Uma linha por URL: status final, tamanho e marcadores do corpo.
               rm -f /tmp/h.txt /tmp/b.bin
