@@ -21,7 +21,7 @@ export interface Projeto {
   responsavel_acao?: string;
   tem_contato: boolean;
   /** Projetos importados de fontes externas (SIGAA das universidades, portais da UNIRIO, dados abertos da UFV). */
-  origem?: "sigaa" | "unirio" | "ufv" | string;
+  origem?: "sigaa" | "unirio" | "ufv" | "puccamp" | string;
   modulo?: "pesquisa" | "extensao";
   tipo_sigaa?: "pesquisa" | "extensao";
   codigo?: string;

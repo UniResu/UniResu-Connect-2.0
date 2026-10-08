@@ -6,7 +6,7 @@ chave natural num campo exclusivo, para que a desativação/upsert de uma
 fonte nunca encoste nos documentos de outra, nem nos projetos manuais.
 
 `origem` identifica a plataforma de onde os dados vieram ("sigaa", "unirio",
-"ufv"); `instituicao` é a universidade. Várias instituições compartilham a
+"ufv", "puccamp"); `instituicao` é a universidade. Várias instituições compartilham a
 plataforma SIGAA, então toda escrita filtra pelos dois campos.
 """
 
@@ -43,10 +43,11 @@ def fonte_sigaa(sigla: str) -> Fonte:
 SIGAA = fonte_sigaa("UNIR")
 UNIRIO = Fonte("unirio", "UNIRIO", "Portais da UNIRIO", "chave_unirio", "unirio_id")
 UFV = Fonte("ufv", "UFV", "Dados abertos da UFV", "chave_ufv", "ufv_id")
+PUCCAMP = Fonte("puccamp", "PUC-Campinas", "Portal da PUC-Campinas", "chave_puccamp", "puccamp_id")
 
 # Uma fonte por plataforma (a do SIGAA representa a UNIR, a primeira coletada).
-FONTES = {f.origem: f for f in (SIGAA, UNIRIO, UFV)}
+FONTES = {f.origem: f for f in (SIGAA, UNIRIO, UFV, PUCCAMP)}
 
 # Uma fonte por instituição, para rótulos e filtros do front.
 INSTITUICOES: dict[str, Fonte] = {sigla: fonte_sigaa(sigla) for sigla in INSTITUICOES_SIGAA}
-INSTITUICOES.update({UNIRIO.instituicao: UNIRIO, UFV.instituicao: UFV})
+INSTITUICOES.update({f.instituicao: f for f in (UNIRIO, UFV, PUCCAMP)})

@@ -47,6 +47,13 @@ async def criar_indices(db) -> None:
         unique=True,
         partialFilterExpression={"origem": "ufv"},
     )
+    # Chave natural dos projetos da PUC-Campinas (página pública de extensão).
+    await db.projetos.create_index(
+        [("chave_puccamp", ASCENDING)],
+        name="uniq_chave_puccamp",
+        unique=True,
+        partialFilterExpression={"origem": "puccamp"},
+    )
     await db.projetos.create_index(
         [("ativo", ASCENDING), ("instituicao", ASCENDING), ("modulo", ASCENDING), ("unidade", ASCENDING)],
         name="listagem_filtros_v2",

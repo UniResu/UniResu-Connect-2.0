@@ -70,6 +70,15 @@ function avisoSemContato(p: Projeto) {
       </>
     );
   }
+  if (p.origem === "puccamp") {
+    return (
+      <>
+        A PUC-Campinas não divulga o e-mail de cada docente na página de extensão, então a candidatura por
+        aqui fica indisponível. Use o botão acima para ver o projeto no portal da universidade ou procure a
+        faculdade indicada.
+      </>
+    );
+  }
   if (p.origem === "ufv") {
     return (
       <>
@@ -91,6 +100,7 @@ const FONTE_NOME: Record<string, string> = {
   sigaa: "SIGAA",
   unirio: "Portal da UNIRIO",
   ufv: "Portal da UFV",
+  puccamp: "portal da PUC-Campinas",
 };
 
 const PAGE_SIZE = 20;

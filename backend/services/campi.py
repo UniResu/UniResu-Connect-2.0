@@ -30,6 +30,7 @@ SEDE_UNIR = "Porto Velho"
 
 # Sede de instituições concentradas em uma cidade (quando a unidade não diz outra coisa).
 SEDES = {
+    "PUC-CAMPINAS": "Campinas",
     "UNIRIO": "Rio de Janeiro",
     "UFV": "Viçosa",
     "UNIR": SEDE_UNIR,
