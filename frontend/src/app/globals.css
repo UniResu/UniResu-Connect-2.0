@@ -211,10 +211,13 @@
   --bg-primary: #0f0e13;
   --bg-secondary: #131218;
   --bg-faixa: #0b0a0e;
-  --bg-card: #2a2240;
-  --surface: #1a1429;
-  --surface-2: #211a33;
-  --surface-3: #2a2240;
+  --bg-card: #362c52;
+  /* Superfícies (cards, painéis, modais) bem mais claras que o fundo, como
+     no tema claro: sem sombra visível no escuro, é a diferença de
+     luminosidade que destaca o card. */
+  --surface: #282040;
+  --surface-2: #2f2649;
+  --surface-3: #362c52;
   --surface-border: rgba(255, 255, 255, 0.13);
   --surface-border-hover: rgba(203, 137, 224, 0.5);
 
@@ -224,7 +227,7 @@
   --border-strong: rgba(255, 255, 255, 0.28);
 
   /* Etiquetas no escuro: fundo no tom saturado de cada cor (30%) e texto no
-     nível 300, para a cor aparecer sem perder contraste (acima de 5,8:1). */
+     nível 300, para a cor aparecer sem perder contraste (acima de 5,4:1). */
   --tint-rose-bg: rgba(244, 63, 94, 0.3);     --tint-rose-fg: #fda4af;
   --tint-orange-bg: rgba(249, 115, 22, 0.3);  --tint-orange-fg: #fdba74;
   --tint-amber-bg: rgba(245, 158, 11, 0.3);   --tint-amber-fg: #fcd34d;
