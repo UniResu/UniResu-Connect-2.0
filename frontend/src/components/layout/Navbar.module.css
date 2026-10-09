@@ -90,7 +90,7 @@
 }
 
 /* Entrar é o destaque (preenchido) e fica por último, na ponta direita;
-   Registre-se fica ao lado, só com texto. */
+   Criar conta fica ao lado, só com texto. */
 .authButtons {
   display: flex;
   align-items: center;
@@ -345,7 +345,7 @@
   }
 
   /* No celular, links e conta ficam só dentro do menu hambúrguer: botões de
-     "Entrar"/"Registre-se" soltos no cabeçalho confundiam quem chegava. */
+     "Entrar"/"Criar conta" soltos no cabeçalho confundiam quem chegava. */
   .navLinks,
   .navActions {
     display: none;

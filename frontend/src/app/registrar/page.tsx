@@ -531,7 +531,7 @@ export default function RegistrarPage() {
             {!semEmailAcademico && (
               <>
                 <button type="submit" disabled={isSubmitting} className={`ui-btn ui-btn-primary ${conta.botaoLargo}`}>
-                  {isSubmitting ? "Criando conta..." : "Registrar-se"}
+                  {isSubmitting ? "Criando conta..." : "Criar conta"}
                 </button>
 
                 <div className={conta.separador}><span>ou</span></div>

@@ -144,7 +144,7 @@ function NavbarConteudo({ pathname }: { pathname: string }) {
             </div>
           ) : (
             <div className={styles.authButtons}>
-              <Link href="/registrar" className={styles.btnSimples}>Registre-se</Link>
+              <Link href="/registrar" className={styles.btnSimples}>Criar conta</Link>
               <Link href="/login" className={styles.btnDestaque}>Entrar</Link>
             </div>
           )}
@@ -231,7 +231,7 @@ function NavbarConteudo({ pathname }: { pathname: string }) {
         ) : (
           <div className={styles.mobileAuth}>
             <Link href="/registrar" className={styles.mobileBtnSimples} onClick={fecharMenu} tabIndex={menuOpen ? 0 : -1}>
-              Registre-se
+              Criar conta
             </Link>
             <Link href="/login" className={styles.mobileBtnDestaque} onClick={fecharMenu} tabIndex={menuOpen ? 0 : -1}>
               Entrar

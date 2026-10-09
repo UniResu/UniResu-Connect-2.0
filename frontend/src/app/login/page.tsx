@@ -175,7 +175,7 @@ export default function LoginPage() {
         <p className={styles.rodape}>
           Não tem uma conta?{" "}
           <Link href="/registrar" className={styles.link}>
-            Registre-se
+            Criar conta
           </Link>
         </p>
       </div>
