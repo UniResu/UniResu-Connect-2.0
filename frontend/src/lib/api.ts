@@ -81,6 +81,16 @@ async function request<T>(
   return res.json();
 }
 
+/**
+ * Pede /health sem esperar resposta. No plano gratuito do Render a API dorme
+ * depois de 15 minutos parada e leva perto de um minuto para acordar; chamar
+ * isto cedo faz a espera acontecer enquanto a pessoa ainda lê a página.
+ * `no-cors` porque só importa a requisição chegar, não a resposta.
+ */
+export function acordarApi() {
+  fetch(`${API_URL}/health`, { mode: "no-cors", cache: "no-store" }).catch(() => {});
+}
+
 export const api = {
   get: <T>(endpoint: string, options?: ApiOptions) =>
     request<T>(endpoint, { ...options, method: "GET" }),
