@@ -235,7 +235,7 @@ interface Membro {
 
 const JULIANA = {
   nome: "Juliana Gimenes Müller",
-  curso: "Análise e desenvolvimento de sistemas",
+  curso: "Análise e Desenvolvimento de Sistemas",
   instituicao: "PUC Minas",
 };
 
@@ -252,9 +252,12 @@ const FUNDADORES: Membro[] = [
   { ...JULIANA, cargo: "Co-fundadora e CTO" },
 ];
 
-// Juliana também lidera o desenvolvimento, por isso aparece nos dois slides.
+// Juliana também lidera o desenvolvimento, e Matheus coordena o produto desde
+// o início (arquitetura, organização e metodologia); os dois aparecem também
+// entre os fundadores.
 const DESENVOLVIMENTO: Membro[] = [
   { ...JULIANA, cargo: "Head de desenvolvimento" },
+  { nome: "Matheus Gabriel Ramos de Melo", cargo: "Coordenador de Produto", curso: "Medicina", instituicao: "UNIR" },
   { nome: "Daniel Pereira Santos da Silva", cargo: "Desenvolvedor", curso: "Ciência da computação", instituicao: "UERJ" },
   { nome: "Pedro de Magalhães Leitão", cargo: "Desenvolvedor", curso: "Ciência da computação", instituicao: "UERJ" },
 ];
