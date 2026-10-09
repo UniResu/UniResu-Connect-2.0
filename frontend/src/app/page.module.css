@@ -147,6 +147,8 @@ a.btnEscuroPrimario:hover {
   background: linear-gradient(160deg, var(--brand-900) 0%, var(--brand-800) 55%, var(--bg-dark) 100%);
   color: var(--text-on-dark);
   text-align: center;
+  /* A constelação passa da largura do texto; nunca da tela. */
+  overflow-x: clip;
 }
 
 /* A foto fica numa camada própria, com opacidade baixa: dá textura ao fundo
@@ -190,6 +192,64 @@ a.btnEscuroPrimario:hover {
    e lê melhor do que o lilás. */
 .heroDestaque {
   color: var(--green-400);
+}
+
+/* Constelação atrás do título, centrada nele e mais larga e mais alta que
+   ele, passando por trás do selo e do subtítulo. Fica abaixo do texto
+   (z-index -1) e o conjunto tem opacidade 0,8 para não competir com a
+   leitura. */
+.heroMarca {
+  position: relative;
+}
+
+.constelacao {
+  position: absolute;
+  z-index: -1;
+  top: 50%;
+  left: 50%;
+  width: min(calc(100vw - 24px), 1010px);
+  height: calc(100% + 230px);
+  transform: translate(-50%, -50%);
+  overflow: visible;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.ligacao,
+.ligacaoVerde {
+  stroke-width: 1;
+}
+
+.ligacao {
+  stroke: var(--text-on-dark);
+  stroke-opacity: 0.2;
+}
+
+.ligacaoVerde {
+  stroke: var(--green-400);
+  stroke-opacity: 0.38;
+}
+
+.estrela {
+  fill: var(--text-on-dark);
+}
+
+.estrelaVerde {
+  fill: var(--green-400);
+}
+
+.constelacao circle {
+  opacity: 0.85;
+}
+
+.constelacao .estrelaHalo {
+  opacity: 0.14;
+}
+
+@media (max-width: 600px) {
+  .constelacao {
+    height: calc(100% + 170px);
+  }
 }
 
 .heroTexto {
@@ -257,6 +317,18 @@ button.heroBuscaBotao:hover {
   color: var(--text-on-dark);
 }
 
+/* Celulares estreitos: texto do campo em 16px (o mínimo para o iOS não dar
+   zoom) e botão mais justo, para o texto de exemplo caber inteiro. */
+@media (max-width: 480px) {
+  .heroBuscaCampo {
+    font-size: var(--font-size-base);
+  }
+
+  button.heroBuscaBotao {
+    padding: 0 1rem;
+  }
+}
+
 /* Linha sob a busca: o tamanho da base e dois atalhos, separados por
    filetes finos. */
 .heroRodape {
@@ -281,6 +353,18 @@ button.heroBuscaBotao:hover {
   background: color-mix(in srgb, var(--text-on-dark) 30%, transparent);
 }
 
+/* Em telas estreitas a linha quebra depois dos números: eles ganham uma
+   linha só deles, e o separador que sobraria no fim dela some. */
+@media (max-width: 640px) {
+  .heroNumeros {
+    flex-basis: 100%;
+  }
+
+  .heroSeparadorNumeros {
+    display: none;
+  }
+}
+
 .heroLink {
   color: var(--text-on-dark);
   font-weight: 600;
@@ -295,12 +379,28 @@ button.heroBuscaBotao:hover {
 }
 
 /* ── Como funciona ──
-   Quatro passos numerados, ligados por um tracejado: na horizontal no
-   desktop, na vertical no tablet e no celular. */
+   Quatro passos numerados que formam uma constelação (ver
+   TrechoDaConstelacao): na horizontal no desktop, na vertical no tablet e
+   no celular. */
 .secao.comoFunciona {
+  --passo-brilho: var(--brand-600);
+  --passo-linha: color-mix(in srgb, var(--brand-700) 35%, transparent);
+  --passo-estrela: var(--brand-700);
+  --passo-verde: var(--green-700);
+  --passo-verde-fg: #ffffff;
+  --passo-linha-verde: color-mix(in srgb, var(--green-700) 50%, transparent);
   padding: clamp(3rem, 6vw, 4.5rem) 0;
   background: var(--surface);
   border-bottom: 1px solid var(--surface-border);
+}
+
+:global(:root[data-theme="dark"]) .secao.comoFunciona {
+  --passo-brilho: var(--brand-300);
+  --passo-linha: color-mix(in srgb, var(--brand-300) 50%, transparent);
+  --passo-estrela: var(--text-on-dark);
+  --passo-verde: var(--green-400);
+  --passo-verde-fg: #06281b;
+  --passo-linha-verde: color-mix(in srgb, var(--green-400) 60%, transparent);
 }
 
 .passos {
@@ -334,15 +434,72 @@ button.heroBuscaBotao:hover {
   font-size: var(--font-size-lg);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+  /* Cada número sai um pouco da linha (--desvio-x vem do componente) e
+     brilha como estrela. */
+  transform: translateX(var(--desvio-x, 0));
+  box-shadow:
+    0 0 0 6px color-mix(in srgb, var(--passo-brilho) 14%, transparent),
+    0 0 22px 4px color-mix(in srgb, var(--passo-brilho) 35%, transparent);
 }
 
-.passo:not(:last-child)::after {
-  content: "";
+/* O último passo, a conversa com a coordenação, é a estrela verde. */
+.passo:last-child .passoNumero {
+  --passo-brilho: var(--green-400);
+  background: var(--passo-verde);
+  color: var(--passo-verde-fg);
+}
+
+/* Trecho entre um passo e o próximo: duas linhas e uma estrela menor no
+   meio. O desenho tem 80px na direção transversal, centrado no número. */
+.trecho {
   position: absolute;
-  top: 3rem;
-  bottom: calc(-1 * var(--space-xl) + 0.5rem);
-  left: calc(1.25rem - 1px);
-  border-left: 2px dashed var(--border-strong);
+  z-index: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.trecho line {
+  stroke: var(--passo-linha);
+  stroke-width: 1.5;
+}
+
+.trechoVerde line {
+  stroke: var(--passo-linha-verde);
+}
+
+.trechoEstrela,
+.trechoHalo,
+.trechoSolta {
+  fill: var(--passo-estrela);
+}
+
+.trechoVerde .trechoEstrela,
+.trechoVerde .trechoHalo {
+  fill: var(--passo-verde);
+}
+
+.trechoEstrela {
+  opacity: 0.75;
+}
+
+.trechoHalo {
+  opacity: 0.15;
+}
+
+.trechoSolta {
+  opacity: 0.35;
+}
+
+/* Lista empilhada: do centro deste número ao centro do próximo. */
+.trechoVertical {
+  top: 1.25rem;
+  left: calc(1.25rem - 40px);
+  width: 80px;
+  height: calc(100% + var(--space-xl));
+}
+
+.trechoHorizontal {
+  display: none;
 }
 
 .passoTitulo {
@@ -383,13 +540,21 @@ button.heroBuscaBotao:hover {
     flex-direction: column;
   }
 
-  .passo:not(:last-child)::after {
-    top: calc(1.25rem - 1px);
-    bottom: auto;
-    left: 3.25rem;
-    right: calc(-1 * var(--space-xl) + 0.75rem);
-    border-left: 0;
-    border-top: 2px dashed var(--border-strong);
+  .passoNumero {
+    transform: translateY(var(--desvio-y, 0));
+  }
+
+  .trechoVertical {
+    display: none;
+  }
+
+  /* Uma coluna inteira mais o espaço entre colunas: chega ao próximo número. */
+  .trechoHorizontal {
+    display: block;
+    top: calc(1.25rem - 40px);
+    left: 1.25rem;
+    width: calc(100% + var(--space-xl));
+    height: 80px;
   }
 }
 

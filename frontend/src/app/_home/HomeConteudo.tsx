@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -108,9 +108,52 @@ function CabecalhoSecao({
 
 /* ── Hero: a busca é a primeira coisa da página ── */
 
+/* Constelação atrás do título: estrelas ligadas por linhas, o "Connect"
+   desenhado. Cada estrela é [x, y, raio], com x e y em frações da área do
+   desenho; como as posições viram porcentagens, o desenho acompanha a largura
+   da tela sem deformar as estrelas. As da metade direita ficam no verde do
+   "Connect". É estática, porque a única animação decorativa do site é o disco
+   voador. */
+const ESTRELAS: [number, number, number][] = [
+  [0.02, 0.62, 2.6], [0.1, 0.3, 2], [0.19, 0.74, 2.2], [0.27, 0.14, 2.8], [0.36, 0.5, 1.8],
+  [0.46, 0.06, 2.4], [0.55, 0.92, 2], [0.63, 0.38, 2.6], [0.72, 0.12, 2.2], [0.8, 0.72, 2],
+  [0.89, 0.3, 2.8], [0.98, 0.58, 2.2], [0.32, 0.95, 1.8],
+];
+const LIGACOES: [number, number][] = [
+  [0, 1], [1, 3], [3, 5], [5, 8], [8, 10], [10, 11], [0, 2], [2, 4],
+  [4, 7], [7, 9], [9, 11], [2, 12], [12, 6], [6, 9], [3, 4], [7, 8],
+];
+const ehVerde = (i: number) => ESTRELAS[i][0] > 0.5;
+const pct = (fracao: number) => `${fracao * 100}%`;
+
+function Constelacao() {
+  return (
+    <svg className={styles.constelacao} aria-hidden="true" focusable="false">
+      {LIGACOES.map(([a, b]) => (
+        <line
+          key={`${a}-${b}`}
+          x1={pct(ESTRELAS[a][0])}
+          y1={pct(ESTRELAS[a][1])}
+          x2={pct(ESTRELAS[b][0])}
+          y2={pct(ESTRELAS[b][1])}
+          className={ehVerde(a) && ehVerde(b) ? styles.ligacaoVerde : styles.ligacao}
+        />
+      ))}
+      {ESTRELAS.map(([x, y, raio], i) => (
+        <g key={i} className={ehVerde(i) ? styles.estrelaVerde : styles.estrela}>
+          <circle cx={pct(x)} cy={pct(y)} r={raio * 3.2} className={styles.estrelaHalo} />
+          <circle cx={pct(x)} cy={pct(y)} r={raio} />
+        </g>
+      ))}
+    </svg>
+  );
+}
+
 function BuscaHero() {
   const router = useRouter();
   const [termo, setTermo] = useState("");
+  // Em celulares o texto inteiro não cabe ao lado do botão e aparecia cortado.
+  const estreito = useMediaQuery("(max-width: 480px)");
 
   function buscar(e: FormEvent) {
     e.preventDefault();
@@ -133,7 +176,7 @@ function BuscaHero() {
         type="search"
         value={termo}
         onChange={(e) => setTermo(e.target.value)}
-        placeholder="Busque por tema ou coordenação"
+        placeholder={estreito ? "Tema ou coordenação" : "Busque por tema ou coordenação"}
         className={styles.heroBuscaCampo}
         autoComplete="off"
         enterKeyHint="search"
@@ -169,6 +212,49 @@ const PASSOS: { titulo: string; texto: string; link?: { href: string; texto: str
   },
 ];
 
+/* Os passos formam uma constelação: cada número é uma estrela, e o caminho
+   até o próximo passa por uma estrela menor fora da linha reta, como num mapa
+   do céu. O último trecho e o passo 4 ficam no verde do "Connect". Os números
+   saem um pouco do alinhamento (na vertical no desktop, na horizontal na
+   lista empilhada), e os trechos partem dessas mesmas posições, em px. */
+const DESVIO_Y = [12, -16, 8, -12];
+const DESVIO_X = [0, 5, 0, 5];
+const LADO_Y = [-22, 20, -18];
+const LADO_X = [-11, 9, -11];
+/** Meia altura (desktop) ou meia largura (lista) do desenho de cada trecho. */
+const MEIO = 40;
+
+function TrechoDaConstelacao({ indice: i }: { indice: number }) {
+  const verde = i === PASSOS.length - 2;
+  const classe = (orientacao: string) => `${styles.trecho} ${orientacao} ${verde ? styles.trechoVerde : ""}`;
+  const y0 = MEIO + DESVIO_Y[i];
+  const y1 = MEIO + DESVIO_Y[i + 1];
+  const yMeio = (y0 + y1) / 2;
+  const x0 = MEIO + DESVIO_X[i];
+  const x1 = MEIO + DESVIO_X[i + 1];
+  const xMeio = (x0 + x1) / 2 + LADO_X[i];
+
+  return (
+    <>
+      {/* Desktop: da estrela deste passo à do próximo, na horizontal. */}
+      <svg className={classe(styles.trechoHorizontal)} aria-hidden="true" focusable="false">
+        <line x1="0" y1={y0} x2="50%" y2={yMeio + LADO_Y[i]} />
+        <line x1="50%" y1={yMeio + LADO_Y[i]} x2="100%" y2={y1} />
+        <circle cx="50%" cy={yMeio + LADO_Y[i]} r={7.8} className={styles.trechoHalo} />
+        <circle cx="50%" cy={yMeio + LADO_Y[i]} r={2.6} className={styles.trechoEstrela} />
+        <circle cx="50%" cy={yMeio - LADO_Y[i] * 1.4} r={1.6} transform="translate(40 0)" className={styles.trechoSolta} />
+      </svg>
+      {/* Lista empilhada: o mesmo trecho, na vertical. */}
+      <svg className={classe(styles.trechoVertical)} aria-hidden="true" focusable="false">
+        <line x1={x0} y1="0" x2={xMeio} y2="50%" />
+        <line x1={xMeio} y1="50%" x2={x1} y2="100%" />
+        <circle cx={xMeio} cy="50%" r={7.8} className={styles.trechoHalo} />
+        <circle cx={xMeio} cy="50%" r={2.6} className={styles.trechoEstrela} />
+      </svg>
+    </>
+  );
+}
+
 function ComoFunciona() {
   return (
     <section className={`${styles.secao} ${styles.comoFunciona}`} id="como-funciona" aria-labelledby="titulo-como">
@@ -176,10 +262,15 @@ function ComoFunciona() {
         <CabecalhoSecao id="titulo-como" rotulo="Como funciona" titulo="Da conta à coordenação em quatro passos" />
         <ol className={styles.passos}>
           {PASSOS.map((passo, i) => (
-            <li key={passo.titulo} className={styles.passo}>
+            <li
+              key={passo.titulo}
+              className={styles.passo}
+              style={{ "--desvio-x": `${DESVIO_X[i]}px`, "--desvio-y": `${DESVIO_Y[i]}px` } as CSSProperties}
+            >
               <span className={styles.passoNumero} aria-hidden="true">
                 {i + 1}
               </span>
+              {i < PASSOS.length - 1 && <TrechoDaConstelacao indice={i} />}
               <div className={styles.passoTexto}>
                 <h3 className={styles.passoTitulo}>{passo.titulo}</h3>
                 <p className={styles.passoCorpo}>{passo.texto}</p>
@@ -689,9 +780,12 @@ export default function HomeConteudo({
       <section className={styles.hero} id="home" aria-labelledby="titulo-hero">
         <div className={`${styles.container} ${styles.heroConteudo} animate-fade-in`}>
           <p className={styles.heroKicker}>Conectando a comunidade acadêmica</p>
-          <h1 id="titulo-hero" className={styles.heroTitulo}>
-            UniResu <span className={styles.heroDestaque}>Connect</span>
-          </h1>
+          <div className={styles.heroMarca}>
+            <Constelacao />
+            <h1 id="titulo-hero" className={styles.heroTitulo}>
+              UniResu <span className={styles.heroDestaque}>Connect</span>
+            </h1>
+          </div>
           <p className={styles.heroTexto}>
             Uma plataforma que une alunos, professores e pesquisadores em uma rede de oportunidades,
             conhecimento e colaboração.
@@ -701,7 +795,7 @@ export default function HomeConteudo({
             {numeros && (
               <>
                 <span className={styles.heroNumeros}>{numeros}</span>
-                <span className={styles.heroSeparador} aria-hidden="true" />
+                <span className={`${styles.heroSeparador} ${styles.heroSeparadorNumeros}`} aria-hidden="true" />
               </>
             )}
             <Link href="/projetos" className={styles.heroLink}>
