@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { IconeEnvelope, IconePlaneta } from "@/components/ui/Icones";
 import { EMAIL_CONTATO } from "@/lib/constants";
@@ -8,11 +7,6 @@ import styles from "./Footer.module.css";
 export default function Footer() {
   return (
     <footer className={styles.footer}>
-      {/* O alienígena da marca espia por cima do rodapé: só a cabeça até os
-          olhos aparece, o resto fica atrás da borda. */}
-      <div className={styles.espiao} aria-hidden="true">
-        <Image src="/uniresulogo.png" alt="" width={52} height={70} className={styles.espiaoImagem} unoptimized />
-      </div>
       <div className={styles.conteudo}>
         <div className={styles.marca}>
           <span className={styles.nome}>
