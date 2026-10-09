@@ -150,16 +150,22 @@ function NavbarConteudo({ pathname }: { pathname: string }) {
           )}
         </div>
 
+        {/* Com o nome escrito: só o ícone, muita gente não reconhecia o menu e
+            rolava a página procurando as opções. O texto visível é o nome do
+            botão; aria-expanded diz se está aberto. */}
         <button
+          type="button"
           className={`${styles.hamburger} ${menuOpen ? styles.hamburgerOpen : ""}`}
           onClick={() => setMenuOpen(!menuOpen)}
-          aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
           aria-expanded={menuOpen}
           aria-controls="menu-mobile"
         >
-          <span />
-          <span />
-          <span />
+          <span className={styles.hamburgerRotulo}>{menuOpen ? "Fechar" : "Menu"}</span>
+          <span className={styles.barras} aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
         </button>
       </nav>
 

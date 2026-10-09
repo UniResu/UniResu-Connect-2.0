@@ -261,25 +261,53 @@
   background: var(--header-danger-hover);
 }
 
-/* ── Hamburger ── */
+/* ── Hamburger ──
+   Botão com o nome "Menu" ao lado das três barras, com borda, para ser
+   reconhecido como botão. Aberto, o nome vira "Fechar" e as barras, um X. */
 
 .hamburger {
   display: none;
-  flex-direction: column;
-  justify-content: center;
-  gap: 5px;
-  width: 44px;
-  height: 44px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 10px;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.75rem;
+  padding: 0 0.85rem;
+  border: 1px solid var(--header-border-strong);
   border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--header-fg);
+  font: inherit;
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
 }
 
-.hamburger span {
+.hamburger:hover,
+.hamburgerOpen {
+  background: var(--header-hover);
+}
+
+.hamburger:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.hamburgerRotulo {
+  line-height: 1;
+}
+
+.barras {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  width: 20px;
+  height: 20px;
+}
+
+.barras span {
   display: block;
-  width: 22px;
+  width: 20px;
   height: 2px;
   background: var(--header-fg);
   border-radius: 1px;
@@ -288,9 +316,9 @@
 }
 
 /* Vira um X quando o menu está aberto */
-.hamburgerOpen span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-.hamburgerOpen span:nth-child(2) { opacity: 0; }
-.hamburgerOpen span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+.hamburgerOpen .barras span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+.hamburgerOpen .barras span:nth-child(2) { opacity: 0; }
+.hamburgerOpen .barras span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
 
 /* ── Menu mobile (oculto no desktop) ── */
 
@@ -322,7 +350,7 @@
   }
 
   .hamburger {
-    display: flex;
+    display: inline-flex;
   }
 
   .mobileMenu {
