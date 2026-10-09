@@ -476,7 +476,31 @@ async def seed_forum(db, agora: Optional[datetime] = None) -> int:
         if resultado.upserted_id is not None:
             inseridos += 1
     inseridos += await seed_boas_vindas(db, autor_id, agora)
+    await atualizar_textos_do_seed(db)
     return inseridos
+
+
+async def atualizar_textos_do_seed(db) -> int:
+    """Leva para o banco o título e o texto atuais das postagens da equipe.
+
+    O upsert com `$setOnInsert` só escreve o que ainda não existe, então uma
+    correção no texto de uma pergunta já publicada nunca chegava ao banco.
+    Aqui só título e texto mudam; data, visualizações, votos e respostas
+    ficam como estão. As postagens são da conta de sistema, que não entra no
+    site, então ninguém editou esse texto por fora. Devolve quantas mudaram.
+    """
+    atualizados = 0
+    for item in [*PERGUNTAS, POST_BOAS_VINDAS]:
+        resultado = await db.topicos_forum.update_one(
+            {
+                "seed": SEED_VERSAO,
+                "seed_chave": item["seed_chave"],
+                "$or": [{"titulo": {"$ne": item["titulo"]}}, {"conteudo_original": {"$ne": item["conteudo"]}}],
+            },
+            {"$set": {"titulo": item["titulo"], "conteudo_original": item["conteudo"]}},
+        )
+        atualizados += resultado.modified_count
+    return atualizados
 
 
 # Total de tópicos que o seed cria: as perguntas e a postagem de boas-vindas.

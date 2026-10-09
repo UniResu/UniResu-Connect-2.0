@@ -96,6 +96,27 @@ async def test_autoria_por_id_e_fallback_por_email_em_docs_legados(api, db):
     assert (await api.delete(f"/api/forum/topicos/{legado_meu}")).status_code == 204
 
 
+async def test_seed_leva_correcoes_de_texto_para_perguntas_ja_publicadas(db):
+    await seed.seed_forum(db)
+    pergunta = seed.PERGUNTAS[0]
+    filtro = {"seed": seed.SEED_VERSAO, "seed_chave": pergunta["seed_chave"]}
+    antes = await db.topicos_forum.find_one(filtro)
+    await db.topicos_forum.update_one(filtro, {"$set": {
+        "titulo": "Título antigo", "conteudo_original": "Texto antigo com PIVIC.",
+        "visualizacoes": 42, "likes": ["alguem"], "total_respostas": 3,
+    }})
+
+    assert await seed.seed_forum(db) == 0  # nada novo entra
+    depois = await db.topicos_forum.find_one(filtro)
+    assert (depois["titulo"], depois["conteudo_original"]) == (pergunta["titulo"], pergunta["conteudo"])
+    assert (depois["visualizacoes"], depois["likes"], depois["total_respostas"]) == (42, ["alguem"], 3)
+    assert depois["data_criacao"] == antes["data_criacao"]
+
+    # Sem diferença, nada é reescrito.
+    assert await seed.atualizar_textos_do_seed(db) == 0
+    assert await db.topicos_forum.count_documents({"seed": seed.SEED_VERSAO}) == seed.TOTAL_SEED
+
+
 async def test_limite_devolve_so_os_mais_recentes(api, db):
     agora = datetime.now(timezone.utc)
     for dias, titulo in ((3, "antigo"), (1, "recente"), (2, "meio"), (0, "hoje")):
