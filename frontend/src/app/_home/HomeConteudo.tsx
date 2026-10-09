@@ -395,7 +395,7 @@ const DESENVOLVIMENTO: Membro[] = [
 
 const ORIENTACAO: Membro[] = [
   { nome: "Prof. Dr. Carlos Eduardo Raymundo", simbolo: "livro", instituicao: "UERJ" },
-  { nome: "Prof. Dr. Thayse Moraes de Moraes", simbolo: "livro", instituicao: "UEPA" },
+  { nome: "Profa. Dra. Thayse Moraes de Moraes", simbolo: "livro", instituicao: "UEPA" },
 ];
 
 type SlideQuemSomos =

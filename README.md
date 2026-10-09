@@ -24,7 +24,7 @@ A presente plataforma web, **UniResu Connect**, propõe-se a ser um ecossistema 
 ### **Orientadores**
 
 * Prof. Dr. Carlos Eduardo Raymundo
-* Prof. Dr. Thayse Moraes de Moraes
+* Profa. Dra. Thayse Moraes de Moraes
 
 ---
 
