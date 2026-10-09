@@ -206,8 +206,11 @@
   --text-on-dark: #f4f1f9;
   --text-on-dark-muted: #cfc4db;
 
-  --bg-primary: #0f0b18;
-  --bg-secondary: #140f20;
+  /* Fundo quase neutro: o roxo suave fica nos cards e nas superfícies; o
+     violeta saturado no fundo deixava o tema com cara de site gamer. */
+  --bg-primary: #0f0e13;
+  --bg-secondary: #131218;
+  --bg-faixa: #0b0a0e;
   --bg-card: #2a2240;
   --surface: #1a1429;
   --surface-2: #211a33;
@@ -247,10 +250,10 @@
   --info-bg: rgba(56, 152, 220, 0.2);
   --info-fg: #a6d8f6;
 
-  --page-projetos-bg: #110c1c;
-  --page-projetos-glow: rgba(162, 66, 181, 0.1);
-  --page-forum-bg: #15110f;
-  --page-forum-glow: rgba(214, 150, 50, 0.06);
+  --page-projetos-bg: #0f0e13;
+  --page-projetos-glow: transparent;
+  --page-forum-bg: #11100f;
+  --page-forum-glow: transparent;
 
   --header-border: rgba(162, 66, 181, 0.45);
   --header-shadow: 0 4px 14px -8px rgba(0, 0, 0, 0.8);

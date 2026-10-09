@@ -894,6 +894,12 @@ span.pessoaCargo {
   color: var(--text-on-dark-muted);
 }
 
+/* Tema escuro: a seção do fórum fica num fundo liso e quase neutro, um
+   pouco mais escuro que o da página, sem o degradê roxo. */
+:global(:root[data-theme="dark"]) .forum {
+  background: var(--bg-faixa);
+}
+
 /* Tema escuro: o card de pergunta fica opaco, no roxo suave das
    superfícies. Translúcido, ele deixava o degradê da seção passar por trás
    do texto. */

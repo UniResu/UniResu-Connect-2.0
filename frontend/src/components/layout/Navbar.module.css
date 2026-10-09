@@ -89,13 +89,15 @@
   margin: 0;
 }
 
+/* Entrar é o destaque (preenchido) e fica por último, na ponta direita;
+   Registre-se fica ao lado, só com texto. */
 .authButtons {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
 }
 
-.btnLogin {
+.btnSimples {
   display: inline-flex;
   align-items: center;
   min-height: 2.75rem;
@@ -108,12 +110,12 @@
   transition: background var(--transition-fast);
 }
 
-.btnLogin:hover {
+.btnSimples:hover {
   background: var(--header-hover);
   color: var(--header-fg);
 }
 
-.btnRegister {
+.btnDestaque {
   display: inline-flex;
   align-items: center;
   min-height: 2.75rem;
@@ -127,7 +129,7 @@
   transition: background var(--transition-fast);
 }
 
-.btnRegister:hover {
+.btnDestaque:hover {
   background: var(--brand-400);
   color: var(--text-on-primary);
 }
@@ -430,8 +432,8 @@
     gap: var(--space-sm);
   }
 
-  .mobileBtnLogin,
-  .mobileBtnRegister {
+  .mobileBtnSimples,
+  .mobileBtnDestaque {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -443,11 +445,11 @@
     color: var(--header-fg);
   }
 
-  .mobileBtnLogin {
+  .mobileBtnSimples {
     border: 1px solid var(--header-border-strong);
   }
 
-  .mobileBtnRegister {
+  .mobileBtnDestaque {
     background: var(--brand-500);
   }
 
