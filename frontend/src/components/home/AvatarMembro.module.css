@@ -1,6 +1,6 @@
-/* Avatar: a cabeça do alienígena da marca, sem moldura, e no canto o selo
-   verde com o símbolo da função. O degradê da cabeça é o do logo, igual nos
-   dois temas; só as antenas mudam de tom, para não sumirem no escuro. */
+/* Avatar: a cabeça do alienígena da marca, sem moldura, e no canto o
+   símbolo da função em verde. O degradê da cabeça é o do logo, igual nos
+   dois temas; as antenas e o símbolo mudam de tom no escuro. */
 .avatar {
   position: relative;
   display: inline-flex;
@@ -22,25 +22,16 @@
   color: var(--brand-700);
 }
 
-/* O anel da cor do card separa o selo da cabeça. */
-.selo {
+/* Símbolo da função: só o traço verde, sem moldura, no canto de baixo à
+   direita, ao lado do queixo (fora do contorno da cabeça). No claro, um
+   verde mais escuro, para ter contraste com o card branco. */
+.simbolo {
   position: absolute;
-  right: -4px;
-  bottom: -2px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: 50%;
-  background: var(--green-400);
-  color: #06281b;
-  box-shadow: 0 0 0 3px var(--surface);
-}
-
-.selo svg {
-  width: 15px;
-  height: 15px;
+  right: -2px;
+  bottom: 0;
+  width: 1.15rem;
+  height: 1.15rem;
+  color: var(--green-700);
 }
 
 @media (min-width: 769px) {
@@ -52,4 +43,8 @@
 
 :global([data-theme="dark"]) .antenas {
   color: var(--brand-300);
+}
+
+:global([data-theme="dark"]) .simbolo {
+  color: var(--green-400);
 }

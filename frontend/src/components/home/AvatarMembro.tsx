@@ -1,7 +1,7 @@
 import { useId } from "react";
 import styles from "./AvatarMembro.module.css";
 
-/** Símbolo da função de cada pessoa, no selo verde do canto do avatar. */
+/** Símbolo da função de cada pessoa, em verde no canto do avatar. */
 export type SimboloFuncao = "maleta" | "atomo" | "megafone" | "processador" | "codigo" | "camadas" | "livro";
 
 /* Traços no estilo Lucide (24×24, traço 2), como os outros ícones do site. */
@@ -65,9 +65,9 @@ const SIMBOLOS: Record<SimboloFuncao, React.ReactNode> = {
  * Avatar dos membros da equipe (seção "Quem somos").
  *
  * Ninguém tem foto: o avatar é a cabeça do alienígena da marca (o mesmo
- * degradê lilás do logo, com olhos e antenas), com um selo verde no canto
- * mostrando o símbolo da função. É decorativo para leitores de tela: o nome
- * e o cargo já estão no texto logo abaixo.
+ * degradê lilás do logo, com as órbitas dos olhos e as antenas) e, no canto,
+ * o símbolo da função em verde, solto, sem moldura. É decorativo para
+ * leitores de tela: o nome e o cargo já estão no texto logo abaixo.
  */
 export default function AvatarMembro({ simbolo }: { simbolo: SimboloFuncao }) {
   // Id próprio do degradê em cada avatar: vários na mesma página não podem
@@ -99,21 +99,18 @@ export default function AvatarMembro({ simbolo }: { simbolo: SimboloFuncao }) {
         />
         <ellipse cx="24.3" cy="35" rx="6.6" ry="4.1" transform="rotate(28 24.3 35)" fill="#2b0a3d" />
         <ellipse cx="39.7" cy="35" rx="6.6" ry="4.1" transform="rotate(-28 39.7 35)" fill="#2b0a3d" />
-        <circle cx="26.4" cy="33.4" r="1.4" fill="#ffffff" />
-        <circle cx="41.8" cy="33.4" r="1.4" fill="#ffffff" />
       </svg>
-      <span className={styles.selo}>
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          {SIMBOLOS[simbolo]}
-        </svg>
-      </span>
+      <svg
+        className={styles.simbolo}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        {SIMBOLOS[simbolo]}
+      </svg>
     </span>
   );
 }

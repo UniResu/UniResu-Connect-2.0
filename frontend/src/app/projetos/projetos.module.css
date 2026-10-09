@@ -20,37 +20,38 @@
   padding: var(--space-2xl) var(--respiro) var(--space-3xl);
 }
 
-/* ── Aviso sobre a origem dos dados (recolhido por padrão) ── */
+/* ── Aviso sobre a origem dos dados ──
+   Faixa da largura da busca, logo acima dela. No desktop o resumo fica
+   visível numa linha e "Saiba mais" abre o texto completo; no celular só o
+   título aparece, recolhido, para não empurrar a busca para baixo. */
 
 .origem {
-  margin-top: var(--space-md);
-  max-width: 46rem;
+  margin-top: var(--space-lg);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
 }
 
 .origemResumo {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 0.4rem;
-  min-height: 2rem;
-  padding: 0 0.5rem 0 0.35rem;
-  margin-left: -0.35rem;
-  border-radius: var(--radius-control);
-  color: var(--text-muted);
+  gap: 0.6rem;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: inherit;
+  color: var(--text-secondary);
   font-size: var(--font-size-sm);
-  font-weight: 500;
   cursor: pointer;
   list-style: none;
-  transition: color var(--transition-fast), background var(--transition-fast);
 }
 
 .origemResumo::-webkit-details-marker {
   display: none;
 }
 
-.origemResumo:hover,
-.origem[open] .origemResumo {
+.origemResumo > svg:first-child {
+  flex-shrink: 0;
   color: var(--text-accent);
-  background: var(--primary-50);
 }
 
 .origemResumo:focus-visible {
@@ -58,13 +59,73 @@
   box-shadow: var(--ring);
 }
 
+.origemTitulo {
+  flex-shrink: 0;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.origemFrase {
+  flex: 1;
+  min-width: 0;
+}
+
+.origemAcao {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: auto;
+  font-weight: 600;
+  color: var(--text-accent);
+}
+
+.origemResumo:hover .origemAcao {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.origemFechar,
+.origem[open] .origemAbrir {
+  display: none;
+}
+
+.origem[open] .origemFechar {
+  display: inline;
+}
+
+.origemSeta {
+  transition: transform var(--transition-fast);
+}
+
+.origem[open] .origemSeta {
+  transform: rotate(180deg);
+}
+
 .origemTexto {
-  margin-top: var(--space-sm);
-  padding-left: var(--space-md);
-  border-left: 2px solid var(--primary-200);
+  max-width: 72ch;
+  margin: 0 0.9rem 0.9rem calc(0.9rem + 18px + 0.6rem);
   color: var(--text-secondary);
   font-size: var(--font-size-sm);
   line-height: 1.6;
+}
+
+/* Celular: só o título e a ação; o texto completo abre embaixo, alinhado
+   à borda da faixa. */
+@media (max-width: 767px) {
+  .origemFrase,
+  .origemAbrir,
+  .origemFechar {
+    display: none;
+  }
+
+  .origem[open] .origemFechar {
+    display: none;
+  }
+
+  .origemTexto {
+    margin-left: 0.9rem;
+  }
 }
 
 /* ── Busca por texto ──

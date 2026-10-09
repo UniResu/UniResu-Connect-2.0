@@ -169,6 +169,7 @@ const ICONE = {
   carregando: "M21 12a9 9 0 1 1-6.22-8.56",
   repetir: "M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8M21 3v5h-5",
   filtros: "M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6",
+  seta: "m6 9 6 6 6-6",
 };
 
 function Icone({
@@ -629,12 +630,20 @@ function ProjetosConteudo({ qInicial, pronto }: { qInicial: string; pronto: bool
             Projetos de pesquisa e extensão das universidades, em um só lugar. Encontre o seu e envie uma
             carta de intenção à coordenação.
           </p>
-          {/* Aviso discreto e recolhido: explica o alcance da base sem disputar
-              atenção com a busca. */}
+          {/* Faixa da largura da busca: no desktop mostra o resumo numa linha e
+              abre o texto completo; no celular fica só o título, recolhido. */}
           <details className={styles.origem}>
             <summary className={styles.origemResumo}>
-              <IconeInfo tamanho={16} />
-              De onde vêm estes projetos
+              <IconeInfo tamanho={18} />
+              <span className={styles.origemTitulo}>De onde vêm estes projetos</span>
+              <span className={styles.origemFrase}>
+                Só projetos em andamento que as universidades publicam em acesso aberto, atualizados toda semana.
+              </span>
+              <span className={styles.origemAcao} aria-hidden="true">
+                <span className={styles.origemAbrir}>Saiba mais</span>
+                <span className={styles.origemFechar}>Fechar</span>
+                <Icone nome="seta" tamanho={16} className={styles.origemSeta} />
+              </span>
             </summary>
             <p className={styles.origemTexto}>
               Reunimos somente projetos em andamento que as universidades publicam em acesso aberto, nos
