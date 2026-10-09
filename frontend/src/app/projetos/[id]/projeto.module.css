@@ -1,0 +1,32 @@
+/* Página própria do projeto: o corpo é o mesmo do modal (modal.module.css);
+   aqui só a largura de leitura, o link de volta e o cabeçalho. */
+
+.container {
+  max-width: 64rem;
+}
+
+.voltar {
+  margin-bottom: var(--space-lg);
+  margin-left: -0.9rem;
+}
+
+.cabecalho {
+  margin-bottom: var(--space-lg);
+}
+
+.origem {
+  margin-bottom: var(--space-xs);
+  color: var(--text-accent);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.titulo {
+  font-size: clamp(1.5rem, 1.2rem + 1.4vw, 2.25rem);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: var(--heading-tracking);
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}

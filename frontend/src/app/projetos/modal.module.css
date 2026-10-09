@@ -294,6 +294,12 @@ section.candidatura {
   display: none;
 }
 
+/* Link para a página própria do projeto, no fim da coluna lateral. */
+a.linkPagina {
+  width: 100%;
+  margin-top: var(--space-sm);
+}
+
 @media (max-width: 899px) {
   .atalho {
     position: sticky;
@@ -333,5 +339,17 @@ section.candidatura {
     margin-bottom: calc(-1 * var(--space-md));
     padding-left: var(--space-md);
     padding-right: var(--space-md);
+  }
+}
+
+/* Na página própria do projeto a barra acompanha a margem da página, não a
+   do modal (--respiro vem do container da página). */
+@media (max-width: 899px) {
+  .atalhoPagina {
+    margin-right: calc(-1 * var(--respiro, var(--space-md)));
+    margin-bottom: 0;
+    margin-left: calc(-1 * var(--respiro, var(--space-md)));
+    padding-right: var(--respiro, var(--space-md));
+    padding-left: var(--respiro, var(--space-md));
   }
 }

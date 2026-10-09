@@ -7,6 +7,7 @@ from typing import List, Literal, Optional
 from controllers.projeto_controller import (
     buscar_projetos_controller,
     obter_projeto_publico_controller,
+    indice_projetos_controller,
     listar_unidades_controller,
     listar_instituicoes_controller,
     listar_filtros_controller,
@@ -22,6 +23,7 @@ from models.projeto_model import (
     ProjetoPublicoResponse,
     FontesStatusResponse,
     FiltrosResponse,
+    IndiceProjetosResponse,
 )
 from auth.autenticacao import get_usuario_atual, get_usuario_com_perfil_completo
 from services.areas import AREAS_CONHECIMENTO
@@ -109,6 +111,15 @@ async def listar_filtros_route(
     `instituicao`, `unidade` e `remoto` (os mesmos parâmetros da busca)."""
     return await listar_filtros_controller(q=q, modulo=modulo, instituicao=instituicao, unidade=unidade,
                                            remoto=remoto, campus=campus)
+
+
+@router.get("/projetos/indice", response_model=IndiceProjetosResponse)
+async def indice_projetos_route(
+    pular: int = Query(0, ge=0),
+    limite: int = Query(5000, ge=1, le=10000),
+):
+    """Ids de todos os projetos visíveis, em páginas, para o sitemap do site."""
+    return await indice_projetos_controller(pular, limite)
 
 
 @router.get("/projetos/fontes/status", response_model=FontesStatusResponse)

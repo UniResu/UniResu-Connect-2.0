@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import Dict, List, Optional
 
@@ -125,6 +126,18 @@ class FonteStatus(BaseModel):
     instituicao: str
     rotulo: str
     ultima_atualizacao: Optional[str] = None
+
+
+class ItemIndiceProjeto(BaseModel):
+    id: str
+    atualizado_em: Optional[datetime] = None
+
+
+class IndiceProjetosResponse(BaseModel):
+    """Uma página da lista de todos os projetos visíveis, só com id e data:
+    serve ao sitemap do site (endereço de cada projeto para os buscadores)."""
+    total: int
+    itens: List[ItemIndiceProjeto] = []
 
 
 class FontesStatusResponse(BaseModel):

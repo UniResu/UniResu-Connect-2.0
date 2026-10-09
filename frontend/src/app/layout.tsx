@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { SITE_URL } from "@/lib/constants";
 import { COR_TEMA, SCRIPT_TEMA } from "@/lib/tema";
 
 /**
@@ -19,10 +20,26 @@ const fonteBase = Plus_Jakarta_Sans({
   variable: "--font-base",
 });
 
+const DESCRICAO_SITE =
+  "Plataforma que conecta alunos, professores e pesquisadores em uma rede de oportunidades, conhecimento e colaboração universitária.";
+
+// metadataBase: os links canônicos e das prévias (Open Graph) das páginas
+// saem com o endereço completo do site. O modelo de título vale para as
+// páginas que definem o próprio título ("Fórum | UniResu Connect").
 export const metadata: Metadata = {
-  title: "UniResu Connect | Conectando a Comunidade Acadêmica",
-  description:
-    "Plataforma que conecta alunos, professores e pesquisadores em uma rede de oportunidades, conhecimento e colaboração universitária.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "UniResu Connect | Conectando a Comunidade Acadêmica",
+    template: "%s | UniResu Connect",
+  },
+  description: DESCRICAO_SITE,
+  openGraph: {
+    type: "website",
+    siteName: "UniResu Connect",
+    locale: "pt_BR",
+    title: "UniResu Connect | Conectando a Comunidade Acadêmica",
+    description: DESCRICAO_SITE,
+  },
 };
 
 // Uma única meta theme-color: o script do tema troca o valor junto com o

@@ -1,10 +1,6 @@
-import { api } from "@/lib/api";
+import { pedirNoServidor } from "@/lib/servidor";
 import type { Projeto } from "@/types/projeto";
 import { conteudoDe, votosDe, type Topico } from "@/app/forum/_componentes/forum";
-
-/** Quanto o servidor espera a API, que pode estar acordando no Render.
- *  A espera acontece no build ou em segundo plano, nunca na frente de alguém. */
-const ESPERA_API_MS = 60_000;
 
 /** Pergunta do fórum como a página inicial mostra: só o que cabe no card. */
 export interface PerguntaVitrine {
@@ -36,26 +32,6 @@ export function resumirPergunta(topico: Topico): PerguntaVitrine {
     votos: votosDe(topico),
     categoria: topico.categoria ?? null,
   };
-}
-
-/**
- * Pede uma rota da API pelo servidor.
- *
- * No build, se a API não responder, devolve null e a página segue sem esse
- * dado (as listas são buscadas pelo navegador como antes). Fora do build (a
- * renovação em segundo plano), lança o erro: assim o Next continua servindo a
- * última versão boa da página em vez de trocá-la por uma sem conteúdo.
- */
-async function pedirNoServidor<T>(rota: string, rotulo: string, valido: (dados: T) => boolean): Promise<T | null> {
-  try {
-    const dados = await api.get<T>(rota, { signal: AbortSignal.timeout(ESPERA_API_MS) });
-    if (!valido(dados)) throw new Error("resposta vazia ou inesperada");
-    return dados;
-  } catch (erro) {
-    if (process.env.NEXT_PHASE === "phase-production-build") return null;
-    const detalhe = erro instanceof Error ? erro.message : JSON.stringify(erro);
-    throw new Error(`${rotulo}: ${detalhe}`);
-  }
 }
 
 /** Lista vazia conta como erro: a busca de projetos devolve vazio quando o banco falha. */

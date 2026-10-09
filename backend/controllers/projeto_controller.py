@@ -205,6 +205,27 @@ async def buscar_projetos_controller(
         return []
 
 
+async def indice_projetos_controller(pular: int, limite: int) -> Dict[str, Any]:
+    """Ids (e a data da última atualização, quando houver) dos projetos
+    visíveis, em ordem de `_id`, para o sitemap. Projeção mínima: a lista
+    inteira tem dezenas de milhares de projetos. Sem `atualizado_em`, vale a
+    data de criação embutida no ObjectId."""
+    db = Database.get_db()
+    filtro = filtro_visiveis()
+    total = await db.projetos.count_documents(filtro)
+    cursor = (
+        db.projetos.find(filtro, {"_id": 1, "atualizado_em": 1})
+        .sort("_id", 1)
+        .skip(pular)
+        .limit(limite)
+    )
+    itens = []
+    for doc in await cursor.to_list(length=limite):
+        data = doc.get("atualizado_em") or doc["_id"].generation_time
+        itens.append({"id": str(doc["_id"]), "atualizado_em": data})
+    return {"total": total, "itens": itens}
+
+
 async def obter_projeto_publico_controller(projeto_id: str) -> Optional[Dict[str, Any]]:
     """Um projeto visível pelo id, no mesmo formato da busca (sem contatos).
     Devolve None para id inválido, inexistente ou projeto oculto."""

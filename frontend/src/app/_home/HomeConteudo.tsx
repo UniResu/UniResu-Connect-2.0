@@ -692,7 +692,7 @@ function ProjetosDestaque({ iniciais }: { iniciais: Projeto[] | null }) {
             key={projeto.id}
             projeto={projeto}
             compacto
-            href={`/projetos?projeto=${encodeURIComponent(projeto.id)}`}
+            href={`/projetos/${encodeURIComponent(projeto.id)}`}
           />
         ))}
       </div>
