@@ -314,22 +314,11 @@ const INTERVALO_CARROSSEL = 4000;
 /** A partir desta largura a seção vira carrossel; até 768px ela fica empilhada. */
 const DESKTOP_QUERY = "(min-width: 769px)";
 
-/**
- * Um slide da seção, com o mesmo DOM na versão empilhada e no carrossel.
- * `faixa`: na versão empilhada (celular), cada bloco rola na horizontal; a
- * faixa recebe foco e nome para dar para rolar pelo teclado.
- */
-function SlideQuemSomosView({ slide, faixa = false }: { slide: SlideQuemSomos; faixa?: boolean }) {
-  const rolagem = (nome: string) =>
-    faixa ? { tabIndex: 0, "aria-label": nome } : {};
-
+/** Um slide da seção, com o mesmo DOM na versão empilhada e no carrossel. */
+function SlideQuemSomosView({ slide }: { slide: SlideQuemSomos }) {
   if (slide.tipo === "institucional") {
     return (
-      <div
-        className={`${styles.institucionalGrid} ${faixa ? styles.faixa : ""}`}
-        {...rolagem("A plataforma")}
-        {...(faixa ? { role: "region" } : {})}
-      >
+      <div className={styles.institucionalGrid}>
         {INSTITUCIONAL.map((item) => (
           <article key={item.titulo} className={`ui-card ${styles.cardTexto}`}>
             <span className={styles.cardIcone}>
@@ -352,8 +341,7 @@ function SlideQuemSomosView({ slide, faixa = false }: { slide: SlideQuemSomos; f
       <ul
         className={`${styles.pessoasGrid} ${slide.membros.length === 2 ? styles.pessoasGridDupla : ""} ${
           slide.membros.length === 4 ? styles.pessoasGridQuadrupla : ""
-        } ${faixa ? styles.faixa : ""}`}
-        {...rolagem(slide.titulo)}
+        }`}
       >
         {slide.membros.map((membro) => (
           <li key={membro.nome} className={`ui-card ${styles.pessoa}`}>
@@ -477,7 +465,7 @@ function QuemSomos() {
         ) : (
           <div className={styles.quemSomosLista}>
             {SLIDES_QUEM_SOMOS.map((slide) => (
-              <SlideQuemSomosView key={slide.id} slide={slide} faixa />
+              <SlideQuemSomosView key={slide.id} slide={slide} />
             ))}
           </div>
         )}

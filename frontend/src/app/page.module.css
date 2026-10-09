@@ -539,38 +539,10 @@ span.pessoaCargo {
   color: var(--text-secondary);
 }
 
-/* No celular, cada bloco de "Quem somos" vira uma faixa com rolagem lateral:
-   os cards cortados na borda mostram que há mais, e a seção fica com a
-   altura de um bloco por vez em vez de empilhar tudo. */
+/* No celular, os blocos de "Quem somos" ficam empilhados, com rolagem só na
+   vertical; os cabeçalhos dos blocos seguem o alinhamento à esquerda das
+   seções. */
 @media (max-width: 768px) {
-  .institucionalGrid.faixa,
-  .pessoasGrid.faixa {
-    display: flex;
-    gap: var(--space-md);
-    width: auto;
-    max-width: none;
-    margin: 0 calc(-1 * var(--space-md));
-    padding: var(--space-xs) var(--space-md) var(--space-md);
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    scroll-padding-inline: var(--space-md);
-    overscroll-behavior-x: contain;
-  }
-
-  .faixa > * {
-    flex: 0 0 82%;
-    scroll-snap-align: start;
-  }
-
-  .pessoasGrid.faixa > * {
-    flex-basis: 46%;
-  }
-
-  .faixa:focus-visible {
-    outline: none;
-    box-shadow: var(--ring);
-  }
-
   .cardTexto {
     padding: var(--space-lg);
   }
