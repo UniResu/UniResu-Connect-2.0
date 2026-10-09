@@ -5,8 +5,10 @@ export const APP_DESCRIPTION = "Conectando a Comunidade Acadêmica";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.uniresu.org";
 
-/** Endereço público do site: links canônicos, sitemap e prévias de link. */
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://uniresu.org").replace(/\/$/, "");
+/** Endereço público do site: links canônicos, sitemap e prévias de link.
+ *  Com www: uniresu.org redireciona para www.uniresu.org, e o Google prefere
+ *  endereços canônicos que não redirecionam. */
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.uniresu.org").replace(/\/$/, "");
 
 /** E-mail de contato e suporte da equipe (aparece no rodapé e no código de conduta). */
 export const EMAIL_CONTATO = "uniresuconnect@gmail.com";
