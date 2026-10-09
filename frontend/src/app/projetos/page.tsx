@@ -168,6 +168,7 @@ const ICONE = {
   info: "M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0M12 16v-4M12 8h.01",
   carregando: "M21 12a9 9 0 1 1-6.22-8.56",
   repetir: "M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8M21 3v5h-5",
+  filtros: "M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6",
 };
 
 function Icone({
@@ -307,6 +308,16 @@ function ProjetosConteudo({ qInicial, pronto }: { qInicial: string; pronto: bool
   const instituicoesExternas = useMemo(() => filtros.filter((i) => i.externa), [filtros]);
   const instituicoesInternas = useMemo(() => filtros.filter((i) => !i.externa), [filtros]);
 
+  // Filtros do painel (sem a busca por texto): a contagem vai no botão
+  // "Filtros" do celular e decide se o "Limpar filtros" do painel aparece.
+  const totalFiltrosAtivos =
+    (tipoFiltro ? 1 : 0) +
+    (instituicaoFiltro ? 1 : 0) +
+    campiFiltro.length +
+    unidadesFiltro.length +
+    (areaFiltro ? 1 : 0) +
+    (remotoFiltro ? 1 : 0);
+
   const temFiltroAtivo =
     busca.trim() !== "" ||
     tipoFiltro !== "" ||
@@ -315,6 +326,61 @@ function ProjetosConteudo({ qInicial, pronto }: { qInicial: string; pronto: bool
     unidadesFiltro.length > 0 ||
     areaFiltro !== "" ||
     remotoFiltro;
+
+  // Painel de filtros: coluna fixa no desktop; no celular e no tablet, uma
+  // folha que sobe do rodapé, aberta pelo botão "Filtros".
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
+  const botaoFiltrosRef = useRef<HTMLButtonElement>(null);
+  const painelRef = useRef<HTMLElement>(null);
+  const idModulo = useId();
+  const idInstituicao = useId();
+  const idArea = useId();
+
+  const fecharFiltros = useCallback(() => {
+    setFiltrosAbertos(false);
+    botaoFiltrosRef.current?.focus();
+  }, []);
+
+  // Folha aberta: foco nela, Esc fecha, Tab circula só dentro dela, a página
+  // de trás não rola, e ela fecha sozinha se a tela passar a desktop.
+  useEffect(() => {
+    if (!filtrosAbertos) return;
+    const painel = painelRef.current;
+    painel?.focus();
+    function aoTeclar(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        fecharFiltros();
+        return;
+      }
+      if (e.key !== "Tab" || !painel) return;
+      const focaveis = painel.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), select:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focaveis.length === 0) return;
+      const primeiro = focaveis[0];
+      const ultimo = focaveis[focaveis.length - 1];
+      if (e.shiftKey && (document.activeElement === primeiro || document.activeElement === painel)) {
+        e.preventDefault();
+        ultimo.focus();
+      } else if (!e.shiftKey && document.activeElement === ultimo) {
+        e.preventDefault();
+        primeiro.focus();
+      }
+    }
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    function aoVirarDesktop(e: MediaQueryListEvent) {
+      if (e.matches) setFiltrosAbertos(false);
+    }
+    document.addEventListener("keydown", aoTeclar);
+    desktop.addEventListener("change", aoVirarDesktop);
+    const overflowAnterior = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", aoTeclar);
+      desktop.removeEventListener("change", aoVirarDesktop);
+      document.body.style.overflow = overflowAnterior;
+    };
+  }, [filtrosAbertos, fecharFiltros]);
 
   // Ignora respostas de buscas antigas (filtros mudaram no meio do caminho).
   const buscaAtual = useRef(0);
@@ -462,6 +528,16 @@ function ProjetosConteudo({ qInicial, pronto }: { qInicial: string; pronto: bool
     inputBuscaRef.current?.focus();
   }
 
+  /** Só os filtros do painel; a busca por texto continua. */
+  function limparFiltrosDoPainel() {
+    setTipoFiltro("");
+    setInstituicaoFiltro("");
+    setUnidadesEscolhidas([]);
+    setCampiEscolhidos([]);
+    setAreaFiltro("");
+    setRemotoFiltro(false);
+  }
+
   function limparFiltros() {
     setBusca("");
     setBuscaAplicada("");
@@ -487,6 +563,44 @@ function ProjetosConteudo({ qInicial, pronto }: { qInicial: string; pronto: bool
   const total = projetos.length;
   const mostrarEsqueleto = total === 0 && (atualizando || !carregouUmaVez);
   const contagem = total === 1 ? "1 projeto carregado" : `${total} projetos carregados`;
+
+  // Etiquetas dos filtros em uso, cada uma com o x que tira só ela.
+  const etiquetas: { chave: string; rotulo: string; limpar: () => void }[] = [];
+  if (buscaAplicada) etiquetas.push({ chave: "q", rotulo: `“${buscaAplicada}”`, limpar: limparBusca });
+  if (tipoFiltro) {
+    etiquetas.push({
+      chave: "modulo",
+      rotulo: tipoFiltro === "pesquisa" ? "Pesquisa" : "Extensão",
+      limpar: () => setTipoFiltro(""),
+    });
+  }
+  if (instituicaoFiltro) {
+    etiquetas.push({
+      chave: "instituicao",
+      rotulo: instituicaoFiltro,
+      limpar: () => {
+        setInstituicaoFiltro("");
+        setUnidadesEscolhidas([]);
+        setCampiEscolhidos([]);
+      },
+    });
+  }
+  campiFiltro.forEach((c) =>
+    etiquetas.push({
+      chave: `campus-${c}`,
+      rotulo: `Campus ${c}`,
+      limpar: () => setCampiEscolhidos((atuais) => atuais.filter((x) => x !== c)),
+    })
+  );
+  unidadesFiltro.forEach((u) =>
+    etiquetas.push({
+      chave: `unidade-${u}`,
+      rotulo: u,
+      limpar: () => setUnidadesEscolhidas((atuais) => atuais.filter((x) => x !== u)),
+    })
+  );
+  if (areaFiltro) etiquetas.push({ chave: "area", rotulo: areaFiltro, limpar: () => setAreaFiltro("") });
+  if (remotoFiltro) etiquetas.push({ chave: "remoto", rotulo: "Remoto", limpar: () => setRemotoFiltro(false) });
 
   return (
     <div className={styles.pagina}>
@@ -514,227 +628,329 @@ function ProjetosConteudo({ qInicial, pronto }: { qInicial: string; pronto: bool
           </details>
         </header>
 
-        {/* ── Filtros ── */}
-        <form onSubmit={handleSearch} className={`ui-card ${styles.filtros}`} role="search" aria-label="Filtrar projetos">
-          <div className={styles.linhaBusca}>
-            <div className={styles.campoBusca}>
-              <Icone nome="lupa" className={styles.iconeBusca} />
-              <label htmlFor={idBusca} className="sr-only">
-                Buscar por título ou coordenação
+        {/* ── Busca por texto ── */}
+        <form onSubmit={handleSearch} className={styles.barraBusca} role="search" aria-label="Buscar projetos">
+          <div className={styles.campoBusca}>
+            <Icone nome="lupa" className={styles.iconeBusca} />
+            <label htmlFor={idBusca} className="sr-only">
+              Buscar por título ou coordenação
+            </label>
+            <input
+              id={idBusca}
+              ref={inputBuscaRef}
+              type="text"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Título ou coordenação"
+              className={`ui-field ${styles.inputBusca}`}
+              maxLength={200}
+              autoComplete="off"
+              enterKeyHint="search"
+            />
+            {busca && (
+              <button type="button" className={styles.limparBusca} onClick={limparBusca} aria-label="Limpar busca">
+                <Icone nome="x" tamanho={18} />
+              </button>
+            )}
+          </div>
+          {/* No celular o botão sai: a busca já se aplica sozinha ao parar de
+              digitar, e a tecla de busca do teclado envia na hora. */}
+          <button type="submit" className={`ui-btn ui-btn-primary ${styles.botaoBuscar}`}>
+            Buscar
+          </button>
+          <button
+            type="button"
+            ref={botaoFiltrosRef}
+            className={`ui-btn ui-btn-secondary ${styles.botaoFiltros}`}
+            onClick={() => setFiltrosAbertos(true)}
+            aria-expanded={filtrosAbertos}
+            aria-controls="painel-filtros"
+            aria-label={totalFiltrosAtivos > 0 ? `Filtros, ${totalFiltrosAtivos} em uso` : "Filtros"}
+          >
+            <Icone nome="filtros" tamanho={18} />
+            <span className={styles.botaoFiltrosTexto}>Filtros</span>
+            {totalFiltrosAtivos > 0 && <span className={styles.contadorFiltros}>{totalFiltrosAtivos}</span>}
+          </button>
+        </form>
+
+        <div className={styles.layout}>
+          {/* ── Painel de filtros (coluna no desktop, folha no celular) ── */}
+          <aside
+            id="painel-filtros"
+            ref={painelRef}
+            className={`${styles.painel} ${filtrosAbertos ? styles.painelAberto : ""}`}
+            aria-labelledby="titulo-filtros"
+            tabIndex={-1}
+            {...(filtrosAbertos ? { role: "dialog", "aria-modal": true } : {})}
+          >
+            <div className={styles.painelTopo}>
+              <h2 id="titulo-filtros" className={styles.painelTitulo}>
+                Filtros
+              </h2>
+              <button type="button" className={styles.painelFechar} onClick={fecharFiltros} aria-label="Fechar filtros">
+                <Icone nome="x" tamanho={20} />
+              </button>
+            </div>
+
+            <div className={styles.painelCorpo}>
+              <div className={styles.campoFiltro}>
+                <label htmlFor={idModulo} className={styles.rotuloFiltro}>
+                  Módulo
+                </label>
+                <select
+                  value={tipoFiltro}
+                  onChange={(e) => {
+                    setTipoFiltro(e.target.value as Modulo);
+                    setUnidadesEscolhidas([]);
+                    setCampiEscolhidos([]);
+                  }}
+                  className="ui-field"
+                  id={idModulo}
+                >
+                  <option value="">Pesquisa e extensão</option>
+                  <option value="pesquisa">Pesquisa</option>
+                  <option value="extensao">Extensão</option>
+                </select>
+              </div>
+
+              <div className={styles.campoFiltro}>
+                <label htmlFor={idInstituicao} className={styles.rotuloFiltro}>
+                  Instituição
+                </label>
+                <select
+                  value={instituicaoFiltro}
+                  onChange={(e) => {
+                    setInstituicaoFiltro(e.target.value);
+                    setUnidadesEscolhidas([]);
+                    setCampiEscolhidos([]);
+                  }}
+                  className="ui-field"
+                  id={idInstituicao}
+                  disabled={filtros.length === 0}
+                >
+                  <option value="">Todas as instituições</option>
+                  {instituicoesExternas.length > 0 && (
+                    <optgroup label="Universidades (coleta automática)">
+                      {instituicoesExternas.map((i) => (
+                        <option key={i.sigla} value={i.sigla}>
+                          {i.sigla} ({i.total})
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {instituicoesInternas.length > 0 && (
+                    <optgroup label="Cadastrados na plataforma">
+                      {instituicoesInternas.map((i) => (
+                        <option key={i.sigla} value={i.sigla}>
+                          {i.sigla} ({i.total})
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+              </div>
+
+              {/* Campi e unidades da instituição escolhida, com seleção múltipla. */}
+              <div className={styles.campoFiltro}>
+                <span className={styles.rotuloFiltro} aria-hidden="true">
+                  Campus
+                </span>
+                <MultiSelect
+                  rotulo="Campus"
+                  rotuloTodos="Todos os campi"
+                  placeholder={
+                    !instituicaoFiltro
+                      ? "Escolha a instituição"
+                      : campiOferecidos.length > 0
+                        ? `Campi da ${instituicaoFiltro}`
+                        : `Sem campi para ${instituicaoFiltro}`
+                  }
+                  opcoes={opcoesCampi}
+                  selecionados={campiFiltro}
+                  onChange={setCampiEscolhidos}
+                  disabled={campiOferecidos.length === 0}
+                />
+              </div>
+
+              <div className={styles.campoFiltro}>
+                <span className={styles.rotuloFiltro} aria-hidden="true">
+                  Unidade ou departamento
+                </span>
+                <MultiSelect
+                  rotulo="Unidades"
+                  rotuloTodos="Todas as unidades"
+                  placeholder={
+                    !instituicaoFiltro
+                      ? "Escolha a instituição"
+                      : unidadesOferecidas.length > 0
+                        ? `Unidades da ${instituicaoFiltro}`
+                        : `Sem unidades para ${instituicaoFiltro}`
+                  }
+                  opcoes={opcoesUnidades}
+                  selecionados={unidadesFiltro}
+                  onChange={setUnidadesEscolhidas}
+                  disabled={unidadesOferecidas.length === 0}
+                />
+              </div>
+
+              {/* Grandes áreas do CNPq, na ordem fixa da tabela, só as que têm projeto no recorte atual. */}
+              <div className={styles.campoFiltro}>
+                <label htmlFor={idArea} className={styles.rotuloFiltro}>
+                  Área do conhecimento
+                </label>
+                <select
+                  value={areaFiltro}
+                  onChange={(e) => setAreaFiltro(e.target.value)}
+                  className="ui-field"
+                  id={idArea}
+                  disabled={areas.length === 0}
+                >
+                  <option value="">{areas.length > 0 ? "Todas as áreas" : "Área do conhecimento"}</option>
+                  {areas.map((a) => (
+                    <option key={a.nome} value={a.nome}>
+                      {a.nome} ({a.total})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <label className={styles.marcar}>
+                <input type="checkbox" checked={remotoFiltro} onChange={(e) => setRemotoFiltro(e.target.checked)} />
+                Somente remotos
               </label>
-              <input
-                id={idBusca}
-                ref={inputBuscaRef}
-                type="text"
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                placeholder="Título ou coordenação"
-                className={`ui-field ${styles.inputBusca}`}
-                maxLength={200}
-                autoComplete="off"
-              />
-              {busca && (
-                <button type="button" className={styles.limparBusca} onClick={limparBusca} aria-label="Limpar busca">
-                  <Icone nome="x" tamanho={18} />
+
+              {totalFiltrosAtivos > 0 && (
+                <button type="button" className={`ui-btn ui-btn-ghost ${styles.limparPainel}`} onClick={limparFiltrosDoPainel}>
+                  <Icone nome="x" tamanho={16} />
+                  Limpar filtros
                 </button>
               )}
             </div>
-            <button type="submit" className="ui-btn ui-btn-primary">
-              Buscar
-            </button>
-          </div>
 
-          <div className={styles.grade}>
-            <select
-              value={tipoFiltro}
-              onChange={(e) => {
-                setTipoFiltro(e.target.value as Modulo);
-                setUnidadesEscolhidas([]);
-                setCampiEscolhidos([]);
-              }}
-              className="ui-field"
-              aria-label="Módulo"
-            >
-              <option value="">Pesquisa e extensão</option>
-              <option value="pesquisa">Pesquisa</option>
-              <option value="extensao">Extensão</option>
-            </select>
-
-            <select
-              value={instituicaoFiltro}
-              onChange={(e) => {
-                setInstituicaoFiltro(e.target.value);
-                setUnidadesEscolhidas([]);
-                setCampiEscolhidos([]);
-              }}
-              className="ui-field"
-              aria-label="Instituição"
-              disabled={filtros.length === 0}
-            >
-              <option value="">Todas as instituições</option>
-              {instituicoesExternas.length > 0 && (
-                <optgroup label="Universidades (coleta automática)">
-                  {instituicoesExternas.map((i) => (
-                    <option key={i.sigla} value={i.sigla}>
-                      {i.sigla} ({i.total})
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-              {instituicoesInternas.length > 0 && (
-                <optgroup label="Cadastrados na plataforma">
-                  {instituicoesInternas.map((i) => (
-                    <option key={i.sigla} value={i.sigla}>
-                      {i.sigla} ({i.total})
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-            </select>
-
-            {/* Campi e unidades da instituição escolhida, com seleção múltipla. */}
-            <MultiSelect
-              rotulo="Campus"
-              rotuloTodos="Todos os campi"
-              placeholder={
-                !instituicaoFiltro
-                  ? "Campus"
-                  : campiOferecidos.length > 0
-                    ? `Campi da ${instituicaoFiltro}`
-                    : `Sem campi para ${instituicaoFiltro}`
-              }
-              opcoes={opcoesCampi}
-              selecionados={campiFiltro}
-              onChange={setCampiEscolhidos}
-              disabled={campiOferecidos.length === 0}
-            />
-            <MultiSelect
-              rotulo="Unidades"
-              rotuloTodos="Todas as unidades"
-              placeholder={
-                !instituicaoFiltro
-                  ? "Unidades"
-                  : unidadesOferecidas.length > 0
-                    ? `Unidades da ${instituicaoFiltro}`
-                    : `Sem unidades para ${instituicaoFiltro}`
-              }
-              opcoes={opcoesUnidades}
-              selecionados={unidadesFiltro}
-              onChange={setUnidadesEscolhidas}
-              disabled={unidadesOferecidas.length === 0}
-            />
-
-            {/* Grandes áreas do CNPq, na ordem fixa da tabela, só as que têm projeto no recorte atual. */}
-            <select
-              value={areaFiltro}
-              onChange={(e) => setAreaFiltro(e.target.value)}
-              className="ui-field"
-              aria-label="Área do conhecimento"
-              disabled={areas.length === 0}
-            >
-              <option value="">{areas.length > 0 ? "Todas as áreas" : "Área do conhecimento"}</option>
-              {areas.map((a) => (
-                <option key={a.nome} value={a.nome}>
-                  {a.nome} ({a.total})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className={styles.linhaExtras}>
-            <label className={styles.marcar}>
-              <input type="checkbox" checked={remotoFiltro} onChange={(e) => setRemotoFiltro(e.target.checked)} />
-              Somente remotos
-            </label>
-            {temFiltroAtivo && (
-              <button type="button" className="ui-btn ui-btn-ghost" onClick={limparFiltros}>
-                <Icone nome="x" tamanho={16} />
-                Limpar filtros
+            <div className={styles.painelRodape}>
+              <button
+                type="button"
+                className="ui-btn ui-btn-secondary"
+                onClick={limparFiltrosDoPainel}
+                disabled={totalFiltrosAtivos === 0}
+              >
+                Limpar
               </button>
-            )}
-          </div>
-        </form>
-
-        {avisoLink && (
-          <div className={styles.avisoLink} role="status">
-            <Icone nome="info" className={styles.avisoIcone} />
-            <span className={styles.avisoTexto}>{avisoLink}</span>
-            <button type="button" className={styles.avisoFechar} onClick={() => setAvisoLink("")} aria-label="Fechar aviso">
-              <Icone nome="x" tamanho={16} />
-            </button>
-          </div>
-        )}
-
-        {/* ── Lista ── */}
-        {carregouUmaVez && !mostrarEsqueleto && total > 0 && (
-          <div className={styles.resultadosTopo}>
-            <p className={styles.contagem} aria-live="polite">
-              {contagem}
-            </p>
-            {atualizando && (
-              <span className={styles.atualizando}>
-                <Icone nome="carregando" tamanho={16} className={styles.girando} />
-                Atualizando
-              </span>
-            )}
-          </div>
-        )}
-
-        {mostrarEsqueleto ? (
-          <div className={styles.lista} aria-busy="true" aria-label="Carregando projetos">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className={`skeleton ${styles.esqueleto}`} />
-            ))}
-          </div>
-        ) : erroBusca && total === 0 ? (
-          <div className={`ui-card ${styles.vazio}`} role="alert">
-            <span className={styles.vazioIcone}>
-              <Icone nome="alerta" tamanho={24} />
-            </span>
-            <h2 className={styles.vazioTitulo}>Não foi possível carregar os projetos</h2>
-            <p className={styles.vazioTexto}>Confira sua conexão e tente de novo.</p>
-            <button type="button" className="ui-btn ui-btn-secondary" onClick={carregarProjetos}>
-              <Icone nome="repetir" tamanho={16} />
-              Tentar de novo
-            </button>
-          </div>
-        ) : total === 0 ? (
-          <div className={`ui-card ${styles.vazio}`}>
-            <span className={`${styles.vazioIcone} ${styles.vazioMarca}`}>
-              <IconeUfo tamanho={30} />
-            </span>
-            <h2 className={styles.vazioTitulo}>Nenhum projeto com esses filtros</h2>
-            <p className={styles.vazioTexto}>
-              Nossa nave varreu a base e não achou nada por aqui. Tente outra palavra ou amplie o recorte de
-              instituição, unidade e área.
-            </p>
-            {temFiltroAtivo && (
-              <button type="button" className="ui-btn ui-btn-secondary" onClick={limparFiltros}>
-                Limpar filtros
+              <button type="button" className="ui-btn ui-btn-primary" onClick={fecharFiltros}>
+                Ver resultados
               </button>
-            )}
-          </div>
-        ) : (
-          <>
-            <div className={`${styles.lista} ${atualizando ? styles.listaAtualizando : ""}`} aria-busy={atualizando}>
-              {projetos.map((projeto) => (
-                <ProjetoCard key={projeto.id} projeto={projeto} onClick={abrirProjeto} />
-              ))}
             </div>
-            {hasMore && (
-              <div className={styles.maisWrapper}>
-                <button
-                  type="button"
-                  className="ui-btn ui-btn-secondary ui-btn-lg"
-                  onClick={carregarMais}
-                  disabled={isLoadingMore || atualizando}
-                >
-                  {isLoadingMore ? "Carregando" : "Carregar mais"}
+          </aside>
+          {filtrosAbertos && <div className={styles.fundoPainel} onClick={fecharFiltros} aria-hidden="true" />}
+
+          {/* ── Resultados ── */}
+          <div className={styles.resultados}>
+            {avisoLink && (
+              <div className={styles.avisoLink} role="status">
+                <Icone nome="info" className={styles.avisoIcone} />
+                <span className={styles.avisoTexto}>{avisoLink}</span>
+                <button type="button" className={styles.avisoFechar} onClick={() => setAvisoLink("")} aria-label="Fechar aviso">
+                  <Icone nome="x" tamanho={16} />
                 </button>
               </div>
             )}
-          </>
-        )}
+
+            {etiquetas.length > 0 && (
+              <div className={styles.etiquetas}>
+                <span className="sr-only">Filtros em uso:</span>
+                {etiquetas.map((e) => (
+                  <button
+                    key={e.chave}
+                    type="button"
+                    className={`ui-chip ${styles.etiqueta}`}
+                    onClick={e.limpar}
+                    aria-label={`Tirar o filtro ${e.rotulo}`}
+                    title={e.rotulo}
+                  >
+                    <span className={styles.etiquetaTexto}>{e.rotulo}</span>
+                    <Icone nome="x" tamanho={14} />
+                  </button>
+                ))}
+                {etiquetas.length > 1 && (
+                  <button type="button" className={styles.limparTudo} onClick={limparFiltros}>
+                    Limpar tudo
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* ── Lista ── */}
+            {carregouUmaVez && !mostrarEsqueleto && total > 0 && (
+              <div className={styles.resultadosTopo}>
+                <p className={styles.contagem} aria-live="polite">
+                  {contagem}
+                </p>
+                {atualizando && (
+                  <span className={styles.atualizando}>
+                    <Icone nome="carregando" tamanho={16} className={styles.girando} />
+                    Atualizando
+                  </span>
+                )}
+              </div>
+            )}
+
+            {mostrarEsqueleto ? (
+              <div className={styles.lista} aria-busy="true" aria-label="Carregando projetos">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className={`skeleton ${styles.esqueleto}`} />
+                ))}
+              </div>
+            ) : erroBusca && total === 0 ? (
+              <div className={`ui-card ${styles.vazio}`} role="alert">
+                <span className={styles.vazioIcone}>
+                  <Icone nome="alerta" tamanho={24} />
+                </span>
+                <h2 className={styles.vazioTitulo}>Não foi possível carregar os projetos</h2>
+                <p className={styles.vazioTexto}>Confira sua conexão e tente de novo.</p>
+                <button type="button" className="ui-btn ui-btn-secondary" onClick={carregarProjetos}>
+                  <Icone nome="repetir" tamanho={16} />
+                  Tentar de novo
+                </button>
+              </div>
+            ) : total === 0 ? (
+              <div className={`ui-card ${styles.vazio}`}>
+                <span className={`${styles.vazioIcone} ${styles.vazioMarca}`}>
+                  <IconeUfo tamanho={30} />
+                </span>
+                <h2 className={styles.vazioTitulo}>Nenhum projeto com esses filtros</h2>
+                <p className={styles.vazioTexto}>
+                  Nossa nave varreu a base e não achou nada por aqui. Tente outra palavra ou amplie o recorte de
+                  instituição, unidade e área.
+                </p>
+                {temFiltroAtivo && (
+                  <button type="button" className="ui-btn ui-btn-secondary" onClick={limparFiltros}>
+                    Limpar filtros
+                  </button>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className={`${styles.lista} ${atualizando ? styles.listaAtualizando : ""}`} aria-busy={atualizando}>
+                  {projetos.map((projeto) => (
+                    <ProjetoCard key={projeto.id} projeto={projeto} onClick={abrirProjeto} />
+                  ))}
+                </div>
+                {hasMore && (
+                  <div className={styles.maisWrapper}>
+                    <button
+                      type="button"
+                      className="ui-btn ui-btn-secondary ui-btn-lg"
+                      onClick={carregarMais}
+                      disabled={isLoadingMore || atualizando}
+                    >
+                      {isLoadingMore ? "Carregando" : "Carregar mais"}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* ── Modal de detalhes e candidatura ── */}

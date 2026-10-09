@@ -64,19 +64,14 @@
   line-height: 1.6;
 }
 
-/* ── Painel de filtros ── */
+/* ── Busca por texto ──
+   Barra própria acima das duas colunas. No celular e no tablet ela leva
+   também o botão "Filtros", que abre o painel. */
 
-.filtros {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-  padding: var(--space-lg);
-  margin-bottom: var(--space-xl);
-}
-
-.linhaBusca {
+.barraBusca {
   display: flex;
   gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
 }
 
 .campoBusca {
@@ -98,6 +93,8 @@
 .campoBusca .inputBusca {
   padding-left: 2.6rem;
   padding-right: 2.9rem;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .limparBusca {
@@ -127,23 +124,255 @@
   box-shadow: var(--ring);
 }
 
-/* Controles de mesma altura (2.75rem, pelo ui-field), em colunas iguais. */
-.grade {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: var(--space-sm);
+.botaoFiltros {
+  position: relative;
+  flex-shrink: 0;
 }
 
-.grade > * {
+.contadorFiltros {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.35rem;
+  border-radius: var(--radius-chip);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-fg);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+/* ── Duas colunas: filtros e resultados ── */
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-xl);
+  align-items: start;
+}
+
+.resultados {
   min-width: 0;
 }
 
-.linhaExtras {
+/* Painel: no desktop, um card que acompanha a rolagem ao lado da lista. */
+.painel {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.painel:focus-visible {
+  outline: none;
+}
+
+.painelTopo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg) 0;
+}
+
+.painelTitulo {
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.painelFechar {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-right: -0.5rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.painelFechar:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.painelFechar:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.painelCorpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg) var(--space-lg);
+}
+
+.campoFiltro {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.rotuloFiltro {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.limparPainel {
+  align-self: flex-start;
+}
+
+.painelRodape {
+  display: none;
+}
+
+.fundoPainel {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .layout {
+    grid-template-columns: 17.5rem minmax(0, 1fr);
+  }
+
+  .painel {
+    position: sticky;
+    top: calc(var(--navbar-height) + var(--space-md));
+  }
+
+  .botaoFiltros {
+    display: none;
+  }
+}
+
+/* Celular e tablet: o painel vira uma folha que sobe do rodapé. Fica no DOM
+   o tempo todo (o mesmo do desktop) e só aparece com .painelAberto. */
+@media (max-width: 1023px) {
+  .painel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 300;
+    max-height: 85vh;
+    max-height: 85dvh;
+    border-radius: var(--radius-modal) var(--radius-modal) 0 0;
+    border-bottom: 0;
+    box-shadow: var(--shadow-xl);
+    transform: translateY(100%);
+    visibility: hidden;
+    transition: transform var(--transition-normal), visibility 0s linear var(--transition-normal);
+  }
+
+  .painelAberto {
+    transform: translateY(0);
+    visibility: visible;
+    transition: transform var(--transition-normal);
+  }
+
+  .painelTopo {
+    padding: var(--space-sm) var(--space-md) var(--space-sm) var(--space-lg);
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .painelTitulo {
+    font-size: var(--font-size-lg);
+  }
+
+  .painelFechar {
+    display: inline-flex;
+  }
+
+  .painelCorpo {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--space-lg);
+  }
+
+  .limparPainel {
+    display: none;
+  }
+
+  .painelRodape {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-lg) calc(var(--space-sm) + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border-light);
+  }
+
+  .fundoPainel {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 290;
+    background: var(--header-backdrop);
+  }
+}
+
+/* ── Filtros em uso ── */
+
+.etiquetas {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-sm) var(--space-md);
+  gap: var(--space-xs) var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+button.etiqueta {
+  gap: 0.3rem;
+  max-width: 18rem;
+  border-color: var(--surface-border);
+  background: var(--surface);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+button.etiqueta:hover {
+  border-color: var(--surface-border-hover);
+  background: var(--surface-2);
+}
+
+button.etiqueta:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+button.etiqueta svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.etiquetaTexto {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.limparTudo {
+  padding: 0.25rem 0.35rem;
+  border: 0;
+  background: transparent;
+  color: var(--text-accent);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .marcar {
@@ -319,12 +548,12 @@ div.esqueleto {
     padding: var(--space-xl) var(--space-md) var(--space-2xl);
   }
 
-  .filtros {
-    padding: var(--space-md);
+  .botaoFiltrosTexto {
+    display: none;
   }
 
-  .linhaExtras {
-    justify-content: flex-start;
+  .botaoBuscar {
+    display: none;
   }
 
   .maisWrapper > button {
