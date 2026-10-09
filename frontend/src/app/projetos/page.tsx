@@ -257,6 +257,24 @@ function ProjetosConteudo({ qInicial, pronto }: { qInicial: string; pronto: bool
   const inputBuscaRef = useRef<HTMLInputElement>(null);
   const idBusca = useId();
 
+  // Celular e tablet: a barra de busca fica presa sob o cabeçalho ao rolar a
+  // lista. A marca invisível logo acima dela diz quando a barra descolou do
+  // lugar; só então ela ganha fundo e sombra (no topo da página, nada muda).
+  const marcaBarraRef = useRef<HTMLSpanElement>(null);
+  const [barraColada, setBarraColada] = useState(false);
+  useEffect(() => {
+    const marca = marcaBarraRef.current;
+    if (!marca) return;
+    const alturaCabecalho =
+      parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--navbar-height")) || 0;
+    const observador = new IntersectionObserver(
+      ([entrada]) => setBarraColada(!entrada.isIntersecting && entrada.boundingClientRect.top < alturaCabecalho + 1),
+      { rootMargin: `-${alturaCabecalho}px 0px 0px 0px` }
+    );
+    observador.observe(marca);
+    return () => observador.disconnect();
+  }, []);
+
   // Categorias: instituição > campus / unidade. Campi e unidades só aparecem
   // depois de escolher a instituição; a lista toda vem de uma única chamada
   // a /api/projetos/filtros.
@@ -629,7 +647,13 @@ function ProjetosConteudo({ qInicial, pronto }: { qInicial: string; pronto: bool
         </header>
 
         {/* ── Busca por texto ── */}
-        <form onSubmit={handleSearch} className={styles.barraBusca} role="search" aria-label="Buscar projetos">
+        <span ref={marcaBarraRef} className={styles.marcaBarra} aria-hidden="true" />
+        <form
+          onSubmit={handleSearch}
+          className={`${styles.barraBusca} ${barraColada ? styles.barraColada : ""}`}
+          role="search"
+          aria-label="Buscar projetos"
+        >
           <div className={styles.campoBusca}>
             <Icone nome="lupa" className={styles.iconeBusca} />
             <label htmlFor={idBusca} className="sr-only">

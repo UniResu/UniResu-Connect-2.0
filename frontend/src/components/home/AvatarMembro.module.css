@@ -1,27 +1,51 @@
-/* Avatar de iniciais: pílula em degradê de marca, só com tokens, para ficar
+/* Avatar: círculo em degradê de marca com a silhueta clara do alienígena e,
+   no canto, o selo verde com o símbolo da função. Só tokens, para ficar
    igual nos dois temas. Sem sombra: o card em volta já tem a dele. */
 .avatar {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   width: 4rem;
   height: 4rem;
-  border-radius: var(--radius-chip);
+  border-radius: 50%;
   background: linear-gradient(135deg, var(--brand-700), var(--brand-500));
   color: var(--text-on-dark);
-  font-size: 1.25rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  line-height: 1;
   user-select: none;
+}
+
+.alien {
+  width: 78%;
+  height: 78%;
+  overflow: visible;
+}
+
+/* O anel da cor do card separa o selo do círculo. */
+.selo {
+  position: absolute;
+  right: -4px;
+  bottom: -2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--green-400);
+  color: #06281b;
+  box-shadow: 0 0 0 3px var(--surface);
+}
+
+.selo svg {
+  width: 15px;
+  height: 15px;
 }
 
 @media (min-width: 769px) {
   .avatar {
     width: 4.5rem;
     height: 4.5rem;
-    font-size: 1.375rem;
   }
 }
 

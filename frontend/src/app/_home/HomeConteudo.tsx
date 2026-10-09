@@ -9,7 +9,7 @@ import { Autoplay, EffectFade, Keyboard } from "swiper/modules";
 import type { Swiper as SwiperInstancia } from "swiper/types";
 import "swiper/css";
 import "swiper/css/effect-fade";
-import AvatarMembro from "@/components/home/AvatarMembro";
+import AvatarMembro, { type SimboloFuncao } from "@/components/home/AvatarMembro";
 import ProjetoCard from "@/components/projetos/ProjetoCard";
 import { IconeLupa, IconeNaveTransmite, IconeSetaDireita, IconeSetaEsquerda } from "@/components/ui/Icones";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -326,6 +326,8 @@ interface Membro {
   nome: string;
   /** Cargo na plataforma, quando houver (fundadores e desenvolvimento). */
   cargo?: string;
+  /** Símbolo da função no selo do avatar (o da função mostrada naquele slide). */
+  simbolo: SimboloFuncao;
   /** Curso em andamento (estudantes). */
   curso?: string;
   instituicao: string;
@@ -339,30 +341,61 @@ const JULIANA = {
 
 // Ordem definida pela equipe: Lucas, Matheus, Maria Eduarda e Juliana.
 const FUNDADORES: Membro[] = [
-  { nome: "Lucas Eduardo Sanches Cordeiro", cargo: "Co-fundador e CEO", curso: "Medicina", instituicao: "UERJ" },
-  { nome: "Matheus Gabriel Ramos de Melo", cargo: "Co-fundador e CSO", curso: "Medicina", instituicao: "UNIR" },
+  {
+    nome: "Lucas Eduardo Sanches Cordeiro",
+    cargo: "Co-fundador e CEO",
+    simbolo: "maleta",
+    curso: "Medicina",
+    instituicao: "UERJ",
+  },
+  {
+    nome: "Matheus Gabriel Ramos de Melo",
+    cargo: "Co-fundador e CSO",
+    simbolo: "atomo",
+    curso: "Medicina",
+    instituicao: "UNIR",
+  },
   {
     nome: "Maria Eduarda Siqueira de Medeiros",
     cargo: "Co-fundadora e CMO",
+    simbolo: "megafone",
     curso: "Medicina",
     instituicao: "Afya Garanhuns",
   },
-  { ...JULIANA, cargo: "Co-fundadora e CTO" },
+  { ...JULIANA, cargo: "Co-fundadora e CTO", simbolo: "processador" },
 ];
 
 // Juliana também lidera o desenvolvimento, e Matheus coordena o produto desde
 // o início (arquitetura, organização e metodologia); os dois aparecem também
 // entre os fundadores.
 const DESENVOLVIMENTO: Membro[] = [
-  { ...JULIANA, cargo: "Head de Desenvolvimento" },
-  { nome: "Matheus Gabriel Ramos de Melo", cargo: "Coordenador de Produto", curso: "Medicina", instituicao: "UNIR" },
-  { nome: "Daniel Pereira Santos da Silva", cargo: "Desenvolvedor", curso: "Ciência da Computação", instituicao: "UERJ" },
-  { nome: "Pedro de Magalhães Leitão", cargo: "Desenvolvedor", curso: "Ciência da Computação", instituicao: "UERJ" },
+  { ...JULIANA, cargo: "Head de Desenvolvimento", simbolo: "codigo" },
+  {
+    nome: "Matheus Gabriel Ramos de Melo",
+    cargo: "Coordenador de Produto",
+    simbolo: "camadas",
+    curso: "Medicina",
+    instituicao: "UNIR",
+  },
+  {
+    nome: "Daniel Pereira Santos da Silva",
+    cargo: "Desenvolvedor",
+    simbolo: "codigo",
+    curso: "Ciência da Computação",
+    instituicao: "UERJ",
+  },
+  {
+    nome: "Pedro de Magalhães Leitão",
+    cargo: "Desenvolvedor",
+    simbolo: "codigo",
+    curso: "Ciência da Computação",
+    instituicao: "UERJ",
+  },
 ];
 
 const ORIENTACAO: Membro[] = [
-  { nome: "Prof. Dr. Carlos Eduardo Raymundo", instituicao: "UERJ" },
-  { nome: "Prof. Dr. Thayse Moraes de Moraes", instituicao: "UEPA" },
+  { nome: "Prof. Dr. Carlos Eduardo Raymundo", simbolo: "livro", instituicao: "UERJ" },
+  { nome: "Prof. Dr. Thayse Moraes de Moraes", simbolo: "livro", instituicao: "UEPA" },
 ];
 
 type SlideQuemSomos =
@@ -446,7 +479,7 @@ function SlideQuemSomosView({ slide }: { slide: SlideQuemSomos }) {
       >
         {slide.membros.map((membro) => (
           <li key={membro.nome} className={`ui-card ${styles.pessoa}`}>
-            <AvatarMembro nome={membro.nome} />
+            <AvatarMembro simbolo={membro.simbolo} />
             <p className={styles.pessoaNome}>{membro.nome}</p>
             {membro.cargo && <span className={`ui-chip ui-chip-primary ${styles.pessoaCargo}`}>{membro.cargo}</span>}
             <p className={styles.pessoaCredencial}>{credencial(membro)}</p>

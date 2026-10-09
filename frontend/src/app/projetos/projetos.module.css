@@ -12,9 +12,12 @@
 }
 
 .container {
+  /* Margem lateral: a barra de busca presa usa o mesmo valor para ir de
+     borda a borda da tela. */
+  --respiro: var(--space-lg);
   max-width: var(--max-width);
   margin: 0 auto;
-  padding: var(--space-2xl) var(--space-lg) var(--space-3xl);
+  padding: var(--space-2xl) var(--respiro) var(--space-3xl);
 }
 
 /* ── Aviso sobre a origem dos dados (recolhido por padrão) ── */
@@ -72,6 +75,34 @@
   display: flex;
   gap: var(--space-sm);
   margin-bottom: var(--space-lg);
+}
+
+.marcaBarra {
+  display: block;
+  height: 0;
+}
+
+/* Celular e tablet: a barra (campo e botão Filtros) fica presa sob o
+   cabeçalho enquanto a lista rola. Ocupa a largura toda da tela; fundo,
+   borda e sombra só aparecem quando ela está de fato presa (.barraColada). */
+@media (max-width: 1023px) {
+  .barraBusca {
+    position: sticky;
+    top: var(--navbar-height);
+    z-index: 40;
+    margin-right: calc(-1 * var(--respiro));
+    margin-bottom: calc(var(--space-lg) - 0.6rem);
+    margin-left: calc(-1 * var(--respiro));
+    padding: 0.6rem var(--respiro);
+    border-bottom: 1px solid transparent;
+    transition: background-color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+  }
+
+  .barraColada {
+    background: var(--page-projetos-bg);
+    border-bottom-color: var(--surface-border);
+    box-shadow: 0 6px 12px -10px rgba(0, 0, 0, 0.35);
+  }
 }
 
 .campoBusca {
@@ -604,7 +635,8 @@ div.esqueleto {
 
 @media (max-width: 640px) {
   .container {
-    padding: var(--space-xl) var(--space-md) var(--space-2xl);
+    --respiro: var(--space-md);
+    padding: var(--space-xl) var(--respiro) var(--space-2xl);
   }
 
   .botaoFiltrosTexto {
