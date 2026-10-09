@@ -256,10 +256,10 @@ const FUNDADORES: Membro[] = [
 // o início (arquitetura, organização e metodologia); os dois aparecem também
 // entre os fundadores.
 const DESENVOLVIMENTO: Membro[] = [
-  { ...JULIANA, cargo: "Head de desenvolvimento" },
+  { ...JULIANA, cargo: "Head de Desenvolvimento" },
   { nome: "Matheus Gabriel Ramos de Melo", cargo: "Coordenador de Produto", curso: "Medicina", instituicao: "UNIR" },
-  { nome: "Daniel Pereira Santos da Silva", cargo: "Desenvolvedor", curso: "Ciência da computação", instituicao: "UERJ" },
-  { nome: "Pedro de Magalhães Leitão", cargo: "Desenvolvedor", curso: "Ciência da computação", instituicao: "UERJ" },
+  { nome: "Daniel Pereira Santos da Silva", cargo: "Desenvolvedor", curso: "Ciência da Computação", instituicao: "UERJ" },
+  { nome: "Pedro de Magalhães Leitão", cargo: "Desenvolvedor", curso: "Ciência da Computação", instituicao: "UERJ" },
 ];
 
 const ORIENTACAO: Membro[] = [

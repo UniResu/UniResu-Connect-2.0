@@ -249,7 +249,7 @@ export default function EditarPerfilPage() {
                     Sem um e-mail acadêmico, o vínculo com a instituição é comprovado pela conta ORCID. Vincule a sua
                     conta ORCID a este perfil: você passa a entrar por ela e o perfil importa a formação e as publicações.
                   </p>
-                  <button type="button" className="ui-btn ui-btn-primary" onClick={() => loginWithOrcid()}>
+                  <button type="button" className="ui-btn ui-btn-orcid" onClick={() => loginWithOrcid()}>
                     <IconeOrcid />
                     Vincular conta ORCID
                   </button>

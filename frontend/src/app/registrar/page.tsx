@@ -538,10 +538,10 @@ export default function RegistrarPage() {
               </>
             )}
 
-            {/* Sem e-mail acadêmico, o ORCID vira a ação principal. */}
+            {/* No verde da marca ORCID, com ou sem e-mail acadêmico. */}
             <button
               onClick={() => loginWithOrcid()}
-              className={`ui-btn ${semEmailAcademico ? "ui-btn-primary" : "ui-btn-secondary"} ${conta.botaoLargo}`}
+              className={`ui-btn ui-btn-orcid ${conta.botaoLargo}`}
               type="button"
             >
               <IconeOrcid />

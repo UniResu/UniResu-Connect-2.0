@@ -100,7 +100,7 @@ export default function LoginPage() {
         <div className={styles.pilha}>
           <button
             onClick={handleOrcidLogin}
-            className={`ui-btn ui-btn-secondary ${styles.botaoLargo}`}
+            className={`ui-btn ui-btn-orcid ${styles.botaoLargo}`}
             type="button"
           >
             <IconeOrcid />

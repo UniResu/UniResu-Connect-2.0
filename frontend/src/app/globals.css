@@ -402,6 +402,20 @@ button, input, select, textarea {
   color: var(--text-primary);
 }
 
+/* Entrar ou registrar pelo ORCID: o verde da marca ORCID (#a6ce39), igual
+   nos dois temas. Texto escuro, porque branco sobre esse verde fica com
+   contraste 1,8:1; o verde-escuro chega a 8,6:1. */
+.ui-btn-orcid {
+  background: #a6ce39;
+  border-color: #a6ce39;
+  color: #1d2606;
+}
+.ui-btn-orcid:hover:not(:disabled) {
+  background: #97bd2f;
+  border-color: #97bd2f;
+  color: #1d2606;
+}
+
 .ui-btn-ghost {
   color: var(--text-accent);
 }
