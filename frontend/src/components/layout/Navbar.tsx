@@ -8,14 +8,18 @@ import ThemeToggle from "@/components/ui/ThemeToggle";
 import { IconeSetaBaixo } from "@/components/ui/Icones";
 import styles from "./Navbar.module.css";
 
-// Só os dois destinos do produto. O logo leva à página inicial, e "Quem somos"
-// fica no rodapé.
 const LINKS = [
+  { href: "/", label: "Início" },
+  { href: "/#quem-somos", label: "Quem somos" },
   { href: "/projetos", label: "Projetos acadêmicos" },
   { href: "/forum", label: "Fórum" },
 ];
 
+/** Página atual: "Início" só na raiz; "Quem somos" é uma âncora da página
+ *  inicial e não marca; as outras valem também para as subpáginas. */
 function estaEm(pathname: string, href: string) {
+  if (href === "/") return pathname === "/";
+  if (href.includes("#")) return false;
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -166,13 +170,13 @@ function NavbarConteudo({ pathname }: { pathname: string }) {
         aria-hidden={!menuOpen}
       >
         <ul className={styles.mobileLinks}>
-          {[{ href: "/", label: "Início" }, ...LINKS].map((l) => (
+          {LINKS.map((l) => (
             <li key={l.href}>
               <Link
                 href={l.href}
                 onClick={fecharMenu}
                 tabIndex={menuOpen ? 0 : -1}
-                aria-current={(l.href === "/" ? pathname === "/" : estaEm(pathname, l.href)) ? "page" : undefined}
+                aria-current={estaEm(pathname, l.href) ? "page" : undefined}
               >
                 {l.label}
               </Link>

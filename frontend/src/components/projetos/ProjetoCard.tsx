@@ -46,26 +46,14 @@ export function estiloDaArea(area?: string) {
   return (area && AREAS[area]) || { classe: "ui-chip-primary", icone: null };
 }
 
-/** "UNIR, campus Ji-Paraná, Departamento de ..." numa linha de texto. */
-function localDoProjeto(projeto: Projeto, compacto: boolean) {
-  return [
-    projeto.instituicao,
-    projeto.campus ? `campus ${projeto.campus}` : null,
-    compacto ? null : projeto.unidade,
-  ]
-    .filter(Boolean)
-    .join(", ");
-}
-
 /**
  * Card de projeto, o mesmo na busca e na página inicial.
  *
- * Hierarquia: tipo e situação no topo, título, quem coordena, onde
- * (instituição, campus e unidade numa linha de texto), resumo em duas
- * linhas e, no rodapé, só o que ajuda a escolher de relance: a área, com
- * cor própria, e "Remoto" em verde; o ano fica discreto à direita. Clica-se
- * no card inteiro: `onClick` abre o modal na busca; `href` leva a outra
- * página.
+ * Hierarquia: tipo e situação no topo, título, quem coordena, resumo em
+ * duas linhas e, no rodapé, as etiquetas do mais geral ao mais específico:
+ * a área, com cor própria, a instituição, o campus e a unidade (neutros) e
+ * "Remoto" em verde; o ano fica discreto à direita. Clica-se no card
+ * inteiro: `onClick` abre o modal na busca; `href` leva a outra página.
  */
 function ProjetoCardBase({
   projeto,
@@ -83,7 +71,6 @@ function ProjetoCardBase({
   const tom = tomDaSituacao(projeto.situacao);
   const situacao = formatarSituacao(projeto.situacao);
   const area = estiloDaArea(projeto.area_conhecimento);
-  const local = localDoProjeto(projeto, compacto);
 
   const conteudo = (
     <>
@@ -116,21 +103,34 @@ function ProjetoCardBase({
         </p>
       )}
 
-      {local && (
-        <p className={styles.local} title={local}>
-          {projeto.campus ? <IconePin /> : <IconePredio />}
-          <span className={styles.localTexto}>{local}</span>
-        </p>
-      )}
-
       {projeto.descricao && !compacto && <p className={styles.resumo}>{projeto.descricao}</p>}
 
-      {(projeto.area_conhecimento || projeto.e_remoto || projeto.ano) && (
+      {(projeto.area_conhecimento || projeto.instituicao || projeto.e_remoto || projeto.ano) && (
         <div className={styles.rodape}>
           {projeto.area_conhecimento && (
             <span className={`ui-chip ${area.classe}`} title="Área do conhecimento (grande área do CNPq)">
               {area.icone}
               {projeto.area_conhecimento}
+            </span>
+          )}
+          {projeto.instituicao && (
+            <span
+              className={`ui-chip ${projeto.origem ? "ui-chip-outline" : `ui-chip-truncate ${styles.tagLonga}`}`}
+              title={projeto.instituicao}
+            >
+              {projeto.instituicao}
+            </span>
+          )}
+          {projeto.campus && (
+            <span className={`ui-chip ${styles.tagLonga}`} title={`Campus ${projeto.campus}`}>
+              <IconePin />
+              <span className={styles.tagTexto}>{projeto.campus}</span>
+            </span>
+          )}
+          {projeto.unidade && !compacto && (
+            <span className={`ui-chip ${styles.tagLonga}`} title={projeto.unidade}>
+              <IconePredio />
+              <span className={styles.tagTexto}>{projeto.unidade}</span>
             </span>
           )}
           {projeto.e_remoto && (

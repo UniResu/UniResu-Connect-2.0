@@ -147,15 +147,20 @@ function BuscaHero() {
 
 /* ── Como funciona ── */
 
-const PASSOS: { titulo: string; texto: string }[] = [
+const PASSOS: { titulo: string; texto: string; link?: { href: string; texto: string } }[] = [
+  {
+    titulo: "Crie sua conta",
+    texto:
+      "Use o e-mail da sua instituição ou entre com o ORCID. É com a conta que você envia cartas e participa do fórum.",
+    link: { href: "/registrar", texto: "Criar conta" },
+  },
   {
     titulo: "Encontre um projeto",
     texto: "Busque entre projetos de pesquisa e extensão em andamento, publicados pelas próprias universidades.",
   },
   {
     titulo: "Envie sua carta de intenção",
-    texto:
-      "Com a conta criada, conte por que quer participar. A carta vai por e-mail para a coordenação, com cópia para você.",
+    texto: "Conte por que quer participar. A carta vai por e-mail para a coordenação, com cópia para você.",
   },
   {
     titulo: "Combine com a coordenação",
@@ -168,7 +173,7 @@ function ComoFunciona() {
   return (
     <section className={`${styles.secao} ${styles.comoFunciona}`} id="como-funciona" aria-labelledby="titulo-como">
       <div className={styles.container}>
-        <CabecalhoSecao id="titulo-como" rotulo="Como funciona" titulo="Do projeto à coordenação em três passos" />
+        <CabecalhoSecao id="titulo-como" rotulo="Como funciona" titulo="Da conta à coordenação em quatro passos" />
         <ol className={styles.passos}>
           {PASSOS.map((passo, i) => (
             <li key={passo.titulo} className={styles.passo}>
@@ -178,6 +183,12 @@ function ComoFunciona() {
               <div className={styles.passoTexto}>
                 <h3 className={styles.passoTitulo}>{passo.titulo}</h3>
                 <p className={styles.passoCorpo}>{passo.texto}</p>
+                {passo.link && (
+                  <Link href={passo.link.href} className={styles.passoLink}>
+                    {passo.link.texto}
+                    <IconeSetaDireita tamanho={16} />
+                  </Link>
+                )}
               </div>
             </li>
           ))}

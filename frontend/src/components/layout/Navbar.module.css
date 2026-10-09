@@ -382,9 +382,12 @@
     background: var(--header-hover);
   }
 
+  /* Página atual: a mesma linha verde sob o rótulo que o desktop usa. */
   .mobileLinks a[aria-current="page"] {
-    background: var(--header-hover);
-    box-shadow: inset 3px 0 0 var(--green-400);
+    text-decoration: underline;
+    text-decoration-color: var(--green-400);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.45rem;
   }
 
   .mobileDivider {

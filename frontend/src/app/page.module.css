@@ -295,8 +295,8 @@ button.heroBuscaBotao:hover {
 }
 
 /* ── Como funciona ──
-   Três passos numerados, ligados por um tracejado: na horizontal no
-   desktop, na vertical no celular. */
+   Quatro passos numerados, ligados por um tracejado: na horizontal no
+   desktop, na vertical no tablet e no celular. */
 .secao.comoFunciona {
   padding: clamp(3rem, 6vw, 4.5rem) 0;
   background: var(--surface);
@@ -357,9 +357,26 @@ button.heroBuscaBotao:hover {
   line-height: 1.6;
 }
 
-@media (min-width: 769px) {
+.passoLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: var(--space-sm);
+  padding: 0.25rem 0;
+  font-weight: 600;
+  color: var(--text-accent);
+  text-decoration: none;
+}
+
+.passoLink:hover {
+  color: var(--text-accent);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+@media (min-width: 1024px) {
   .passos {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .passo {
@@ -903,6 +920,34 @@ span.pessoaCargo {
   font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--text-on-dark-muted);
+}
+
+/* Tema escuro: os cards de pergunta usam o grafite dos cards de projeto,
+   com cinzas neutros, em vez do branco translúcido sobre o roxo. */
+:global(:root[data-theme="dark"]) .forumCard {
+  border-color: var(--card-borda);
+  background: var(--card-bg);
+}
+
+:global(:root[data-theme="dark"]) .forumCard:hover {
+  border-color: var(--card-borda-hover);
+  background: var(--card-bg);
+}
+
+:global(:root[data-theme="dark"]) .forumCardTitulo {
+  color: var(--card-titulo);
+}
+
+:global(:root[data-theme="dark"]) .forumCardTexto {
+  color: var(--card-texto);
+}
+
+:global(:root[data-theme="dark"]) .forumCardAutor {
+  color: var(--card-apagado);
+}
+
+:global(:root[data-theme="dark"]) .forumCardTopo {
+  color: var(--card-destaque);
 }
 
 .forumEsqueleto {

@@ -7,11 +7,11 @@
 .card {
   display: block;
   position: relative;
-  background: var(--surface);
-  border: 1px solid var(--surface-border);
+  background: var(--card-bg);
+  border: 1px solid var(--card-borda);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-sm);
-  color: var(--text-primary);
+  color: var(--card-titulo);
   text-decoration: none;
   content-visibility: auto;
   /* Estimativa perto da altura real, para a barra de rolagem não pular. */
@@ -25,7 +25,7 @@
 
 .clicavel:hover,
 .clicavel:focus-within {
-  border-color: var(--surface-border-hover);
+  border-color: var(--card-borda-hover);
   box-shadow: var(--shadow-md);
 }
 
@@ -90,7 +90,7 @@
   flex-shrink: 0;
   font-size: var(--font-size-xs);
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--card-texto);
   white-space: nowrap;
 }
 
@@ -108,7 +108,7 @@
 
 .data {
   font-size: var(--font-size-xs);
-  color: var(--text-muted);
+  color: var(--card-apagado);
   flex-shrink: 0;
 }
 
@@ -117,7 +117,7 @@
   font-weight: 700;
   line-height: 1.35;
   letter-spacing: -0.01em;
-  color: var(--text-primary);
+  color: var(--card-titulo);
   margin-bottom: var(--space-xs);
   overflow-wrap: anywhere;
 }
@@ -125,38 +125,13 @@
 .coordenacao {
   display: block;
   font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  margin-bottom: var(--space-xs);
-}
-
-/* Onde: instituição, campus e unidade numa linha só, cortada com
-   reticências; o texto inteiro fica no title. */
-.local {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  min-width: 0;
+  color: var(--card-texto);
   margin-bottom: var(--space-sm);
-  font-size: var(--font-size-sm);
-  color: var(--text-muted);
-}
-
-.local svg {
-  flex-shrink: 0;
-  width: 14px;
-  height: 14px;
-}
-
-.localTexto {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .coordenacaoRotulo {
   margin-right: 0.35rem;
-  color: var(--text-muted);
+  color: var(--card-apagado);
 }
 
 .coordenacaoRotulo::after {
@@ -164,7 +139,7 @@
 }
 
 .resumo {
-  color: var(--text-secondary);
+  color: var(--card-texto);
   font-size: var(--font-size-sm);
   line-height: 1.6;
   display: -webkit-box;
@@ -174,13 +149,26 @@
   margin-bottom: var(--space-md);
 }
 
-/* Rodapé: no máximo duas etiquetas (área e remoto) e o ano em texto. */
+/* Rodapé: as etiquetas e o ano em texto, à direita. */
 .rodape {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-xs) var(--space-sm);
   align-items: center;
   min-width: 0;
+}
+
+/* Nomes de unidade são longos: corta com reticências e mostra o nome inteiro
+   no title. `.rodape .tagLonga` vence o max-width do `ui-chip` global; o
+   texto fica num span próprio para o ícone não ser cortado junto. */
+.rodape .tagLonga {
+  max-width: 320px;
+}
+
+.tagTexto {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ano {
@@ -190,12 +178,53 @@
   margin-left: auto;
   font-size: var(--font-size-xs);
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--card-apagado);
 }
 
 .ano svg {
   width: 13px;
   height: 13px;
+}
+
+/* Tema escuro: etiquetas com texto neutro e claro. A cor da área fica no
+   ícone e num tom leve do fundo, sem texto colorido sobre fundo colorido,
+   que no escuro brilhava demais e lia mal. */
+:global(:root[data-theme="dark"]) .card :global(.ui-chip) {
+  --cor-etiqueta: var(--card-apagado);
+  border-color: color-mix(in srgb, var(--cor-etiqueta) 26%, var(--card-bg));
+  background: color-mix(in srgb, var(--cor-etiqueta) 12%, var(--card-bg));
+  color: var(--card-etiqueta-fg);
+}
+
+:global(:root[data-theme="dark"]) .card :global(.ui-chip) svg {
+  color: var(--cor-etiqueta);
+}
+
+:global(:root[data-theme="dark"]) .card :global(.ui-chip-outline) {
+  background: transparent;
+}
+
+:global(:root[data-theme="dark"]) .card :global(.ui-chip-rose) { --cor-etiqueta: var(--tint-rose-fg); }
+:global(:root[data-theme="dark"]) .card :global(.ui-chip-orange) { --cor-etiqueta: var(--tint-orange-fg); }
+:global(:root[data-theme="dark"]) .card :global(.ui-chip-amber) { --cor-etiqueta: var(--tint-amber-fg); }
+:global(:root[data-theme="dark"]) .card :global(.ui-chip-green) { --cor-etiqueta: var(--tint-green-fg); }
+:global(:root[data-theme="dark"]) .card :global(.ui-chip-teal) { --cor-etiqueta: var(--tint-teal-fg); }
+:global(:root[data-theme="dark"]) .card :global(.ui-chip-sky) { --cor-etiqueta: var(--tint-sky-fg); }
+:global(:root[data-theme="dark"]) .card :global(.ui-chip-indigo) { --cor-etiqueta: var(--tint-indigo-fg); }
+:global(:root[data-theme="dark"]) .card :global(.ui-chip-violet) { --cor-etiqueta: var(--tint-violet-fg); }
+:global(:root[data-theme="dark"]) .card :global(.ui-chip-slate) { --cor-etiqueta: var(--tint-slate-fg); }
+:global(:root[data-theme="dark"]) .card :global(.ui-chip-primary) { --cor-etiqueta: var(--card-destaque); }
+:global(:root[data-theme="dark"]) .card :global(.ui-chip-success) { --cor-etiqueta: var(--success-fg); }
+
+/* O selo do módulo continua com a cor dele, sobre um fundo mais discreto. */
+:global(:root[data-theme="dark"]) .tipoPesquisa {
+  background: color-mix(in srgb, var(--tint-violet-fg) 14%, var(--card-bg));
+  color: var(--tint-violet-fg);
+}
+
+:global(:root[data-theme="dark"]) .tipoExtensao {
+  background: color-mix(in srgb, var(--tint-sky-fg) 14%, var(--card-bg));
+  color: var(--tint-sky-fg);
 }
 
 @media (max-width: 768px) {
@@ -208,6 +237,10 @@
   .botao,
   .card:not(:has(.botao)) {
     padding: var(--space-md);
+  }
+
+  .rodape .tagLonga {
+    max-width: 100%;
   }
 
   .topo {
