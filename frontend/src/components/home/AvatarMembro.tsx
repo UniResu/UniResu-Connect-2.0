@@ -65,9 +65,11 @@ const SIMBOLOS: Record<SimboloFuncao, React.ReactNode> = {
  * Avatar dos membros da equipe (seção "Quem somos").
  *
  * Ninguém tem foto: o avatar é a cabeça do alienígena da marca (o mesmo
- * degradê lilás do logo, com as órbitas dos olhos e as antenas) e, no canto,
- * o símbolo da função em verde, solto, sem moldura. É decorativo para
- * leitores de tela: o nome e o cargo já estão no texto logo abaixo.
+ * degradê lilás do logo) e, no canto, o símbolo da função em verde, solto.
+ * O desenho é feito para parecer simpático: olhos redondos com brilho,
+ * sorriso pequeno como o do logo e antenas finas, quase retas, com bolinhas
+ * nas pontas (as curvas grossas para fora pareciam chifres). É decorativo
+ * para leitores de tela: o nome e o cargo já estão no texto logo abaixo.
  */
 export default function AvatarMembro({ simbolo }: { simbolo: SimboloFuncao }) {
   // Id próprio do degradê em cada avatar: vários na mesma página não podem
@@ -84,21 +86,27 @@ export default function AvatarMembro({ simbolo }: { simbolo: SimboloFuncao }) {
         </defs>
         <g className={styles.antenas}>
           <path
-            d="M25.5 16C24.5 10.5 21.8 7 18.5 5.5M38.5 16C39.5 10.5 42.2 7 45.5 5.5"
+            d="M27.5 15.5C27 12 25.8 9.5 24.6 7.6M36.5 15.5C37 12 38.2 9.5 39.4 7.6"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2.4"
+            strokeWidth="1.8"
             strokeLinecap="round"
           />
-          <circle cx="18.2" cy="5.4" r="2" fill="currentColor" />
-          <circle cx="45.8" cy="5.4" r="2" fill="currentColor" />
+          <circle cx="24.2" cy="6.6" r="2.6" fill="currentColor" />
+          <circle cx="39.8" cy="6.6" r="2.6" fill="currentColor" />
         </g>
         <path
           d="M32 14c11.2 0 19.5 7.7 19.5 17.6C51.5 43.3 40.7 56 32 56S12.5 43.3 12.5 31.6C12.5 21.7 20.8 14 32 14z"
           fill={`url(#${degrade})`}
         />
-        <ellipse cx="24.3" cy="35" rx="6.6" ry="4.1" transform="rotate(28 24.3 35)" fill="#2b0a3d" />
-        <ellipse cx="39.7" cy="35" rx="6.6" ry="4.1" transform="rotate(-28 39.7 35)" fill="#2b0a3d" />
+        <ellipse cx="24.6" cy="34.5" rx="5.8" ry="4.6" transform="rotate(18 24.6 34.5)" fill="#2b0a3d" />
+        <ellipse cx="39.4" cy="34.5" rx="5.8" ry="4.6" transform="rotate(-18 39.4 34.5)" fill="#2b0a3d" />
+        {/* Brilho dos olhos: um ponto maior em cima e um menor embaixo. */}
+        <circle cx="26.4" cy="32.8" r="1.6" fill="#ffffff" />
+        <circle cx="41" cy="32.8" r="1.6" fill="#ffffff" />
+        <circle cx="22.9" cy="36.3" r="0.7" fill="#ffffff" />
+        <circle cx="37.7" cy="36.3" r="0.7" fill="#ffffff" />
+        <path d="M30.2 44.2q1.8 1.8 3.6 0" fill="none" stroke="#2b0a3d" strokeWidth="1.3" strokeLinecap="round" />
       </svg>
       <svg
         className={styles.simbolo}

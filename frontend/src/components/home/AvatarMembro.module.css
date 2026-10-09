@@ -18,8 +18,9 @@
   overflow: visible;
 }
 
+/* Antenas num lilás médio: o roxo escuro deixava o traço pesado. */
 .antenas {
-  color: var(--brand-700);
+  color: var(--brand-400);
 }
 
 /* Símbolo da função: só o traço verde, sem moldura, no canto de baixo à
