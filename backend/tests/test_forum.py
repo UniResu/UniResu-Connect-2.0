@@ -335,28 +335,38 @@ async def test_criar_indices_inclui_username_unico_sparse(db):
     assert indice["key"] == [("username", 1)] and indice["unique"] and indice["sparse"]
 
 
-# ── Selo "Primeiro contato" ──
+# ── Categorias ──
 
-async def test_selo_primeiro_contato_so_na_primeira_pergunta_de_cada_autor(api, db):
-    agora = datetime.now(timezone.utc)
-    ana = await _usuario(db, "Ana", username="ana")
-    sistema = await _usuario(db, "UniResu", username="uniresu", sistema=True)
-    primeira = await _topico(db, autor_id=ana, data_criacao=agora - timedelta(days=2))
-    segunda = await _topico(db, autor_id=ana, data_criacao=agora - timedelta(days=1))
-    do_sistema = await _topico(db, autor_id=sistema, data_criacao=agora - timedelta(days=3))
-    legado = await _topico(db, autor_email="antigo@exemplo.com")
+async def test_categoria_na_criacao_na_edicao_e_validada(api, db):
+    criado = await api.post(
+        "/api/forum/topicos", json={"titulo": "Bolsa e estágio", "conteudo": "Pode acumular?", "categoria": "bolsas"}
+    )
+    assert criado.status_code == 201, criado.text
+    tid = criado.json()["id"]
+    assert criado.json()["categoria"] == "bolsas"
 
+    editado = await api.patch(f"/api/forum/topicos/{tid}", json={"categoria": "vida-universitaria"})
+    assert editado.status_code == 200 and editado.json()["categoria"] == "vida-universitaria"
     lista = (await api.get("/api/forum/topicos")).json()
-    assert {t["id"]: t["primeira_do_autor"] for t in lista} == {
-        primeira: True, segunda: False, do_sistema: False, legado: False,
-    }
-    assert all("_autor_sistema" not in t for t in lista)
+    assert [t["categoria"] for t in lista if t["id"] == tid] == ["vida-universitaria"]
 
-    assert (await api.get(f"/api/forum/topicos/{primeira}")).json()["primeira_do_autor"] is True
-    assert (await api.get(f"/api/forum/topicos/{segunda}")).json()["primeira_do_autor"] is False
+    # Só as cinco categorias valem.
+    invalida = await api.post("/api/forum/topicos", json={"titulo": "x", "conteudo": "y", "categoria": "outra"})
+    assert invalida.status_code == 422
+    assert (await api.patch(f"/api/forum/topicos/{tid}", json={"categoria": "outra"})).status_code == 422
 
-    # Quem nunca perguntou recebe o selo já na resposta da criação.
-    criado = await api.post("/api/forum/topicos", json={"titulo": "Dúvida", "conteudo": "Texto"})
-    assert criado.status_code == 201 and criado.json()["primeira_do_autor"] is True
-    outra = await api.post("/api/forum/topicos", json={"titulo": "Outra", "conteudo": "Texto"})
-    assert outra.json()["primeira_do_autor"] is False
+    # Pergunta antiga, sem categoria, continua saindo (com categoria nula).
+    antigo = await _topico(db)
+    assert [t["categoria"] for t in (await api.get("/api/forum/topicos")).json() if t["id"] == antigo] == [None]
+
+
+async def test_seed_leva_a_categoria_para_perguntas_ja_publicadas(db):
+    await seed.seed_forum(db)
+    assert await db.topicos_forum.count_documents({"seed": seed.SEED_VERSAO, "categoria": None}) == 0
+
+    # Perguntas publicadas antes das categorias recebem a delas no próximo startup.
+    await db.topicos_forum.update_many({"seed": seed.SEED_VERSAO}, {"$unset": {"categoria": ""}})
+    assert await seed.atualizar_textos_do_seed(db) == seed.TOTAL_SEED
+    pergunta = seed.PERGUNTAS[1]
+    doc = await db.topicos_forum.find_one({"seed": seed.SEED_VERSAO, "seed_chave": pergunta["seed_chave"]})
+    assert doc["categoria"] == pergunta["categoria"]

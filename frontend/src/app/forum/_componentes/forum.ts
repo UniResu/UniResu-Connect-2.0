@@ -6,6 +6,24 @@
 
 import type { User } from "@/types/user";
 
+// ── Categorias ────────────────────────────────────────────────────────────
+
+/** As cinco grandes categorias, na ordem do filtro e do formulário. Os
+ *  identificadores são os mesmos da API (backend/models/forum_model.py). */
+export const CATEGORIAS = [
+  { id: "pesquisa", nome: "Pesquisa" },
+  { id: "extensao", nome: "Extensão" },
+  { id: "bolsas", nome: "Bolsas e editais" },
+  { id: "candidatura", nome: "Candidatura e currículo" },
+  { id: "vida-universitaria", nome: "Vida universitária" },
+] as const;
+
+export type CategoriaForum = (typeof CATEGORIAS)[number]["id"];
+
+export function nomeDaCategoria(id?: string | null): string | null {
+  return CATEGORIAS.find((c) => c.id === id)?.nome ?? null;
+}
+
 // ── Tipos ─────────────────────────────────────────────────────────────────
 
 export interface Resposta {
@@ -32,8 +50,8 @@ export interface Topico {
   likes: string[]; // IDs de usuários
   dislikes: string[]; // IDs de usuários
   total_respostas: number;
-  /** Primeira pergunta de quem escreveu: mostra o selo "Primeiro contato". */
-  primeira_do_autor?: boolean;
+  /** Perguntas anteriores às categorias podem não ter. */
+  categoria?: CategoriaForum | null;
   /** Só no GET de um tópico: as primeiras respostas, da mais antiga para a mais nova. */
   respostas?: Resposta[];
 }

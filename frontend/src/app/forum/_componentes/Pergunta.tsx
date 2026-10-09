@@ -12,7 +12,8 @@
 import { useId, useState } from "react";
 import Link from "next/link";
 import type { User } from "@/types/user";
-import { IconeAlien, IconeNaveDesce, IconeNaveSobe, IconeNaveTransmite } from "@/components/ui/Icones";
+import { IconeNaveDesce, IconeNaveSobe, IconeNaveTransmite } from "@/components/ui/Icones";
+import { CampoCategoria } from "./Categoria";
 import {
   conteudoDe,
   dataCompleta,
@@ -20,6 +21,7 @@ import {
   plural,
   tempoRelativo,
   votosDe,
+  type CategoriaForum,
   type TipoVoto,
   type Topico,
 } from "./forum";
@@ -85,8 +87,7 @@ export function MetaPergunta({ topico }: { topico: Topico }) {
   );
 }
 
-// ── Chips: votos, respostas e o selo da primeira pergunta (o pai decide
-//    onde ficam) ─────────────────────────────────────────────────────────
+// ── Chips: votos e respostas (o pai decide onde ficam) ───────────────────
 
 export function ChipsPergunta({ topico }: { topico: Topico }) {
   const respostas = topico.total_respostas ?? 0;
@@ -100,12 +101,6 @@ export function ChipsPergunta({ topico }: { topico: Topico }) {
         <IconeNaveTransmite />
         {plural(respostas, "resposta", "respostas")}
       </span>
-      {topico.primeira_do_autor && (
-        <span className="ui-chip ui-chip-success" title="Primeira pergunta desta pessoa no fórum">
-          <IconeAlien />
-          Primeiro contato
-        </span>
-      )}
     </>
   );
 }
@@ -141,28 +136,30 @@ export function AcoesAutor({ onEditar, onExcluir }: AcoesAutorProps) {
   );
 }
 
-// ── Edição da pergunta: título e conteúdo ─────────────────────────────────
+// ── Edição da pergunta: título, categoria e conteúdo ──────────────────────
 
 interface FormPerguntaProps {
   titulo: string;
   conteudo: string;
+  categoria?: CategoriaForum | null;
   onCancelar: () => void;
   /** Deve lançar em caso de falha: o formulário então continua aberto para nova tentativa. */
-  onSalvar: (titulo: string, conteudo: string) => Promise<void>;
+  onSalvar: (titulo: string, conteudo: string, categoria: CategoriaForum) => Promise<void>;
 }
 
-export function FormPergunta({ titulo, conteudo, onCancelar, onSalvar }: FormPerguntaProps) {
+export function FormPergunta({ titulo, conteudo, categoria, onCancelar, onSalvar }: FormPerguntaProps) {
   const idBase = useId();
   const [editTitulo, setEditTitulo] = useState(titulo);
   const [editConteudo, setEditConteudo] = useState(conteudo);
+  const [editCategoria, setEditCategoria] = useState<CategoriaForum | "">(categoria ?? "");
   const [salvando, setSalvando] = useState(false);
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
-    if (!editTitulo.trim() || !editConteudo.trim()) return;
+    if (!editTitulo.trim() || !editConteudo.trim() || !editCategoria) return;
     setSalvando(true);
     try {
-      await onSalvar(editTitulo.trim(), editConteudo.trim());
+      await onSalvar(editTitulo.trim(), editConteudo.trim(), editCategoria);
     } catch {
       // Quem chamou já mostrou o erro; os campos ficam como estavam.
     } finally {
@@ -186,6 +183,7 @@ export function FormPergunta({ titulo, conteudo, onCancelar, onSalvar }: FormPer
           required
         />
       </div>
+      <CampoCategoria id={`${idBase}-categoria`} valor={editCategoria} onMudar={setEditCategoria} />
       <div>
         <label htmlFor={`${idBase}-conteudo`} className="ui-label">
           Conteúdo

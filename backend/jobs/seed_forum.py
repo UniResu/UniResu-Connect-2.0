@@ -50,6 +50,7 @@ USUARIO_SISTEMA: Dict[str, Any] = {
 PERGUNTAS: List[Dict[str, Any]] = [
     {
         "seed_chave": "encontrar-projeto-iniciacao-cientifica",
+        "categoria": "pesquisa",
         "dias_atras": 58, "hora": 9,
         "titulo": "Como encontro um projeto de pesquisa para participar (iniciação científica)?",
         "conteudo": (
@@ -72,6 +73,7 @@ PERGUNTAS: List[Dict[str, Any]] = [
     },
     {
         "seed_chave": "carta-de-intencao",
+        "categoria": "candidatura",
         "dias_atras": 55, "hora": 14,
         "titulo": "Como escrever uma carta de intenção para o(a) coordenador(a) de um projeto?",
         "conteudo": (
@@ -91,6 +93,7 @@ PERGUNTAS: List[Dict[str, Any]] = [
     },
     {
         "seed_chave": "pesquisa-vs-extensao-curricularizacao",
+        "categoria": "extensao",
         "dias_atras": 51, "hora": 11,
         "titulo": "Qual é a diferença entre pesquisa e extensão, e por que a extensão agora conta no currículo?",
         "conteudo": (
@@ -112,6 +115,7 @@ PERGUNTAS: List[Dict[str, Any]] = [
     },
     {
         "seed_chave": "curriculo-lattes",
+        "categoria": "candidatura",
         "dias_atras": 47, "hora": 16,
         "titulo": "O que é o Currículo Lattes e como mantê-lo atualizado?",
         "conteudo": (
@@ -134,6 +138,7 @@ PERGUNTAS: List[Dict[str, Any]] = [
     },
     {
         "seed_chave": "o-que-e-orcid",
+        "categoria": "candidatura",
         "dias_atras": 44, "hora": 10,
         "titulo": "O que é ORCID e por que vale a pena criar o meu ainda na graduação?",
         "conteudo": (
@@ -153,6 +158,7 @@ PERGUNTAS: List[Dict[str, Any]] = [
     },
     {
         "seed_chave": "bolsas-iniciacao-cientifica",
+        "categoria": "bolsas",
         "dias_atras": 40, "hora": 8,
         "titulo": "Como funcionam as bolsas de iniciação científica (CNPq, FAPs e editais internos)?",
         "conteudo": (
@@ -176,6 +182,7 @@ PERGUNTAS: List[Dict[str, Any]] = [
     },
     {
         "seed_chave": "comite-de-etica-plataforma-brasil",
+        "categoria": "pesquisa",
         "dias_atras": 36, "hora": 15,
         "titulo": "Minha pesquisa envolve pessoas. O que são o Comitê de Ética e a Plataforma Brasil?",
         "conteudo": (
@@ -200,6 +207,7 @@ PERGUNTAS: List[Dict[str, Any]] = [
     },
     {
         "seed_chave": "como-ler-artigo-cientifico",
+        "categoria": "pesquisa",
         "dias_atras": 31, "hora": 20,
         "titulo": "Como ler um artigo científico sem levar um dia inteiro?",
         "conteudo": (
@@ -221,6 +229,7 @@ PERGUNTAS: List[Dict[str, Any]] = [
     },
     {
         "seed_chave": "como-escolher-orientador",
+        "categoria": "pesquisa",
         "dias_atras": 27, "hora": 12,
         "titulo": "Como escolher um(a) orientador(a)?",
         "conteudo": (
@@ -242,6 +251,7 @@ PERGUNTAS: List[Dict[str, Any]] = [
     },
     {
         "seed_chave": "monitoria-ou-iniciacao-cientifica",
+        "categoria": "vida-universitaria",
         "dias_atras": 22, "hora": 9,
         "titulo": "Monitoria ou iniciação científica: qual escolher?",
         "conteudo": (
@@ -262,6 +272,7 @@ PERGUNTAS: List[Dict[str, Any]] = [
     },
     {
         "seed_chave": "submeter-resumo-evento-cientifico",
+        "categoria": "pesquisa",
         "dias_atras": 18, "hora": 17,
         "titulo": "Como submeter um resumo para um evento científico?",
         "conteudo": (
@@ -285,6 +296,7 @@ PERGUNTAS: List[Dict[str, Any]] = [
     },
     {
         "seed_chave": "primeiro-artigo-revistas-predatorias",
+        "categoria": "pesquisa",
         "dias_atras": 13, "hora": 11,
         "titulo": "Vou publicar meu primeiro artigo. Como escolho a revista e evito as predatórias?",
         "conteudo": (
@@ -310,6 +322,7 @@ PERGUNTAS: List[Dict[str, Any]] = [
     },
     {
         "seed_chave": "conciliar-horas-do-projeto-com-aulas",
+        "categoria": "vida-universitaria",
         "dias_atras": 9, "hora": 19,
         "titulo": "Como conciliar as horas do projeto com as aulas e o resto da vida?",
         "conteudo": (
@@ -330,6 +343,7 @@ PERGUNTAS: List[Dict[str, Any]] = [
     },
     {
         "seed_chave": "grupos-de-pesquisa-cnpq",
+        "categoria": "pesquisa",
         "dias_atras": 5, "hora": 10,
         "titulo": "O que são os grupos de pesquisa (Diretório do CNPq) e como entro em um?",
         "conteudo": (
@@ -350,6 +364,7 @@ PERGUNTAS: List[Dict[str, Any]] = [
     },
     {
         "seed_chave": "iniciacao-cientifica-voluntaria",
+        "categoria": "bolsas",
         "dias_atras": 2, "hora": 13,
         "titulo": "Não consegui bolsa. Vale a pena fazer iniciação científica como voluntário(a)?",
         "conteudo": (
@@ -376,6 +391,7 @@ PERGUNTAS: List[Dict[str, Any]] = [
 # foi removida do banco e não volta.
 POST_BOAS_VINDAS: Dict[str, Any] = {
     "seed_chave": "boas-vindas",
+    "categoria": "vida-universitaria",
     "titulo": "Boas-vindas ao fórum do UniResu Connect",
     "conteudo": (
         "Este fórum nasceu de uma dificuldade que todo estudante conhece: descobrir onde estão os projetos de "
@@ -437,6 +453,7 @@ def montar_topico(pergunta: Dict[str, Any], autor_id: str, agora: datetime) -> D
         "likes": [],
         "dislikes": [],
         "total_respostas": 0,
+        "categoria": pergunta["categoria"],
         "seed": SEED_VERSAO,
         "seed_chave": pergunta["seed_chave"],
     }
@@ -451,6 +468,7 @@ async def seed_forum(db, agora: Optional[datetime] = None) -> int:
     """
     chaves = [p["seed_chave"] for p in PERGUNTAS]
     assert len(set(chaves)) == len(chaves), "seed_chave repetida em PERGUNTAS"
+    assert all(p.get("categoria") for p in [*PERGUNTAS, POST_BOAS_VINDAS]), "pergunta do seed sem categoria"
 
     await db.topicos_forum.create_index(
         [("seed", 1), ("seed_chave", 1)],
@@ -481,11 +499,12 @@ async def seed_forum(db, agora: Optional[datetime] = None) -> int:
 
 
 async def atualizar_textos_do_seed(db) -> int:
-    """Leva para o banco o título e o texto atuais das postagens da equipe.
+    """Leva para o banco o título, o texto e a categoria atuais das postagens
+    da equipe.
 
     O upsert com `$setOnInsert` só escreve o que ainda não existe, então uma
     correção no texto de uma pergunta já publicada nunca chegava ao banco.
-    Aqui só título e texto mudam; data, visualizações, votos e respostas
+    Aqui só título, texto e categoria mudam; data, visualizações, votos e respostas
     ficam como estão. As postagens são da conta de sistema, que não entra no
     site, então ninguém editou esse texto por fora. Devolve quantas mudaram.
     """
@@ -495,9 +514,13 @@ async def atualizar_textos_do_seed(db) -> int:
             {
                 "seed": SEED_VERSAO,
                 "seed_chave": item["seed_chave"],
-                "$or": [{"titulo": {"$ne": item["titulo"]}}, {"conteudo_original": {"$ne": item["conteudo"]}}],
+                "$or": [
+                    {"titulo": {"$ne": item["titulo"]}},
+                    {"conteudo_original": {"$ne": item["conteudo"]}},
+                    {"categoria": {"$ne": item["categoria"]}},
+                ],
             },
-            {"$set": {"titulo": item["titulo"], "conteudo_original": item["conteudo"]}},
+            {"$set": {"titulo": item["titulo"], "conteudo_original": item["conteudo"], "categoria": item["categoria"]}},
         )
         atualizados += resultado.modified_count
     return atualizados

@@ -15,6 +15,7 @@ import { IconeLupa, IconeNaveTransmite, IconeSetaDireita, IconeSetaEsquerda } fr
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { acordarApi, api } from "@/lib/api";
 import type { Projeto } from "@/types/projeto";
+import { ChipCategoria } from "@/app/forum/_componentes/Categoria";
 import type { Topico } from "@/app/forum/_componentes/forum";
 import {
   ROTA_PERGUNTAS,
@@ -723,6 +724,7 @@ function Forum({ iniciais }: { iniciais: PerguntaVitrine[] | null }) {
                 {p.respostas === 1 ? "1 resposta" : `${p.respostas} respostas`}
               </span>
               <h3 className={styles.forumCardTitulo}>{p.titulo}</h3>
+              <ChipCategoria categoria={p.categoria} className={styles.forumCardCategoria} />
               {p.resumo && <p className={styles.forumCardTexto}>{p.resumo}</p>}
               <span className={styles.forumCardAutor}>@{p.autor}</span>
             </Link>

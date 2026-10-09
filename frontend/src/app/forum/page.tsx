@@ -13,7 +13,8 @@
  *  [R4] Visitantes leem; logados perguntam, respondem, editam e votam.
  *  [R5] Privacidade: a API não devolve e-mail; o autor aparece como @username.
  *
- * Busca e ordenação são feitas no cliente sobre a lista já carregada.
+ * Busca, filtro por categoria e ordenação são feitos no cliente sobre a
+ * lista já carregada.
  */
 
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -23,6 +24,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import type { User } from "@/types/user";
 import {
+  CATEGORIAS,
   aplicarVotoLocal,
   conteudoDe,
   ehAutor,
@@ -30,6 +32,7 @@ import {
   parsearData,
   plural,
   votosDe,
+  type CategoriaForum,
   type EstadoRespostas,
   type TipoVoto,
   type Topico,
@@ -43,6 +46,7 @@ import {
   MetaPergunta,
   Votos,
 } from "./_componentes/Pergunta";
+import { CampoCategoria, ChipCategoria } from "./_componentes/Categoria";
 import { Respostas } from "./_componentes/Respostas";
 import { IconeAlien, IconeUfo } from "@/components/ui/Icones";
 import styles from "./forum.module.css";
@@ -73,7 +77,7 @@ interface LinhaPerguntaProps {
   votando: boolean;
   falhouRespostas: boolean;
   onAbrir: () => void;
-  onEditar: (topico: Topico, titulo: string, conteudo: string) => Promise<void>;
+  onEditar: (topico: Topico, titulo: string, conteudo: string, categoria: CategoriaForum) => Promise<void>;
   onExcluir: (topicoId: string) => Promise<void>;
   onVotar: (topicoId: string, tipo: TipoVoto) => Promise<void>;
   onMudarRespostas: (topicoId: string, atualizar: (atual: EstadoRespostas) => EstadoRespostas) => void;
@@ -103,8 +107,8 @@ function LinhaPergunta({
     : null;
 
   // Se salvar falhar, `onEditar` lança e o formulário continua aberto.
-  async function salvarEdicao(titulo: string, novoConteudo: string) {
-    await onEditar(topico, titulo, novoConteudo);
+  async function salvarEdicao(titulo: string, novoConteudo: string, categoria: CategoriaForum) {
+    await onEditar(topico, titulo, novoConteudo, categoria);
     setEditando(false);
   }
 
@@ -118,6 +122,7 @@ function LinhaPergunta({
               {topico.titulo}
             </button>
           </h2>
+          <ChipCategoria categoria={topico.categoria} className={styles.categoria} />
           {!aberta && conteudo && <p className={styles.resumo}>{resumo(conteudo)}</p>}
           <MetaPergunta topico={topico} />
         </div>
@@ -132,6 +137,7 @@ function LinhaPergunta({
             <FormPergunta
               titulo={topico.titulo}
               conteudo={conteudo}
+              categoria={topico.categoria}
               onCancelar={() => setEditando(false)}
               onSalvar={salvarEdicao}
             />
@@ -185,12 +191,14 @@ export default function ForumPage() {
 
   // Busca e ordenação (no cliente)
   const [busca, setBusca] = useState("");
+  const [filtroCategoria, setFiltroCategoria] = useState<CategoriaForum | "">("");
   const [ordem, setOrdem] = useState<Ordem>("recentes");
 
   // Nova pergunta
   const [mostrarForm, setMostrarForm] = useState(false);
   const [novoTitulo, setNovoTitulo] = useState("");
   const [novoConteudo, setNovoConteudo] = useState("");
+  const [novaCategoria, setNovaCategoria] = useState<CategoriaForum | "">("");
   const [publicando, setPublicando] = useState(false);
 
   const carregar = useCallback(async () => {
@@ -213,9 +221,11 @@ export default function ForumPage() {
 
   const visiveis = useMemo(() => {
     const termo = normalizar(busca.trim());
-    const filtrados = termo
-      ? topicos.filter((t) => normalizar(`${t.titulo} ${conteudoDe(t)}`).includes(termo))
-      : topicos.slice();
+    const filtrados = topicos.filter(
+      (t) =>
+        (!filtroCategoria || t.categoria === filtroCategoria) &&
+        (!termo || normalizar(`${t.titulo} ${conteudoDe(t)}`).includes(termo))
+    );
     const porData = (a: Topico, b: Topico) =>
       parsearData(b.data_criacao).getTime() - parsearData(a.data_criacao).getTime();
     if (ordem === "votadas") {
@@ -224,7 +234,7 @@ export default function ForumPage() {
       filtrados.sort(porData);
     }
     return filtrados;
-  }, [topicos, busca, ordem]);
+  }, [topicos, busca, filtroCategoria, ordem]);
 
   /**
    * Mescla a versão do servidor na lista. Votar e editar devolvem o tópico
@@ -274,7 +284,7 @@ export default function ForumPage() {
   // ── Perguntar ([R4] só autenticados) ──
   async function publicar(e: React.FormEvent) {
     e.preventDefault();
-    if (!isAuthenticated || !novoTitulo.trim() || !novoConteudo.trim()) return;
+    if (!isAuthenticated || !novoTitulo.trim() || !novoConteudo.trim() || !novaCategoria) return;
     if (user?.perfil_completo === false) {
       // A API exige o perfil concluído (vínculo e aceites) para publicar.
       router.push("/perfil/completar");
@@ -284,17 +294,19 @@ export default function ForumPage() {
     try {
       const criado = await api.post<Topico>(
         "/api/forum/topicos",
-        { titulo: novoTitulo.trim(), conteudo: novoConteudo.trim() },
+        { titulo: novoTitulo.trim(), conteudo: novoConteudo.trim(), categoria: novaCategoria },
         { token: token || undefined }
       );
       // Pergunta nova ainda não tem respostas: abre sem precisar de outro GET.
       setTopicos((prev) => [{ ...criado, respostas: [] }, ...prev]);
       setNovoTitulo("");
       setNovoConteudo("");
+      setNovaCategoria("");
       setMostrarForm(false);
       setErro("");
       // Garante que a pergunta nova apareça (no topo) e já aberta.
       setBusca("");
+      setFiltroCategoria("");
       setOrdem("recentes");
       setAbertoId(criado.id);
     } catch (err) {
@@ -306,12 +318,12 @@ export default function ForumPage() {
 
   // ── Editar ([R1] só o autor; o backend valida de novo) ──
   const editar = useCallback(
-    async (topico: Topico, titulo: string, conteudo: string) => {
+    async (topico: Topico, titulo: string, conteudo: string, categoria: CategoriaForum) => {
       if (!isAuthenticated || !ehAutor(topico, user)) return;
       try {
         const atualizado = await api.patch<Topico>(
           `/api/forum/topicos/${topico.id}`,
-          { titulo, conteudo },
+          { titulo, conteudo, categoria },
           { token: token || undefined }
         );
         substituir(atualizado);
@@ -432,6 +444,7 @@ export default function ForumPage() {
                 autoFocus
               />
             </div>
+            <CampoCategoria id="forum-nova-categoria" valor={novaCategoria} onMudar={setNovaCategoria} />
             <div>
               <label htmlFor="forum-novo-conteudo" className="ui-label">
                 Conteúdo
@@ -472,6 +485,22 @@ export default function ForumPage() {
               className={`ui-field ${styles.busca}`}
             />
           </div>
+          <label htmlFor="forum-categoria" className="sr-only">
+            Categoria
+          </label>
+          <select
+            id="forum-categoria"
+            className={`ui-field ${styles.filtroCategoria}`}
+            value={filtroCategoria}
+            onChange={(e) => setFiltroCategoria(e.target.value as CategoriaForum | "")}
+          >
+            <option value="">Todas as categorias</option>
+            {CATEGORIAS.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nome}
+              </option>
+            ))}
+          </select>
           <label htmlFor="forum-ordem" className="sr-only">
             Ordenar por
           </label>
@@ -511,7 +540,9 @@ export default function ForumPage() {
                 <IconeUfo tamanho={32} />
                 {topicos.length === 0
                   ? "Nenhuma pergunta ainda. Que tal abrir a primeira transmissão?"
-                  : "Nenhuma pergunta corresponde à busca."}
+                  : !busca.trim()
+                    ? "Nenhuma pergunta nesta categoria ainda."
+                    : "Nenhuma pergunta corresponde à busca."}
               </p>
             ) : (
               <ul className={styles.lista}>

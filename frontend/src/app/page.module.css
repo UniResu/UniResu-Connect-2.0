@@ -1117,6 +1117,11 @@ span.pessoaCargo {
   overflow: hidden;
 }
 
+/* Categoria logo abaixo do título, como no fórum; sem esticar na coluna. */
+.forumCardCategoria {
+  align-self: flex-start;
+}
+
 .forumCardTexto {
   color: var(--text-on-dark-muted);
   font-size: var(--font-size-sm);

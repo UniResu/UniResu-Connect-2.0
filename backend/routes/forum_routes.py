@@ -67,7 +67,6 @@ def formatar_topico(doc: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     doc["dislikes"] = _lista_de_ids(doc.get("dislikes"))
     doc.setdefault("autor_username", AUTOR_DESCONHECIDO_USERNAME)
     doc.setdefault("autor_nome", AUTOR_DESCONHECIDO_NOME)
-    doc.pop("_autor_sistema", None)
     # Tópicos criados antes das respostas não têm o contador.
     doc["total_respostas"] = max(int(doc.get("total_respostas") or 0), 0)
     return doc
@@ -81,7 +80,6 @@ def formatar_resposta(doc: Dict[str, Any]) -> Dict[str, Any]:
     doc.pop("autor_email", None)
     doc.setdefault("autor_username", AUTOR_DESCONHECIDO_USERNAME)
     doc.setdefault("autor_nome", AUTOR_DESCONHECIDO_NOME)
-    doc.pop("_autor_sistema", None)
     return doc
 
 
@@ -93,10 +91,8 @@ async def anexar_autores(db, docs: List[Dict[str, Any]]) -> List[Dict[str, Any]]
     """Preenche `autor_username`/`autor_nome` em cada tópico ou resposta, in place.
 
     Uma única `find` com `$in` sobre os `autor_id` válidos (projeção mínima:
-    username, nome, nome_social e a marca de conta do sistema). Quem não for
-    encontrado recebe os rótulos de autor desconhecido — nunca o e-mail.
-    `_autor_sistema` é interno: serve a `marcar_primeiras_perguntas` e sai
-    no `formatar_*`.
+    username, nome, nome_social). Quem não for encontrado recebe os rótulos
+    de autor desconhecido — nunca o e-mail.
     """
     ids = set()
     for doc in docs:
@@ -108,7 +104,7 @@ async def anexar_autores(db, docs: List[Dict[str, Any]]) -> List[Dict[str, Any]]
     if ids:
         cursor = db.usuarios.find(
             {"_id": {"$in": list(ids)}},
-            {"username": 1, "nome": 1, "nome_social": 1, "sistema": 1},
+            {"username": 1, "nome": 1, "nome_social": 1},
         )
         for usuario in await cursor.to_list(length=len(ids)):
             autores[str(usuario["_id"])] = usuario
@@ -118,45 +114,15 @@ async def anexar_autores(db, docs: List[Dict[str, Any]]) -> List[Dict[str, Any]]
         if usuario:
             doc["autor_username"] = usuario.get("username") or AUTOR_DESCONHECIDO_USERNAME
             doc["autor_nome"] = nome_de_exibicao(usuario)
-            doc["_autor_sistema"] = bool(usuario.get("sistema"))
         else:
             doc["autor_username"] = AUTOR_DESCONHECIDO_USERNAME
             doc["autor_nome"] = AUTOR_DESCONHECIDO_NOME
     return docs
 
 
-async def marcar_primeiras_perguntas(db, topicos: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Marca `primeira_do_autor` nos tópicos que são a primeira pergunta de
-    quem os escreveu (o selo "Primeiro contato" no fórum), in place.
-
-    Uma única agregação sobre os autores da lista devolve, para cada um, o
-    `_id` da pergunta mais antiga. Ficam sem selo os tópicos legados (sem
-    `autor_id`) e os da conta do sistema, que publica as perguntas iniciais.
-    Roda depois de `anexar_autores`, que diz quem é conta do sistema.
-    """
-    autores = {
-        str(t["autor_id"]) for t in topicos if t.get("autor_id") and not t.get("_autor_sistema")
-    }
-    primeiras: Dict[str, Any] = {}
-    if autores:
-        pipeline = [
-            {"$match": {"autor_id": {"$in": list(autores)}}},
-            {"$sort": {"data_criacao": 1, "_id": 1}},
-            {"$group": {"_id": "$autor_id", "primeira": {"$first": "$_id"}}},
-        ]
-        primeiras = {g["_id"]: g["primeira"] async for g in db.topicos_forum.aggregate(pipeline)}
-
-    for topico in topicos:
-        autor_id = str(topico.get("autor_id") or "")
-        topico["primeira_do_autor"] = bool(autor_id in primeiras and primeiras[autor_id] == topico.get("_id"))
-    return topicos
-
-
 async def responder_topico(db, doc: Dict[str, Any]) -> Dict[str, Any]:
-    """Resposta de um único tópico: resolve o autor, marca se é a primeira
-    pergunta dele e formata."""
+    """Resposta de um único tópico: resolve o autor e formata."""
     await anexar_autores(db, [doc])
-    await marcar_primeiras_perguntas(db, [doc])
     return formatar_topico(doc)
 
 
@@ -262,7 +228,6 @@ async def listar_topicos(limite: int = Query(100, ge=1, le=100)):
         cursor = db.topicos_forum.find({}).sort("data_criacao", -1).limit(limite)
         lista_docs = await cursor.to_list(length=limite)
         await anexar_autores(db, lista_docs)
-        await marcar_primeiras_perguntas(db, lista_docs)
         return [formatar_topico(doc) for doc in lista_docs]
     except Exception as e:
         raise HTTPException(
@@ -293,7 +258,6 @@ async def obter_topico(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tópico não encontrado.")
     respostas = await buscar_respostas(db, str(oid), limite_respostas)
     await anexar_autores(db, [topico, *respostas])
-    await marcar_primeiras_perguntas(db, [topico])
     detalhe = formatar_topico(topico)
     detalhe["respostas"] = [formatar_resposta(r) for r in respostas]
     return detalhe
@@ -317,6 +281,7 @@ async def criar_topico(
         "titulo": topico.titulo,
         "conteudo_original": topico.conteudo,
         "autor_id": extrair_id_usuario(usuario_logado),
+        "categoria": topico.categoria,
         "data_criacao": datetime.now(timezone.utc),
         "visualizacoes": 0,
         # Reações: listas de IDs de usuários para garantir 1 voto por usuário
@@ -349,7 +314,7 @@ async def editar_topico(
     dados: TopicoUpdate,
     usuario_logado: dict = Depends(get_usuario_com_perfil_completo),
 ):
-    """Edita título e/ou conteúdo de um tópico. Apenas o autor pode editar."""
+    """Edita título, conteúdo e/ou categoria de um tópico. Apenas o autor pode editar."""
     db = Database.get_db()
     oid = _object_id(topico_id)
 
@@ -368,6 +333,8 @@ async def editar_topico(
         campos_para_atualizar["titulo"] = dados.titulo
     if dados.conteudo is not None:
         campos_para_atualizar["conteudo_original"] = dados.conteudo
+    if dados.categoria is not None:
+        campos_para_atualizar["categoria"] = dados.categoria
 
     if not campos_para_atualizar:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Nenhum campo para atualizar.")

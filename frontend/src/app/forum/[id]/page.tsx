@@ -26,6 +26,7 @@ import {
   ehAutor,
   mensagemDeErro,
   statusDoErro,
+  type CategoriaForum,
   type EstadoRespostas,
   type TipoVoto,
   type Topico,
@@ -39,6 +40,7 @@ import {
   MetaPergunta,
   Votos,
 } from "../_componentes/Pergunta";
+import { ChipCategoria } from "../_componentes/Categoria";
 import { Respostas } from "../_componentes/Respostas";
 import styles from "../forum.module.css";
 
@@ -132,12 +134,12 @@ export default function PaginaPergunta({ params }: { params: Promise<{ id: strin
   }
 
   // ── Editar (só o autor; se falhar, lança e o formulário continua aberto) ──
-  async function editar(novoTitulo: string, novoConteudo: string) {
+  async function editar(novoTitulo: string, novoConteudo: string, categoria: CategoriaForum) {
     if (!topico || !isAuthenticated || !ehAutor(topico, user)) return;
     try {
       const atualizado = await api.patch<Topico>(
         `/api/forum/topicos/${topico.id}`,
-        { titulo: novoTitulo, conteudo: novoConteudo },
+        { titulo: novoTitulo, conteudo: novoConteudo, categoria },
         { token: token || undefined }
       );
       mesclar(atualizado);
@@ -197,12 +199,14 @@ export default function PaginaPergunta({ params }: { params: Promise<{ id: strin
               <FormPergunta
                 titulo={topico.titulo}
                 conteudo={conteudoDe(topico)}
+                categoria={topico.categoria}
                 onCancelar={() => setEditando(false)}
                 onSalvar={editar}
               />
             ) : (
               <>
                 <h1 className={styles.perguntaTitulo}>{topico.titulo}</h1>
+                <ChipCategoria categoria={topico.categoria} className={styles.categoria} />
                 <div className={styles.perguntaMeta}>
                   <MetaPergunta topico={topico} />
                   <div className={styles.chips}>

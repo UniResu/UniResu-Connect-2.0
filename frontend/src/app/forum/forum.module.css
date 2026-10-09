@@ -70,7 +70,7 @@
   color: var(--text-muted);
 }
 
-/* ── Barra de busca e ordenação ── */
+/* ── Barra de busca, categoria e ordenação ── */
 
 .barra {
   display: flex;
@@ -102,6 +102,12 @@
   flex: 0 0 auto;
   width: auto;
   min-width: 11rem;
+}
+
+.barra .filtroCategoria {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 13rem;
 }
 
 /* ── Contagem, erro e avisos ── */
@@ -199,6 +205,11 @@
 .linhaTituloBtn:focus-visible {
   outline: 2px solid var(--brand-500);
   outline-offset: 3px;
+}
+
+/* Categoria logo abaixo do título, na lista e na página da pergunta. */
+.categoria {
+  margin-top: var(--space-xs);
 }
 
 .resumo {
@@ -477,7 +488,8 @@
   .container { padding-top: var(--space-xl); }
   .cabecalho { align-items: flex-start; }
   .barra { flex-wrap: wrap; }
-  .barra .ordem { width: 100%; }
+  .barra .ordem,
+  .barra .filtroCategoria { width: 100%; }
   .linhaCabecalho {
     flex-direction: column;
     gap: var(--space-sm);

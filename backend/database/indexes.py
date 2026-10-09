@@ -82,11 +82,6 @@ async def criar_indices(db) -> None:
         [("topico_id", ASCENDING), ("data_criacao", ASCENDING), ("_id", ASCENDING)],
         name="respostas_por_topico",
     )
-    # Primeira pergunta de cada autor (selo "Primeiro contato" no fórum).
-    await db.topicos_forum.create_index(
-        [("autor_id", ASCENDING), ("data_criacao", ASCENDING), ("_id", ASCENDING)],
-        name="topicos_por_autor",
-    )
     logger.info("Índices do MongoDB verificados/criados.")
 
 

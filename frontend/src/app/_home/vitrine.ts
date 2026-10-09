@@ -14,6 +14,7 @@ export interface PerguntaVitrine {
   autor: string;
   respostas: number;
   votos: number;
+  categoria: string | null;
 }
 
 export const ROTA_PROJETOS = "/api/projetos/buscar?page_size=3";
@@ -33,6 +34,7 @@ export function resumirPergunta(topico: Topico): PerguntaVitrine {
     autor: topico.autor_username || "usuario",
     respostas: topico.total_respostas ?? 0,
     votos: votosDe(topico),
+    categoria: topico.categoria ?? null,
   };
 }
 

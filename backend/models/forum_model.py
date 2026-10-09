@@ -1,21 +1,28 @@
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from typing import List, Optional
+from typing import List, Literal, Optional
 from datetime import datetime
 
 # Limite de uma resposta, contado depois de tirar os espaços das pontas.
 RESPOSTA_MAX_CARACTERES = 5000
+
+# As cinco grandes categorias do fórum. Os nomes de exibição ficam no
+# frontend (app/forum/_componentes/forum.ts); aqui só os identificadores.
+CategoriaForum = Literal["pesquisa", "extensao", "bolsas", "candidatura", "vida-universitaria"]
 
 
 class TopicoCreate(BaseModel):
     """Modelo para o que o usuário envia ao criar um tópico."""
     titulo: str
     conteudo: str
+    # Opcional para não quebrar quem ainda usa a versão antiga da página.
+    categoria: Optional[CategoriaForum] = None
 
 
 class TopicoUpdate(BaseModel):
     """Modelo para edição parcial de um tópico (PATCH)."""
     titulo: Optional[str] = None
     conteudo: Optional[str] = None
+    categoria: Optional[CategoriaForum] = None
 
 
 class TopicoResponse(BaseModel):
@@ -39,7 +46,7 @@ class TopicoResponse(BaseModel):
     likes: List[str] = []                    # lista de IDs de usuários
     dislikes: List[str] = []                 # lista de IDs de usuários
     total_respostas: int = 0                 # contador ($inc); tópicos antigos sem o campo contam 0
-    primeira_do_autor: bool = False          # primeira pergunta de quem escreveu (selo "Primeiro contato")
+    categoria: Optional[str] = None          # uma das CategoriaForum; tópicos antigos podem não ter
 
 
 # ── Respostas (um único nível: respondem ao tópico, nunca a outra resposta) ──
