@@ -8,21 +8,25 @@ import ThemeToggle from "@/components/ui/ThemeToggle";
 import { IconeSetaBaixo } from "@/components/ui/Icones";
 import styles from "./Navbar.module.css";
 
+// Só os dois destinos do produto. O logo leva à página inicial, e "Quem somos"
+// fica no rodapé.
 const LINKS = [
-  { href: "/", label: "Início" },
-  { href: "/#quem-somos", label: "Quem somos" },
   { href: "/projetos", label: "Projetos acadêmicos" },
   { href: "/forum", label: "Fórum" },
 ];
+
+function estaEm(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export default function Navbar() {
   const pathname = usePathname();
   // O menu mobile vive em um componente remontado a cada rota (key): ao
   // navegar, por link, redirect ou botão voltar/avançar, ele nasce fechado.
-  return <NavbarConteudo key={pathname} />;
+  return <NavbarConteudo key={pathname} pathname={pathname} />;
 }
 
-function NavbarConteudo() {
+function NavbarConteudo({ pathname }: { pathname: string }) {
   const { user, isAuthenticated, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -72,14 +76,18 @@ function NavbarConteudo() {
   return (
     <header className={styles.header}>
       <nav className={styles.navbar} aria-label="Principal">
-        <Link href="/" className={styles.logo} onClick={fecharMenu}>
-          <img src="/uniresulogo.png" alt="Logo Uniresu" className={styles.logoIcon} />
+        <Link href="/" className={styles.logo} onClick={fecharMenu} aria-label="UniResu Connect, página inicial">
+          <img src="/uniresulogo.png" alt="" className={styles.logoIcon} />
         </Link>
 
         {/* Links (desktop) */}
         <ul className={styles.navLinks}>
           {LINKS.map((l) => (
-            <li key={l.href}><Link href={l.href}>{l.label}</Link></li>
+            <li key={l.href}>
+              <Link href={l.href} aria-current={estaEm(pathname, l.href) ? "page" : undefined}>
+                {l.label}
+              </Link>
+            </li>
           ))}
         </ul>
 
@@ -158,9 +166,16 @@ function NavbarConteudo() {
         aria-hidden={!menuOpen}
       >
         <ul className={styles.mobileLinks}>
-          {LINKS.map((l) => (
+          {[{ href: "/", label: "Início" }, ...LINKS].map((l) => (
             <li key={l.href}>
-              <Link href={l.href} onClick={fecharMenu} tabIndex={menuOpen ? 0 : -1}>{l.label}</Link>
+              <Link
+                href={l.href}
+                onClick={fecharMenu}
+                tabIndex={menuOpen ? 0 : -1}
+                aria-current={(l.href === "/" ? pathname === "/" : estaEm(pathname, l.href)) ? "page" : undefined}
+              >
+                {l.label}
+              </Link>
             </li>
           ))}
         </ul>

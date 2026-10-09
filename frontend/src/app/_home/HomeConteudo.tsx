@@ -10,15 +10,23 @@ import "swiper/css";
 import "swiper/css/effect-fade";
 import AvatarMembro from "@/components/home/AvatarMembro";
 import ProjetoCard from "@/components/projetos/ProjetoCard";
-import { IconeSetaDireita, IconeSetaEsquerda } from "@/components/ui/Icones";
+import { IconeNaveTransmite, IconeSetaDireita, IconeSetaEsquerda } from "@/components/ui/Icones";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { acordarApi, api } from "@/lib/api";
 import type { Projeto } from "@/types/projeto";
+import type { Topico } from "@/app/forum/_componentes/forum";
+import {
+  ROTA_PERGUNTAS,
+  ROTA_PROJETOS,
+  resumirPergunta,
+  resumirProjeto,
+  type PerguntaVitrine,
+} from "./vitrine";
 import styles from "../page.module.css";
 
 /* ── Ícones (SVG inline no estilo Lucide, traço 2) ── */
 
-type NomeIcone = "usuarios" | "alvo" | "megafone" | "conversas" | "capelo" | "premio";
+type NomeIcone = "usuarios" | "alvo" | "megafone";
 
 function Icone({ nome }: { nome: NomeIcone }) {
   const comum = {
@@ -56,28 +64,6 @@ function Icone({ nome }: { nome: NomeIcone }) {
         <svg {...comum}>
           <path d="m3 11 18-5v12L3 14v-3z" />
           <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
-        </svg>
-      );
-    case "conversas":
-      return (
-        <svg {...comum}>
-          <path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4c0-1.1.9-2 2-2h8a2 2 0 0 1 2 2z" />
-          <path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1" />
-        </svg>
-      );
-    case "capelo":
-      return (
-        <svg {...comum}>
-          <path d="M22 10 12 5 2 10l10 5 10-5z" />
-          <path d="M6 12v5c3 3 9 3 12 0v-5" />
-          <path d="M22 10v6" />
-        </svg>
-      );
-    case "premio":
-      return (
-        <svg {...comum}>
-          <circle cx="12" cy="8" r="6" />
-          <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
         </svg>
       );
   }
@@ -377,27 +363,21 @@ function EsqueletoProjeto() {
 }
 
 /**
- * Três projetos reais da busca. Normalmente eles chegam prontos do servidor
- * (ver ../page.tsx) e aparecem com a página. Sem eles, o navegador busca na
- * API: enquanto carrega, esqueletos; se a API falhar ou não houver
- * projetos, uma frase com link para a busca.
+ * Lista da vitrine: normalmente chega pronta do servidor (ver ../page.tsx).
+ * Sem ela (a API não respondeu no build), o navegador busca na API.
+ * `mapear` precisa ser uma função estável, definida fora do componente.
  */
-function ProjetosDestaque({ iniciais }: { iniciais: Projeto[] | null }) {
-  const [projetos, setProjetos] = useState<Projeto[] | null>(iniciais);
+function useListaDaVitrine<T, R>(iniciais: R[] | null, rota: string, mapear: (item: T) => R) {
+  const [itens, setItens] = useState<R[] | null>(iniciais);
   const [erro, setErro] = useState(false);
 
   useEffect(() => {
-    if (iniciais) {
-      // A vitrine já veio no HTML; só acordamos a API para que o clique num
-      // card abra o projeto sem a espera do primeiro acesso.
-      acordarApi();
-      return;
-    }
+    if (iniciais) return;
     let ativo = true;
     api
-      .get<Projeto[]>("/api/projetos/buscar?page_size=3")
+      .get<T[]>(rota)
       .then((data) => {
-        if (ativo) setProjetos(Array.isArray(data) ? data : []);
+        if (ativo) setItens(Array.isArray(data) ? data.map(mapear) : []);
       })
       .catch(() => {
         if (ativo) setErro(true);
@@ -405,7 +385,18 @@ function ProjetosDestaque({ iniciais }: { iniciais: Projeto[] | null }) {
     return () => {
       ativo = false;
     };
-  }, [iniciais]);
+  }, [iniciais, rota, mapear]);
+
+  return { itens, erro };
+}
+
+/**
+ * Três projetos reais da busca. Enquanto o navegador carrega (só quando o
+ * servidor não os trouxe), esqueletos; se a API falhar ou não houver
+ * projetos, uma frase com link para a busca.
+ */
+function ProjetosDestaque({ iniciais }: { iniciais: Projeto[] | null }) {
+  const { itens: projetos, erro } = useListaDaVitrine<Projeto, Projeto>(iniciais, ROTA_PROJETOS, resumirProjeto);
 
   const carregando = projetos === null && !erro;
 
@@ -474,25 +465,45 @@ function ProjetosDestaque({ iniciais }: { iniciais: Projeto[] | null }) {
 
 /* ── Fórum ── */
 
-const FORUM_CARDS: { titulo: string; texto: string; icone: NomeIcone }[] = [
-  {
-    titulo: "Conecte-se com a comunidade",
-    icone: "conversas",
-    texto: "Fique por dentro das novidades: artigos, eventos, seminários e muito mais na plataforma.",
-  },
-  {
-    titulo: "Vida universitária",
-    icone: "capelo",
-    texto: "Saiba como aproveitar seus anos na faculdade e se engajar em projetos.",
-  },
-  {
-    titulo: "Histórias de sucesso",
-    icone: "premio",
-    texto: "Inspire-se com as trajetórias de alunos e pesquisadores do campus.",
-  },
-];
+/** As três perguntas mais recentes, cada uma levando à própria página. */
+function Forum({ iniciais }: { iniciais: PerguntaVitrine[] | null }) {
+  const { itens: perguntas, erro } = useListaDaVitrine<Topico, PerguntaVitrine>(
+    iniciais,
+    ROTA_PERGUNTAS,
+    resumirPergunta
+  );
 
-function Forum() {
+  let conteudo: ReactNode;
+  if (erro || (perguntas && perguntas.length === 0)) {
+    conteudo = null;
+  } else if (perguntas === null) {
+    conteudo = (
+      <div className={styles.forumGrid} aria-hidden="true">
+        <span className={`skeleton ${styles.forumEsqueleto}`} />
+        <span className={`skeleton ${styles.forumEsqueleto}`} />
+        <span className={`skeleton ${styles.forumEsqueleto}`} />
+      </div>
+    );
+  } else {
+    conteudo = (
+      <ul className={styles.forumGrid}>
+        {perguntas.slice(0, 3).map((p) => (
+          <li key={p.id}>
+            <Link href={`/forum/${encodeURIComponent(p.id)}`} className={styles.forumCard}>
+              <span className={styles.forumCardTopo}>
+                <IconeNaveTransmite tamanho={16} />
+                {p.respostas === 1 ? "1 resposta" : `${p.respostas} respostas`}
+              </span>
+              <h3 className={styles.forumCardTitulo}>{p.titulo}</h3>
+              {p.resumo && <p className={styles.forumCardTexto}>{p.resumo}</p>}
+              <span className={styles.forumCardAutor}>@{p.autor}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
   return (
     <section className={`${styles.secao} ${styles.forum}`} id="forum" aria-labelledby="titulo-forum">
       <div className={styles.ufo} aria-hidden="true">
@@ -507,21 +518,11 @@ function Forum() {
             Fórum
           </h2>
           <p className={styles.secaoSubtitulo}>
-            Embarque na rede de conhecimento e descubra novas oportunidades de integração.
+            Perguntas e respostas sobre pesquisa, extensão e vida universitária. Estas são as mais recentes.
           </p>
         </header>
 
-        <ul className={styles.forumGrid}>
-          {FORUM_CARDS.map((card) => (
-            <li key={card.titulo} className={styles.forumCard}>
-              <span className={styles.forumIcone}>
-                <Icone nome={card.icone} />
-              </span>
-              <h3 className={styles.forumCardTitulo}>{card.titulo}</h3>
-              <p className={styles.forumCardTexto}>{card.texto}</p>
-            </li>
-          ))}
-        </ul>
+        {conteudo}
 
         <div className={styles.secaoAcao}>
           <Link href="/forum" className={`ui-btn ui-btn-lg ${styles.btnEscuroPrimario}`}>
@@ -535,9 +536,21 @@ function Forum() {
 
 /* ── Página ── */
 
-/** Conteúdo da página inicial. `projetosIniciais` vem do servidor e é
- *  null quando a API não respondeu a tempo no build. */
-export default function HomeConteudo({ projetosIniciais }: { projetosIniciais: Projeto[] | null }) {
+/** Conteúdo da página inicial. As listas vêm do servidor e são null quando
+ *  a API não respondeu a tempo no build. */
+export default function HomeConteudo({
+  projetosIniciais,
+  perguntasIniciais,
+}: {
+  projetosIniciais: Projeto[] | null;
+  perguntasIniciais: PerguntaVitrine[] | null;
+}) {
+  // Acorda a API enquanto a pessoa lê: o clique num card de projeto ou de
+  // pergunta abre a página sem a espera do primeiro acesso.
+  useEffect(() => {
+    acordarApi();
+  }, []);
+
   return (
     <div className={styles.page}>
       <section className={styles.hero} id="home" aria-labelledby="titulo-hero">
@@ -563,7 +576,7 @@ export default function HomeConteudo({ projetosIniciais }: { projetosIniciais: P
 
       <QuemSomos />
       <ProjetosDestaque iniciais={projetosIniciais} />
-      <Forum />
+      <Forum iniciais={perguntasIniciais} />
     </div>
   );
 }

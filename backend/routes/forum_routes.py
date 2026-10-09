@@ -220,12 +220,13 @@ async def _resposta_do_autor(db, resposta_id: str, usuario_logado: Any, acao: st
 # ── Rotas ───────────────────────────────────────────────────────────────────
 
 @router.get("/forum/topicos", response_model=List[TopicoResponse])
-async def listar_topicos():
-    """Lista todos os tópicos do fórum (rota pública)."""
+async def listar_topicos(limite: int = Query(100, ge=1, le=100)):
+    """Lista os tópicos do fórum, do mais recente ao mais antigo (rota
+    pública). `limite` serve à página inicial, que mostra só os três últimos."""
     db = Database.get_db()
     try:
-        cursor = db.topicos_forum.find({}).sort("data_criacao", -1)
-        lista_docs = await cursor.to_list(length=100)
+        cursor = db.topicos_forum.find({}).sort("data_criacao", -1).limit(limite)
+        lista_docs = await cursor.to_list(length=limite)
         await anexar_autores(db, lista_docs)
         return [formatar_topico(doc) for doc in lista_docs]
     except Exception as e:

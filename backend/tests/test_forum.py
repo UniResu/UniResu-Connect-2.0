@@ -96,6 +96,19 @@ async def test_autoria_por_id_e_fallback_por_email_em_docs_legados(api, db):
     assert (await api.delete(f"/api/forum/topicos/{legado_meu}")).status_code == 204
 
 
+async def test_limite_devolve_so_os_mais_recentes(api, db):
+    agora = datetime.now(timezone.utc)
+    for dias, titulo in ((3, "antigo"), (1, "recente"), (2, "meio"), (0, "hoje")):
+        await _topico(db, titulo=titulo, data_criacao=agora - timedelta(days=dias))
+
+    r = await api.get("/api/forum/topicos?limite=3")
+    assert r.status_code == 200, r.text
+    assert [t["titulo"] for t in r.json()] == ["hoje", "recente", "meio"]
+
+    assert len((await api.get("/api/forum/topicos")).json()) == 4
+    assert (await api.get("/api/forum/topicos?limite=0")).status_code == 422
+
+
 # ── Autores resolvidos em lote ──
 
 async def test_autores_resolvidos_com_uma_consulta(api, db, finds_em_usuarios):

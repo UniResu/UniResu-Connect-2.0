@@ -213,24 +213,30 @@
   overflow: hidden;
 }
 
-/* Linha de meta: itens separados por um filete vertical fino.
-   Todo item tem a borda à esquerda e o container é deslocado para a esquerda
-   com overflow: hidden: o filete do primeiro item de cada linha fica fora da
-   área visível, inclusive quando a meta quebra em duas linhas no celular. */
+/* Linha de meta: itens separados por um filete vertical fino. O filete é um
+   ::before no meio do espaço à esquerda de cada item; no primeiro item de
+   cada linha ele cai fora da caixa da meta e o overflow: hidden o corta,
+   inclusive quando a meta quebra em duas linhas no celular. */
 .meta {
   display: flex;
   flex-wrap: wrap;
-  column-gap: 0.65rem;
+  column-gap: 1.3rem;
   row-gap: 0.15rem;
   margin-top: var(--space-sm);
-  margin-left: calc(-0.65rem - 1px);
   overflow: hidden;
   font-size: var(--font-size-xs);
   line-height: 1.6;
   color: var(--text-muted);
 }
 .metaItem {
-  padding-left: 0.65rem;
+  position: relative;
+}
+.metaItem::before {
+  content: "";
+  position: absolute;
+  top: 0.25em;
+  bottom: 0.25em;
+  left: -0.65rem;
   border-left: 1px solid var(--border);
 }
 .metaAutor {

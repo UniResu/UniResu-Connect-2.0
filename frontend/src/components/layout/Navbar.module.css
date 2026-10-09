@@ -64,6 +64,22 @@
   background: var(--header-hover);
 }
 
+/* Página atual: filete verde sob o rótulo, no tom do "Connect" do hero. */
+.navLinks a[aria-current="page"] {
+  color: var(--header-fg);
+}
+
+.navLinks a[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: 0.2rem;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--green-400);
+}
+
 /* ── Nav Actions (direita) ── */
 
 .navActions {
@@ -364,6 +380,11 @@
   .mobileLinks a:active,
   .mobileLinks a:hover {
     background: var(--header-hover);
+  }
+
+  .mobileLinks a[aria-current="page"] {
+    background: var(--header-hover);
+    box-shadow: inset 3px 0 0 var(--green-400);
   }
 
   .mobileDivider {

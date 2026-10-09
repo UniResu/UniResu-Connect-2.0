@@ -90,18 +90,21 @@
   color: var(--text-primary);
 }
 
+/* Listas de texto corrido (regras, termos). Listas com classe própria, como
+   as etiquetas de palavras-chave, cuidam do próprio espaçamento; sem o
+   :not([class]) elas herdavam este recuo e ficavam deslocadas. */
 .conteudo p + p,
-.conteudo ol,
-.conteudo ul {
+.conteudo ol:not([class]),
+.conteudo ul:not([class]) {
   margin-top: var(--space-sm);
 }
 
-.conteudo ol,
-.conteudo ul {
+.conteudo ol:not([class]),
+.conteudo ul:not([class]) {
   padding-left: 1.25rem;
 }
 
-.conteudo li + li {
+.conteudo :is(ol, ul):not([class]) > li + li {
   margin-top: var(--space-xs);
 }
 

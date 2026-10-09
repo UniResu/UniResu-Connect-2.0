@@ -570,41 +570,79 @@ span.pessoaCargo {
   }
 }
 
-/* Superfície translúcida escura, sem desfoque; a borda clara de 1px é o que
-   separa o card do fundo nesta seção. */
+.forumGrid > li {
+  display: flex;
+  min-width: 0;
+}
+
+/* Cada pergunta é um link inteiro. Superfície translúcida escura, sem
+   desfoque; a borda clara de 1px separa o card do fundo e acende no hover. */
 .forumCard {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
-  padding: var(--space-xl);
+  gap: var(--space-sm);
+  width: 100%;
+  padding: var(--space-lg);
   border: 1px solid color-mix(in srgb, var(--text-on-dark) 14%, transparent);
   border-radius: var(--radius-card);
   background: color-mix(in srgb, var(--text-on-dark) 6%, transparent);
+  color: var(--text-on-dark);
+  text-decoration: none;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
 }
 
-.forumIcone {
+.forumCard:hover {
+  border-color: color-mix(in srgb, var(--brand-300) 55%, transparent);
+  background: color-mix(in srgb, var(--text-on-dark) 9%, transparent);
+  color: var(--text-on-dark);
+}
+
+.forumCard:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.forumCardTopo {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: var(--radius-control);
-  background: color-mix(in srgb, var(--brand-300) 16%, transparent);
+  gap: 0.4rem;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
   color: var(--brand-300);
 }
 
-.forumIcone svg {
-  width: 22px;
-  height: 22px;
-}
-
 .forumCardTitulo {
-  font-size: var(--font-size-xl);
+  font-size: var(--font-size-lg);
   font-weight: 700;
+  line-height: 1.35;
   color: var(--text-on-dark);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .forumCardTexto {
   color: var(--text-on-dark-muted);
-  line-height: 1.65;
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.forumCardAutor {
+  margin-top: auto;
+  padding-top: var(--space-xs);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-on-dark-muted);
+}
+
+.forumEsqueleto {
+  display: block;
+  height: 11rem;
+  border-radius: var(--radius-card);
+  opacity: 0.25;
 }
