@@ -37,26 +37,28 @@ export function resumirPergunta(topico: Topico): PerguntaVitrine {
 }
 
 /**
- * Busca uma lista da API pelo servidor.
+ * Pede uma rota da API pelo servidor.
  *
- * No build, se a API não responder, devolve null e o navegador busca a lista
- * como antes. Fora do build (a renovação em segundo plano), lança o erro:
- * assim o Next continua servindo a última versão boa da página em vez de
- * trocá-la por uma sem conteúdo. Lista vazia conta como erro, porque a busca
- * de projetos devolve vazio quando o banco falha.
+ * No build, se a API não responder, devolve null e a página segue sem esse
+ * dado (as listas são buscadas pelo navegador como antes). Fora do build (a
+ * renovação em segundo plano), lança o erro: assim o Next continua servindo a
+ * última versão boa da página em vez de trocá-la por uma sem conteúdo.
  */
-async function buscarNoServidor<T>(rota: string, rotulo: string): Promise<T[] | null> {
+async function pedirNoServidor<T>(rota: string, rotulo: string, valido: (dados: T) => boolean): Promise<T | null> {
   try {
-    const dados = await api.get<T[]>(rota, { signal: AbortSignal.timeout(ESPERA_API_MS) });
-    if (!Array.isArray(dados) || dados.length === 0) {
-      throw new Error("a API não devolveu itens");
-    }
+    const dados = await api.get<T>(rota, { signal: AbortSignal.timeout(ESPERA_API_MS) });
+    if (!valido(dados)) throw new Error("resposta vazia ou inesperada");
     return dados;
   } catch (erro) {
     if (process.env.NEXT_PHASE === "phase-production-build") return null;
     const detalhe = erro instanceof Error ? erro.message : JSON.stringify(erro);
     throw new Error(`${rotulo}: ${detalhe}`);
   }
+}
+
+/** Lista vazia conta como erro: a busca de projetos devolve vazio quando o banco falha. */
+function buscarNoServidor<T>(rota: string, rotulo: string): Promise<T[] | null> {
+  return pedirNoServidor<T[]>(rota, rotulo, (dados) => Array.isArray(dados) && dados.length > 0);
 }
 
 /** Os três projetos de exemplo da página inicial. */
@@ -70,4 +72,27 @@ export async function perguntasDaVitrine(): Promise<PerguntaVitrine[] | null> {
   const dados = await buscarNoServidor<Topico>(ROTA_PERGUNTAS, "Perguntas do fórum");
   // slice: uma API anterior ao parâmetro `limite` devolve a lista inteira.
   return dados && dados.slice(0, 3).map(resumirPergunta);
+}
+
+interface FiltrosResposta {
+  instituicoes?: { externa: boolean; total: number }[];
+}
+
+/** "20.258 projetos em andamento em 46 instituições", calculado das opções de
+ *  filtro da busca. Formatado aqui para o HTML do servidor e o do navegador
+ *  serem iguais. */
+export async function numerosDaBase(): Promise<string | null> {
+  const dados = await pedirNoServidor<FiltrosResposta>(
+    "/api/projetos/filtros",
+    "Números da base",
+    (d) => Array.isArray(d?.instituicoes) && d.instituicoes.length > 0
+  );
+  if (!dados?.instituicoes) return null;
+  const projetos = dados.instituicoes.reduce((soma, i) => soma + (i.total || 0), 0);
+  const instituicoes = dados.instituicoes.filter((i) => i.externa && i.total > 0).length;
+  if (projetos === 0) return null;
+  const n = new Intl.NumberFormat("pt-BR");
+  const deInstituicoes =
+    instituicoes > 1 ? ` em ${n.format(instituicoes)} instituições` : instituicoes === 1 ? " em 1 instituição" : "";
+  return `${n.format(projetos)} projetos em andamento${deInstituicoes}`;
 }

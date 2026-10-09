@@ -284,3 +284,54 @@ section.candidatura {
     width: 100%;
   }
 }
+
+/* ── Atalho fixo para a candidatura ──
+   Só abaixo de 900px, onde o modal tem uma coluna e a candidatura fica no
+   fim da rolagem. Gruda no rodapé da área rolável; as margens negativas
+   esticam a barra até as bordas do modal. Fica invisível (sem sair do
+   fluxo, para a rolagem não pular) quando a seção de candidatura aparece. */
+.atalho {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .atalho {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    display: flex;
+    gap: var(--space-sm);
+    margin: var(--space-md) calc(-1 * var(--space-xl)) calc(-1 * var(--space-xl));
+    padding: var(--space-sm) var(--space-xl);
+    border-top: 1px solid var(--border-light);
+    background: var(--surface);
+    box-shadow: 0 -10px 20px -16px rgb(var(--shadow-rgb) / 0.5);
+    transition: opacity var(--transition-fast), visibility 0s linear 0s;
+  }
+
+  .atalho > button {
+    flex: 1;
+  }
+
+  .atalhoOculto {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--transition-fast), visibility 0s linear var(--transition-fast);
+  }
+
+  a.atalhoFonte {
+    flex-shrink: 0;
+    width: 2.75rem;
+    padding: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .atalho {
+    margin-left: calc(-1 * var(--space-md));
+    margin-right: calc(-1 * var(--space-md));
+    margin-bottom: calc(-1 * var(--space-md));
+    padding-left: var(--space-md);
+    padding-right: var(--space-md);
+  }
+}

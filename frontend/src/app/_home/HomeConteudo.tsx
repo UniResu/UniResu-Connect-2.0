@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, EffectFade, Keyboard } from "swiper/modules";
@@ -10,7 +11,7 @@ import "swiper/css";
 import "swiper/css/effect-fade";
 import AvatarMembro from "@/components/home/AvatarMembro";
 import ProjetoCard from "@/components/projetos/ProjetoCard";
-import { IconeNaveTransmite, IconeSetaDireita, IconeSetaEsquerda } from "@/components/ui/Icones";
+import { IconeLupa, IconeNaveTransmite, IconeSetaDireita, IconeSetaEsquerda } from "@/components/ui/Icones";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { acordarApi, api } from "@/lib/api";
 import type { Projeto } from "@/types/projeto";
@@ -67,6 +68,123 @@ function Icone({ nome }: { nome: NomeIcone }) {
         </svg>
       );
   }
+}
+
+/* ── Cabeçalho das seções ── */
+
+/** Rótulo pequeno, título e texto alinhados à esquerda; no desktop, o link
+ *  para a página da seção fica à direita (no celular, um botão no fim). */
+function CabecalhoSecao({
+  id,
+  rotulo,
+  titulo,
+  texto,
+  acao,
+}: {
+  id: string;
+  rotulo: string;
+  titulo: string;
+  texto?: string;
+  acao?: { href: string; texto: string };
+}) {
+  return (
+    <header className={styles.secaoCabecalho}>
+      <div className={styles.secaoCabecalhoTexto}>
+        <p className={styles.secaoRotulo}>{rotulo}</p>
+        <h2 id={id} className={styles.secaoTitulo}>
+          {titulo}
+        </h2>
+        {texto && <p className={styles.secaoSubtitulo}>{texto}</p>}
+      </div>
+      {acao && (
+        <Link href={acao.href} className={styles.secaoLink}>
+          {acao.texto}
+          <IconeSetaDireita tamanho={18} />
+        </Link>
+      )}
+    </header>
+  );
+}
+
+/* ── Hero: a busca é a primeira coisa da página ── */
+
+function BuscaHero() {
+  const router = useRouter();
+  const [termo, setTermo] = useState("");
+
+  function buscar(e: FormEvent) {
+    e.preventDefault();
+    const t = termo.trim();
+    router.push(t ? `/projetos?q=${encodeURIComponent(t)}` : "/projetos");
+  }
+
+  // action/method: sem JavaScript, o formulário ainda leva à busca.
+  return (
+    <form className={styles.heroBusca} role="search" action="/projetos" method="get" onSubmit={buscar}>
+      <label htmlFor="busca-inicio" className="sr-only">
+        Buscar projetos
+      </label>
+      <span className={styles.heroBuscaIcone} aria-hidden="true">
+        <IconeLupa tamanho={20} />
+      </span>
+      <input
+        id="busca-inicio"
+        name="q"
+        type="search"
+        value={termo}
+        onChange={(e) => setTermo(e.target.value)}
+        placeholder="Busque por tema ou coordenação"
+        className={styles.heroBuscaCampo}
+        autoComplete="off"
+        enterKeyHint="search"
+      />
+      <button type="submit" className={`ui-btn ${styles.heroBuscaBotao}`}>
+        Buscar
+      </button>
+    </form>
+  );
+}
+
+/* ── Como funciona ── */
+
+const PASSOS: { titulo: string; texto: string }[] = [
+  {
+    titulo: "Encontre um projeto",
+    texto: "Busque entre projetos de pesquisa e extensão em andamento, publicados pelas próprias universidades.",
+  },
+  {
+    titulo: "Envie sua carta de intenção",
+    texto:
+      "Com a conta criada, conte por que quer participar. A carta vai por e-mail para a coordenação, com cópia para você.",
+  },
+  {
+    titulo: "Combine com a coordenação",
+    texto:
+      "A resposta chega no seu e-mail. Enquanto isso, o fórum ajuda com dúvidas sobre bolsas, carta e rotina de pesquisa.",
+  },
+];
+
+function ComoFunciona() {
+  return (
+    <section className={`${styles.secao} ${styles.comoFunciona}`} id="como-funciona" aria-labelledby="titulo-como">
+      <div className={styles.container}>
+        <CabecalhoSecao id="titulo-como" rotulo="Como funciona" titulo="Do projeto à coordenação em três passos" />
+        <ol className={styles.passos}>
+          {PASSOS.map((passo, i) => (
+            <li key={passo.titulo} className={styles.passo}>
+              <span className={styles.passoNumero} aria-hidden="true">
+                {i + 1}
+              </span>
+              <div className={styles.passoTexto}>
+                <h3 className={styles.passoTitulo}>{passo.titulo}</h3>
+                <p className={styles.passoCorpo}>{passo.texto}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  );
 }
 
 /* ── Quem somos: conteúdo ──
@@ -185,11 +303,22 @@ const INTERVALO_CARROSSEL = 4000;
 /** A partir desta largura a seção vira carrossel; até 768px ela fica empilhada. */
 const DESKTOP_QUERY = "(min-width: 769px)";
 
-/** Um slide da seção, com o mesmo DOM na versão empilhada e no carrossel. */
-function SlideQuemSomosView({ slide }: { slide: SlideQuemSomos }) {
+/**
+ * Um slide da seção, com o mesmo DOM na versão empilhada e no carrossel.
+ * `faixa`: na versão empilhada (celular), cada bloco rola na horizontal; a
+ * faixa recebe foco e nome para dar para rolar pelo teclado.
+ */
+function SlideQuemSomosView({ slide, faixa = false }: { slide: SlideQuemSomos; faixa?: boolean }) {
+  const rolagem = (nome: string) =>
+    faixa ? { tabIndex: 0, "aria-label": nome } : {};
+
   if (slide.tipo === "institucional") {
     return (
-      <div className={styles.institucionalGrid}>
+      <div
+        className={`${styles.institucionalGrid} ${faixa ? styles.faixa : ""}`}
+        {...rolagem("A plataforma")}
+        {...(faixa ? { role: "region" } : {})}
+      >
         {INSTITUCIONAL.map((item) => (
           <article key={item.titulo} className={`ui-card ${styles.cardTexto}`}>
             <span className={styles.cardIcone}>
@@ -212,7 +341,8 @@ function SlideQuemSomosView({ slide }: { slide: SlideQuemSomos }) {
       <ul
         className={`${styles.pessoasGrid} ${slide.membros.length === 2 ? styles.pessoasGridDupla : ""} ${
           slide.membros.length === 4 ? styles.pessoasGridQuadrupla : ""
-        }`}
+        } ${faixa ? styles.faixa : ""}`}
+        {...rolagem(slide.titulo)}
       >
         {slide.membros.map((membro) => (
           <li key={membro.nome} className={`ui-card ${styles.pessoa}`}>
@@ -259,12 +389,12 @@ function QuemSomos() {
   return (
     <section className={`${styles.secao} ${styles.secaoClara}`} id="quem-somos" aria-labelledby="titulo-quem-somos">
       <div className={styles.container}>
-        <header className={styles.secaoCabecalho}>
-          <h2 id="titulo-quem-somos" className={styles.secaoTitulo}>
-            Quem somos
-          </h2>
-          <p className={styles.secaoSubtitulo}>Quem constrói o UniResu Connect e o que a plataforma propõe.</p>
-        </header>
+        <CabecalhoSecao
+          id="titulo-quem-somos"
+          rotulo="O projeto"
+          titulo="Quem somos"
+          texto="Quem constrói o UniResu Connect e o que a plataforma propõe."
+        />
 
         {desktop ? (
           <div className={styles.carrosselArea} role="region" aria-roledescription="carrossel" aria-label="Quem somos">
@@ -336,7 +466,7 @@ function QuemSomos() {
         ) : (
           <div className={styles.quemSomosLista}>
             {SLIDES_QUEM_SOMOS.map((slide) => (
-              <SlideQuemSomosView key={slide.id} slide={slide} />
+              <SlideQuemSomosView key={slide.id} slide={slide} faixa />
             ))}
           </div>
         )}
@@ -439,14 +569,13 @@ function ProjetosDestaque({ iniciais }: { iniciais: Projeto[] | null }) {
   return (
     <section className={`${styles.secao} ${styles.secaoClara}`} id="projetos" aria-labelledby="titulo-projetos">
       <div className={styles.container}>
-        <header className={styles.secaoCabecalho}>
-          <h2 id="titulo-projetos" className={styles.secaoTitulo}>
-            Projetos acadêmicos
-          </h2>
-          <p className={styles.secaoSubtitulo}>
-            Uma amostra dos projetos de pesquisa e extensão que você encontra na busca.
-          </p>
-        </header>
+        <CabecalhoSecao
+          id="titulo-projetos"
+          rotulo="Projetos acadêmicos"
+          titulo="Uma amostra do que está em andamento"
+          texto="Projetos de pesquisa e extensão que as universidades publicam em acesso aberto."
+          acao={{ href: "/projetos", texto: "Ver todos os projetos" }}
+        />
 
         <p role="status" aria-live="polite" className="sr-only">
           {carregando ? "Carregando projetos" : ""}
@@ -455,7 +584,7 @@ function ProjetosDestaque({ iniciais }: { iniciais: Projeto[] | null }) {
 
         <div className={styles.secaoAcao}>
           <Link href="/projetos" className="ui-btn ui-btn-primary ui-btn-lg">
-            Explorar projetos
+            Ver todos os projetos
           </Link>
         </div>
       </div>
@@ -513,14 +642,13 @@ function Forum({ iniciais }: { iniciais: PerguntaVitrine[] | null }) {
       </div>
 
       <div className={`${styles.container} ${styles.forumConteudo}`}>
-        <header className={styles.secaoCabecalho}>
-          <h2 id="titulo-forum" className={styles.secaoTitulo}>
-            Fórum
-          </h2>
-          <p className={styles.secaoSubtitulo}>
-            Perguntas e respostas sobre pesquisa, extensão e vida universitária. Estas são as mais recentes.
-          </p>
-        </header>
+        <CabecalhoSecao
+          id="titulo-forum"
+          rotulo="Fórum"
+          titulo="Perguntas recentes da comunidade"
+          texto="Dúvidas e respostas sobre pesquisa, extensão e vida universitária."
+          acao={{ href: "/forum", texto: "Explorar fórum" }}
+        />
 
         {conteudo}
 
@@ -541,9 +669,12 @@ function Forum({ iniciais }: { iniciais: PerguntaVitrine[] | null }) {
 export default function HomeConteudo({
   projetosIniciais,
   perguntasIniciais,
+  numeros,
 }: {
   projetosIniciais: Projeto[] | null;
   perguntasIniciais: PerguntaVitrine[] | null;
+  /** "20.258 projetos em andamento em 46 instituições", ou null. */
+  numeros: string | null;
 }) {
   // Acorda a API enquanto a pessoa lê: o clique num card de projeto ou de
   // pergunta abre a página sem a espera do primeiro acesso.
@@ -563,20 +694,29 @@ export default function HomeConteudo({
             Uma plataforma que une alunos, professores e pesquisadores em uma rede de oportunidades,
             conhecimento e colaboração.
           </p>
-          <div className={styles.heroCta}>
-            <Link href="/projetos" className={`ui-btn ui-btn-lg ${styles.btnEscuroPrimario}`}>
-              Explorar projetos
+          <BuscaHero />
+          <p className={styles.heroRodape}>
+            {numeros && (
+              <>
+                <span className={styles.heroNumeros}>{numeros}</span>
+                <span className={styles.heroSeparador} aria-hidden="true" />
+              </>
+            )}
+            <Link href="/projetos" className={styles.heroLink}>
+              Ver todos
             </Link>
-            <Link href="/registrar" className={`ui-btn ui-btn-lg ${styles.btnEscuroSecundario}`}>
+            <span className={styles.heroSeparador} aria-hidden="true" />
+            <Link href="/registrar" className={styles.heroLink}>
               Criar conta
             </Link>
-          </div>
+          </p>
         </div>
       </section>
 
-      <QuemSomos />
+      <ComoFunciona />
       <ProjetosDestaque iniciais={projetosIniciais} />
       <Forum iniciais={perguntasIniciais} />
+      <QuemSomos />
     </div>
   );
 }

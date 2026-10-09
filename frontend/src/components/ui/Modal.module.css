@@ -132,6 +132,10 @@
     padding: var(--space-md);
   }
 
+  .titulo {
+    font-size: var(--font-size-lg);
+  }
+
   .rodape {
     padding: var(--space-sm) var(--space-md);
   }

@@ -1,7 +1,17 @@
 "use client";
 
-import { memo, useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import {
+  Suspense,
+  memo,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import type { User } from "@/types/user";
@@ -191,7 +201,35 @@ function Icone({
    Página
    ═══════════════════════════════════════════ */
 
+/**
+ * A busca da página inicial chega como ?q=. useSearchParams exige um Suspense
+ * numa página pré-renderizada: o HTML do servidor sai com a página parada
+ * (`pronto` falso, sem pedidos à API) e, no navegador, ela é montada de novo
+ * já com o termo, antes de a primeira busca sair.
+ */
 export default function ProjetosPage() {
+  return (
+    <Suspense fallback={<ProjetosConteudo qInicial="" pronto={false} />}>
+      <ProjetosComTermo />
+    </Suspense>
+  );
+}
+
+function ProjetosComTermo() {
+  const q = useSearchParams().get("q") ?? "";
+  return <ProjetosConteudo qInicial={q} pronto />;
+}
+
+/** Mantém ?q= na URL igual à busca aplicada, sem criar entrada no histórico. */
+function gravarParamBusca(termo: string) {
+  const url = new URL(window.location.href);
+  if ((url.searchParams.get("q") ?? "") === termo) return;
+  if (termo) url.searchParams.set("q", termo);
+  else url.searchParams.delete("q");
+  window.history.replaceState(null, "", url.toString());
+}
+
+function ProjetosConteudo({ qInicial, pronto }: { qInicial: string; pronto: boolean }) {
   const { token } = useAuth();
   const [projetos, setProjetos] = useState<Projeto[]>([]);
   // A lista nunca é zerada enquanto uma busca nova está no ar: `atualizando`
@@ -204,8 +242,8 @@ export default function ProjetosPage() {
   const [hasMore, setHasMore] = useState(false);
 
   // Filtros
-  const [busca, setBusca] = useState("");
-  const [buscaAplicada, setBuscaAplicada] = useState("");
+  const [busca, setBusca] = useState(qInicial);
+  const [buscaAplicada, setBuscaAplicada] = useState(qInicial.trim());
   const [tipoFiltro, setTipoFiltro] = useState<Modulo>("");
   const [instituicaoFiltro, setInstituicaoFiltro] = useState("");
   const [unidadesEscolhidas, setUnidadesEscolhidas] = useState<string[]>([]);
@@ -334,8 +372,13 @@ export default function ProjetosPage() {
   }, [montarParams, token]);
 
   useEffect(() => {
-    carregarProjetos();
-  }, [carregarProjetos]);
+    if (pronto) carregarProjetos();
+  }, [carregarProjetos, pronto]);
+
+  // Recarregar a página ou mandar o link mantém o termo buscado.
+  useEffect(() => {
+    if (pronto) gravarParamBusca(buscaAplicada);
+  }, [buscaAplicada, pronto]);
 
   // Busca por texto com debounce (o botão "Buscar" aplica na hora). As
   // opções de filtro seguem o mesmo debounce, porque dependem de `buscaAplicada`.
@@ -348,6 +391,7 @@ export default function ProjetosPage() {
   // recorte; as áreas do conhecimento sim, então a lista é refeita a cada
   // mudança nos outros filtros, e respostas de recortes antigos são ignoradas.
   useEffect(() => {
+    if (!pronto) return;
     const id = ++filtrosAtuais.current;
     const query = montarParamsRecorte().toString();
     api
@@ -361,12 +405,13 @@ export default function ProjetosPage() {
         if (id !== filtrosAtuais.current) return;
         setAreas([]);
       });
-  }, [montarParamsRecorte]);
+  }, [montarParamsRecorte, pronto]);
 
   // Link direto (/projetos?projeto=<id>): busca o projeto pela rota pública
-  // e abre o modal. Lido de window.location dentro do efeito para não
-  // precisar do Suspense que useSearchParams exige.
+  // e abre o modal. Lido de window.location dentro do efeito, que só roda
+  // quando a página já está montada com a URL certa.
   useEffect(() => {
+    if (!pronto) return;
     const id = new URLSearchParams(window.location.search).get("projeto");
     if (!id) return;
     let cancelado = false;
@@ -383,7 +428,7 @@ export default function ProjetosPage() {
     return () => {
       cancelado = true;
     };
-  }, []);
+  }, [pronto]);
 
   async function carregarMais() {
     const ultimo = projetos[projetos.length - 1];
@@ -764,6 +809,32 @@ const DetalheProjeto = memo(function DetalheProjeto({
   if (p.modalidade) metadados.push({ rotulo: "Modalidade", valor: p.modalidade });
   if (p.local) metadados.push({ rotulo: "Localização", valor: p.local });
 
+  // Celular e tablet: a candidatura fica no fim da rolagem, então uma barra
+  // fixa no rodapé do modal leva até ela. A barra vem depois da seção no DOM
+  // (gruda no rodapé enquanto não chega a vez dela) e some quando a seção
+  // aparece; o espaço que ela deixa fica no fim do modal.
+  const candidaturaRef = useRef<HTMLElement>(null);
+  const [candidaturaVisivel, setCandidaturaVisivel] = useState(false);
+  useEffect(() => {
+    const alvo = candidaturaRef.current;
+    if (!alvo || typeof IntersectionObserver === "undefined") return;
+    const observador = new IntersectionObserver(([entrada]) => setCandidaturaVisivel(entrada.isIntersecting), {
+      threshold: 0.1,
+    });
+    observador.observe(alvo);
+    return () => observador.disconnect();
+  }, []);
+
+  function irParaCandidatura() {
+    const alvo = candidaturaRef.current;
+    if (!alvo) return;
+    alvo.scrollIntoView({ behavior: "smooth", block: "start" });
+    alvo.querySelector<HTMLElement>("h3")?.focus({ preventScroll: true });
+  }
+
+  const linkFonte = p.link_detalhe || p.link_consulta;
+  const rotuloFonte = p.link_detalhe ? `Ver no ${FONTE_NOME[p.origem || ""] || "site de origem"}` : "Buscar no SIGAA";
+
   const temConteudoPrincipal = Boolean(
     p.descricao ||
       (p.palavras_chave && p.palavras_chave.length > 0) ||
@@ -877,8 +948,8 @@ const DetalheProjeto = memo(function DetalheProjeto({
         </aside>
       </div>
 
-      <section className={`ui-card ${m.candidatura}`} aria-labelledby="candidatura-titulo">
-        <h3 id="candidatura-titulo" className={m.candidaturaTitulo}>
+      <section ref={candidaturaRef} className={`ui-card ${m.candidatura}`} aria-labelledby="candidatura-titulo">
+        <h3 id="candidatura-titulo" className={m.candidaturaTitulo} tabIndex={-1}>
           Candidatar-se
         </h3>
 
@@ -905,6 +976,30 @@ const DetalheProjeto = memo(function DetalheProjeto({
           <FormularioCandidatura key={user?.id ?? "anonimo"} projeto={p} onEnviado={onFechar} />
         )}
       </section>
+
+      <div className={`${m.atalho} ${candidaturaVisivel ? m.atalhoOculto : ""}`} aria-hidden={candidaturaVisivel}>
+        <button
+          type="button"
+          className="ui-btn ui-btn-primary"
+          onClick={irParaCandidatura}
+          tabIndex={candidaturaVisivel ? -1 : 0}
+        >
+          Candidatar-se
+        </button>
+        {linkFonte && (
+          <a
+            href={linkFonte}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`ui-btn ui-btn-secondary ${m.atalhoFonte}`}
+            aria-label={rotuloFonte}
+            title={rotuloFonte}
+            tabIndex={candidaturaVisivel ? -1 : 0}
+          >
+            <Icone nome="linkExterno" tamanho={18} />
+          </a>
+        )}
+      </div>
     </>
   );
 });
