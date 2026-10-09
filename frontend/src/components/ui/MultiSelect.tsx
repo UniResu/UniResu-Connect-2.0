@@ -116,7 +116,7 @@ export default function MultiSelect({
         aria-expanded={aberto}
         aria-controls={aberto ? idLista : undefined}
         aria-label={nomeAcessivel}
-        title={selecionados.length > 1 ? selecionados.join(", ") : undefined}
+        title={selecionados.length > 1 ? selecionados.join(", ") : algumMarcado ? resumo : undefined}
       >
         <span className={styles.resumo}>{resumo}</span>
         <svg

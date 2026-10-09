@@ -321,8 +321,12 @@
     grid-template-columns: 17.5rem minmax(0, 1fr);
   }
 
+  /* z-index: as listas de opções (campus, unidade) são mais largas que a
+     coluna e se abrem por cima dos resultados; sem isto, os cards da lista
+     ficavam na frente e cortavam as opções. */
   .painel {
     position: sticky;
+    z-index: 5;
     top: calc(var(--navbar-height) + var(--space-md));
   }
 
@@ -408,9 +412,16 @@
   margin-bottom: var(--space-md);
 }
 
+/* Nomes longos (unidades) quebram linha dentro da etiqueta em vez de
+   serem cortados. */
 button.etiqueta {
   gap: 0.3rem;
-  max-width: 18rem;
+  max-width: 100%;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+  line-height: 1.35;
+  white-space: normal;
+  text-align: left;
   border-color: var(--surface-border);
   background: var(--surface);
   color: var(--text-primary);
@@ -435,8 +446,7 @@ button.etiqueta svg {
 
 .etiquetaTexto {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .limparTudo {
