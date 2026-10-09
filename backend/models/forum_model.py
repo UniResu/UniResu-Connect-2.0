@@ -39,6 +39,7 @@ class TopicoResponse(BaseModel):
     likes: List[str] = []                    # lista de IDs de usuários
     dislikes: List[str] = []                 # lista de IDs de usuários
     total_respostas: int = 0                 # contador ($inc); tópicos antigos sem o campo contam 0
+    primeira_do_autor: bool = False          # primeira pergunta de quem escreveu (selo "Primeiro contato")
 
 
 # ── Respostas (um único nível: respondem ao tópico, nunca a outra resposta) ──

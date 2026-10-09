@@ -494,6 +494,65 @@ div.esqueleto {
   border-radius: var(--radius-card);
 }
 
+/* Carregando: a nave anda de um lado ao outro numa faixa acima dos cards
+   em branco, com o feixe descendo sobre eles. A caixa da nave tem a largura
+   da lista menos a do ícone e anda 100% dela, com o ícone na ponta
+   esquerda: ele vai da borda esquerda à direita. A faixa corta o que passa
+   da lista, para não criar rolagem lateral. Ida e volta em 5 s; o começo e
+   o fim do ciclo são a nave parada à esquerda, que é o que fica para quem
+   pede menos movimento. */
+.listaCarregando {
+  position: relative;
+  padding-top: 2.5rem;
+}
+
+.varredura {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  overflow: clip;
+  pointer-events: none;
+}
+
+.varreduraNave {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(100% - 30px);
+  color: var(--text-accent);
+  animation: varrer 5s ease-in-out infinite;
+}
+
+.varreduraNave svg {
+  display: block;
+}
+
+.varreduraFeixe {
+  position: absolute;
+  top: 24px;
+  left: 15px;
+  width: 96px;
+  height: 160px;
+  transform: translateX(-50%);
+  clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%);
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--green-400) 40%, transparent),
+    color-mix(in srgb, var(--green-400) 0%, transparent)
+  );
+}
+
+@keyframes varrer {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  50% {
+    transform: translateX(100%);
+  }
+}
+
 .maisWrapper {
   display: flex;
   justify-content: center;

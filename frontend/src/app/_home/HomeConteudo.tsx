@@ -112,8 +112,9 @@ function CabecalhoSecao({
    desenhado. Cada estrela é [x, y, raio], com x e y em frações da área do
    desenho; como as posições viram porcentagens, o desenho acompanha a largura
    da tela sem deformar as estrelas. As da metade direita ficam no verde do
-   "Connect". É estática, porque a única animação decorativa do site é o disco
-   voador. */
+   "Connect". Algumas estrelas cintilam devagar, cada uma no seu tempo
+   (CINTILANTES: índice da estrela e atraso em segundos); quem pede menos
+   movimento no sistema vê o desenho parado. */
 const ESTRELAS: [number, number, number][] = [
   [0.02, 0.62, 2.6], [0.1, 0.3, 2], [0.19, 0.74, 2.2], [0.27, 0.14, 2.8], [0.36, 0.5, 1.8],
   [0.46, 0.06, 2.4], [0.55, 0.92, 2], [0.63, 0.38, 2.6], [0.72, 0.12, 2.2], [0.8, 0.72, 2],
@@ -123,6 +124,7 @@ const LIGACOES: [number, number][] = [
   [0, 1], [1, 3], [3, 5], [5, 8], [8, 10], [10, 11], [0, 2], [2, 4],
   [4, 7], [7, 9], [9, 11], [2, 12], [12, 6], [6, 9], [3, 4], [7, 8],
 ];
+const CINTILANTES: Record<number, number> = { 3: 0, 12: -1.7, 7: -3.1, 5: -4.4, 10: -5.6 };
 const ehVerde = (i: number) => ESTRELAS[i][0] > 0.5;
 const pct = (fracao: number) => `${fracao * 100}%`;
 
@@ -140,7 +142,11 @@ function Constelacao() {
         />
       ))}
       {ESTRELAS.map(([x, y, raio], i) => (
-        <g key={i} className={ehVerde(i) ? styles.estrelaVerde : styles.estrela}>
+        <g
+          key={i}
+          className={`${ehVerde(i) ? styles.estrelaVerde : styles.estrela} ${i in CINTILANTES ? styles.cintila : ""}`}
+          style={i in CINTILANTES ? ({ "--atraso": `${CINTILANTES[i]}s` } as CSSProperties) : undefined}
+        >
           <circle cx={pct(x)} cy={pct(y)} r={raio * 3.2} className={styles.estrelaHalo} />
           <circle cx={pct(x)} cy={pct(y)} r={raio} />
         </g>

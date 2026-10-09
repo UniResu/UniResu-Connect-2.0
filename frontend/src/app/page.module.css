@@ -246,6 +246,44 @@ a.btnEscuroPrimario:hover {
   opacity: 0.14;
 }
 
+/* Cintilar: a estrela esmaece e o halo cresce um pouco, em ciclos de 6 s.
+   O começo e o fim do ciclo são o desenho parado, que é o que fica para
+   quem pede menos movimento (regra global em globals.css). */
+.cintila circle {
+  animation: cintilar 6s ease-in-out infinite;
+  animation-delay: var(--atraso, 0s);
+}
+
+.cintila .estrelaHalo {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation-name: haloPulsar;
+}
+
+@keyframes cintilar {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes haloPulsar {
+  0%,
+  100% {
+    opacity: 0.14;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.26;
+    transform: scale(1.6);
+  }
+}
+
 @media (max-width: 600px) {
   .constelacao {
     height: calc(100% + 170px);
@@ -442,11 +480,28 @@ button.heroBuscaBotao:hover {
     0 0 22px 4px color-mix(in srgb, var(--passo-brilho) 35%, transparent);
 }
 
-/* O último passo, a conversa com a coordenação, é a estrela verde. */
+/* O último passo, a conversa com a coordenação, é a estrela verde, e o
+   brilho dela pulsa devagar. */
 .passo:last-child .passoNumero {
   --passo-brilho: var(--green-400);
   background: var(--passo-verde);
   color: var(--passo-verde-fg);
+  animation: passoPulsar 4.5s ease-in-out infinite;
+}
+
+@keyframes passoPulsar {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 6px color-mix(in srgb, var(--passo-brilho) 14%, transparent),
+      0 0 22px 4px color-mix(in srgb, var(--passo-brilho) 35%, transparent);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 9px color-mix(in srgb, var(--passo-brilho) 10%, transparent),
+      0 0 30px 8px color-mix(in srgb, var(--passo-brilho) 48%, transparent);
+  }
 }
 
 /* Trecho entre um passo e o próximo: duas linhas e uma estrela menor no
@@ -478,8 +533,29 @@ button.heroBuscaBotao:hover {
   fill: var(--passo-verde);
 }
 
+/* As estrelas do meio cintilam, cada trecho no seu tempo. */
 .trechoEstrela {
   opacity: 0.75;
+  animation: cintilarTrecho 5s ease-in-out infinite;
+}
+
+.passo:nth-child(2) .trechoEstrela {
+  animation-delay: -1.7s;
+}
+
+.passo:nth-child(3) .trechoEstrela {
+  animation-delay: -3.4s;
+}
+
+@keyframes cintilarTrecho {
+  0%,
+  100% {
+    opacity: 0.75;
+  }
+
+  50% {
+    opacity: 0.25;
+  }
 }
 
 .trechoHalo {

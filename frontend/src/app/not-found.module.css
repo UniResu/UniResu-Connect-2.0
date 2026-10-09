@@ -1,0 +1,127 @@
+.pagina {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(3rem, 8vw, 5.5rem) var(--space-md);
+  text-align: center;
+}
+
+/* ── Cena: a nave, o feixe e a folha ──
+   A nave e a folha flutuam devagar, fora de fase; o feixe começa por baixo
+   da nave, para não abrir vão quando ela sobe. Começo e fim de cada ciclo
+   são a cena parada, que é o que fica para quem pede menos movimento. */
+.cena {
+  position: relative;
+  width: 160px;
+  height: 210px;
+  margin-bottom: var(--space-lg);
+}
+
+.nave {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  width: 160px;
+  height: auto;
+  filter: drop-shadow(0 6px 14px color-mix(in srgb, var(--brand-500) 30%, transparent));
+  animation: flutuar 6s ease-in-out infinite;
+}
+
+.feixe {
+  position: absolute;
+  z-index: 0;
+  top: 88px;
+  left: 50%;
+  width: 140px;
+  height: 118px;
+  transform: translateX(-50%);
+  clip-path: polygon(30% 0, 70% 0, 100% 100%, 0 100%);
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--green-400) 55%, transparent),
+    color-mix(in srgb, var(--green-400) 0%, transparent)
+  );
+}
+
+.folha {
+  position: absolute;
+  z-index: 1;
+  top: 140px;
+  left: calc(50% - 20px);
+  width: 40px;
+  height: 40px;
+  color: var(--text-accent);
+  transform: rotate(-10deg);
+  animation: subir 6s ease-in-out infinite;
+  animation-delay: -2s;
+}
+
+.folha path:first-child {
+  fill: var(--surface);
+}
+
+@keyframes flutuar {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes subir {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-10deg);
+  }
+
+  50% {
+    transform: translateY(-10px) rotate(-4deg);
+  }
+}
+
+/* ── Texto e ações ── */
+
+.codigo {
+  margin-bottom: var(--space-xs);
+  color: var(--text-accent);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.titulo {
+  font-size: clamp(1.75rem, 1.4rem + 1.6vw, 2.5rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--text-primary);
+  text-wrap: balance;
+}
+
+.texto {
+  max-width: 32rem;
+  margin-top: var(--space-md);
+  color: var(--text-secondary);
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.acoes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-xl);
+}
+
+@media (max-width: 480px) {
+  .acoes {
+    flex-direction: column;
+    align-self: stretch;
+  }
+}

@@ -32,6 +32,8 @@ export interface Topico {
   likes: string[]; // IDs de usuários
   dislikes: string[]; // IDs de usuários
   total_respostas: number;
+  /** Primeira pergunta de quem escreveu: mostra o selo "Primeiro contato". */
+  primeira_do_autor?: boolean;
   /** Só no GET de um tópico: as primeiras respostas, da mais antiga para a mais nova. */
   respostas?: Resposta[];
 }

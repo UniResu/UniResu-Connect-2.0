@@ -12,7 +12,7 @@
 import { useId, useState } from "react";
 import Link from "next/link";
 import type { User } from "@/types/user";
-import { IconeNaveDesce, IconeNaveSobe, IconeNaveTransmite } from "@/components/ui/Icones";
+import { IconeAlien, IconeNaveDesce, IconeNaveSobe, IconeNaveTransmite } from "@/components/ui/Icones";
 import {
   conteudoDe,
   dataCompleta,
@@ -85,7 +85,8 @@ export function MetaPergunta({ topico }: { topico: Topico }) {
   );
 }
 
-// ── Chips: votos e respostas (o pai decide onde ficam) ───────────────────
+// ── Chips: votos, respostas e o selo da primeira pergunta (o pai decide
+//    onde ficam) ─────────────────────────────────────────────────────────
 
 export function ChipsPergunta({ topico }: { topico: Topico }) {
   const respostas = topico.total_respostas ?? 0;
@@ -99,6 +100,12 @@ export function ChipsPergunta({ topico }: { topico: Topico }) {
         <IconeNaveTransmite />
         {plural(respostas, "resposta", "respostas")}
       </span>
+      {topico.primeira_do_autor && (
+        <span className="ui-chip ui-chip-success" title="Primeira pergunta desta pessoa no fórum">
+          <IconeAlien />
+          Primeiro contato
+        </span>
+      )}
     </>
   );
 }

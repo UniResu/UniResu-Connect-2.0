@@ -333,3 +333,30 @@ async def test_criar_indices_inclui_username_unico_sparse(db):
     await criar_indices(db)
     indice = (await db.usuarios.index_information())["uniq_username"]
     assert indice["key"] == [("username", 1)] and indice["unique"] and indice["sparse"]
+
+
+# ── Selo "Primeiro contato" ──
+
+async def test_selo_primeiro_contato_so_na_primeira_pergunta_de_cada_autor(api, db):
+    agora = datetime.now(timezone.utc)
+    ana = await _usuario(db, "Ana", username="ana")
+    sistema = await _usuario(db, "UniResu", username="uniresu", sistema=True)
+    primeira = await _topico(db, autor_id=ana, data_criacao=agora - timedelta(days=2))
+    segunda = await _topico(db, autor_id=ana, data_criacao=agora - timedelta(days=1))
+    do_sistema = await _topico(db, autor_id=sistema, data_criacao=agora - timedelta(days=3))
+    legado = await _topico(db, autor_email="antigo@exemplo.com")
+
+    lista = (await api.get("/api/forum/topicos")).json()
+    assert {t["id"]: t["primeira_do_autor"] for t in lista} == {
+        primeira: True, segunda: False, do_sistema: False, legado: False,
+    }
+    assert all("_autor_sistema" not in t for t in lista)
+
+    assert (await api.get(f"/api/forum/topicos/{primeira}")).json()["primeira_do_autor"] is True
+    assert (await api.get(f"/api/forum/topicos/{segunda}")).json()["primeira_do_autor"] is False
+
+    # Quem nunca perguntou recebe o selo já na resposta da criação.
+    criado = await api.post("/api/forum/topicos", json={"titulo": "Dúvida", "conteudo": "Texto"})
+    assert criado.status_code == 201 and criado.json()["primeira_do_autor"] is True
+    outra = await api.post("/api/forum/topicos", json={"titulo": "Outra", "conteudo": "Texto"})
+    assert outra.json()["primeira_do_autor"] is False

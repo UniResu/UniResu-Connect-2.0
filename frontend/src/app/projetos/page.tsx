@@ -895,7 +895,14 @@ function ProjetosConteudo({ qInicial, pronto }: { qInicial: string; pronto: bool
             )}
 
             {mostrarEsqueleto ? (
-              <div className={styles.lista} aria-busy="true" aria-label="Carregando projetos">
+              <div className={`${styles.lista} ${styles.listaCarregando}`} aria-busy="true" aria-label="Carregando projetos">
+                {/* Enquanto carrega, a nave passa o feixe sobre os cards em branco. */}
+                <div className={styles.varredura} aria-hidden="true">
+                  <div className={styles.varreduraNave}>
+                    <IconeUfo tamanho={30} />
+                    <span className={styles.varreduraFeixe} />
+                  </div>
+                </div>
                 {[1, 2, 3].map((i) => (
                   <div key={i} className={`skeleton ${styles.esqueleto}`} />
                 ))}
