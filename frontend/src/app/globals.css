@@ -211,13 +211,14 @@
   --bg-primary: #0f0e13;
   --bg-secondary: #131218;
   --bg-faixa: #0b0a0e;
-  --bg-card: #362c52;
+  --bg-card: #352f49;
   /* Superfícies (cards, painéis, modais) bem mais claras que o fundo, como
      no tema claro: sem sombra visível no escuro, é a diferença de
-     luminosidade que destaca o card. */
-  --surface: #282040;
-  --surface-2: #2f2649;
-  --surface-3: #362c52;
+     luminosidade que destaca o card. O roxo é suave (saturação baixa),
+     para não brilhar. */
+  --surface: #272239;
+  --surface-2: #2e2941;
+  --surface-3: #352f49;
   --surface-border: rgba(255, 255, 255, 0.13);
   --surface-border-hover: rgba(203, 137, 224, 0.5);
 
