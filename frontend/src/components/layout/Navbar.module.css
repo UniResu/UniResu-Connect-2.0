@@ -32,6 +32,22 @@
   transform-origin: left center;
 }
 
+/* Nome ao lado do alienígena: só no celular (no desktop os links preenchem
+   a barra). "Connect" no verde do hero. */
+.logoNome {
+  display: none;
+  color: var(--header-fg);
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.logoConnect {
+  color: var(--green-400);
+}
+
 /* ── Nav Links (centralizados) ── */
 
 .navLinks {
@@ -344,6 +360,10 @@
     transform: none;
   }
 
+  .logoNome {
+    display: inline;
+  }
+
   /* No celular, links e conta ficam só dentro do menu hambúrguer: botões de
      "Entrar"/"Criar conta" soltos no cabeçalho confundiam quem chegava. */
   .navLinks,
@@ -507,5 +527,21 @@
     font-size: var(--font-size-base);
     cursor: pointer;
     border-radius: var(--radius-control);
+  }
+}
+
+/* Celulares bem estreitos (até 360px): nome e alienígena menores, para o
+   nome não encostar no botão Menu. */
+@media (max-width: 360px) {
+  .navbar {
+    gap: var(--space-sm);
+  }
+
+  .logoIcon {
+    height: 44px;
+  }
+
+  .logoNome {
+    font-size: var(--font-size-base);
   }
 }

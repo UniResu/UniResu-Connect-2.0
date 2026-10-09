@@ -1,6 +1,6 @@
-/* Avatar: círculo em degradê de marca com a silhueta clara do alienígena e,
-   no canto, o selo verde com o símbolo da função. Só tokens, para ficar
-   igual nos dois temas. Sem sombra: o card em volta já tem a dele. */
+/* Avatar: a cabeça do alienígena da marca, sem moldura, e no canto o selo
+   verde com o símbolo da função. O degradê da cabeça é o do logo, igual nos
+   dois temas; só as antenas mudam de tom, para não sumirem no escuro. */
 .avatar {
   position: relative;
   display: inline-flex;
@@ -9,19 +9,20 @@
   flex-shrink: 0;
   width: 4rem;
   height: 4rem;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--brand-700), var(--brand-500));
-  color: var(--text-on-dark);
   user-select: none;
 }
 
 .alien {
-  width: 78%;
-  height: 78%;
+  width: 100%;
+  height: 100%;
   overflow: visible;
 }
 
-/* O anel da cor do card separa o selo do círculo. */
+.antenas {
+  color: var(--brand-700);
+}
+
+/* O anel da cor do card separa o selo da cabeça. */
 .selo {
   position: absolute;
   right: -4px;
@@ -49,7 +50,6 @@
   }
 }
 
-/* No escuro o degradê sobe um tom, senão some contra a superfície do card. */
-:global([data-theme="dark"]) .avatar {
-  background: linear-gradient(135deg, var(--brand-600), var(--brand-400));
+:global([data-theme="dark"]) .antenas {
+  color: var(--brand-300);
 }

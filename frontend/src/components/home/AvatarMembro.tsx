@@ -1,3 +1,4 @@
+import { useId } from "react";
 import styles from "./AvatarMembro.module.css";
 
 /** Símbolo da função de cada pessoa, no selo verde do canto do avatar. */
@@ -63,28 +64,43 @@ const SIMBOLOS: Record<SimboloFuncao, React.ReactNode> = {
 /**
  * Avatar dos membros da equipe (seção "Quem somos").
  *
- * Ninguém tem foto: o avatar é a silhueta do alienígena da marca (cabeça e
- * antenas, sem rosto) num círculo em degradê, com um selo verde no canto
+ * Ninguém tem foto: o avatar é a cabeça do alienígena da marca (o mesmo
+ * degradê lilás do logo, com olhos e antenas), com um selo verde no canto
  * mostrando o símbolo da função. É decorativo para leitores de tela: o nome
  * e o cargo já estão no texto logo abaixo.
  */
 export default function AvatarMembro({ simbolo }: { simbolo: SimboloFuncao }) {
+  // Id próprio do degradê em cada avatar: vários na mesma página não podem
+  // repetir o mesmo id.
+  const degrade = `alien-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
   return (
     <span className={styles.avatar} aria-hidden="true">
       <svg className={styles.alien} viewBox="0 0 64 64">
-        <path
-          d="M25.5 16C24.5 10.5 21.8 7 18.5 5.5M38.5 16C39.5 10.5 42.2 7 45.5 5.5"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.4"
-          strokeLinecap="round"
-        />
-        <circle cx="18.2" cy="5.4" r="2" fill="currentColor" />
-        <circle cx="45.8" cy="5.4" r="2" fill="currentColor" />
+        <defs>
+          <linearGradient id={degrade} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#9a6fe0" />
+            <stop offset="1" stopColor="#e6a0dc" />
+          </linearGradient>
+        </defs>
+        <g className={styles.antenas}>
+          <path
+            d="M25.5 16C24.5 10.5 21.8 7 18.5 5.5M38.5 16C39.5 10.5 42.2 7 45.5 5.5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+          />
+          <circle cx="18.2" cy="5.4" r="2" fill="currentColor" />
+          <circle cx="45.8" cy="5.4" r="2" fill="currentColor" />
+        </g>
         <path
           d="M32 14c11.2 0 19.5 7.7 19.5 17.6C51.5 43.3 40.7 56 32 56S12.5 43.3 12.5 31.6C12.5 21.7 20.8 14 32 14z"
-          fill="currentColor"
+          fill={`url(#${degrade})`}
         />
+        <ellipse cx="24.3" cy="35" rx="6.6" ry="4.1" transform="rotate(28 24.3 35)" fill="#2b0a3d" />
+        <ellipse cx="39.7" cy="35" rx="6.6" ry="4.1" transform="rotate(-28 39.7 35)" fill="#2b0a3d" />
+        <circle cx="26.4" cy="33.4" r="1.4" fill="#ffffff" />
+        <circle cx="41.8" cy="33.4" r="1.4" fill="#ffffff" />
       </svg>
       <span className={styles.selo}>
         <svg

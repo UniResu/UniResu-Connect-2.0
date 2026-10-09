@@ -82,6 +82,11 @@ function NavbarConteudo({ pathname }: { pathname: string }) {
       <nav className={styles.navbar} aria-label="Principal">
         <Link href="/" className={styles.logo} onClick={fecharMenu} aria-label="UniResu Connect, página inicial">
           <img src="/uniresulogo.png" alt="" className={styles.logoIcon} />
+          {/* No celular o nome aparece ao lado do alienígena: sem ele a barra
+              ficava vazia e não dizia em que site a pessoa estava. */}
+          <span className={styles.logoNome}>
+            UniResu <span className={styles.logoConnect}>Connect</span>
+          </span>
         </Link>
 
         {/* Links (desktop) */}
