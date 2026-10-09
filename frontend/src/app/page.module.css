@@ -922,32 +922,33 @@ span.pessoaCargo {
   color: var(--text-on-dark-muted);
 }
 
-/* Tema escuro: os cards de pergunta usam o grafite dos cards de projeto,
-   com cinzas neutros, em vez do branco translúcido sobre o roxo. */
+/* Tema escuro: o card de pergunta fica opaco, no roxo suave das
+   superfícies. Translúcido, ele deixava o degradê da seção passar por trás
+   do texto. */
 :global(:root[data-theme="dark"]) .forumCard {
-  border-color: var(--card-borda);
-  background: var(--card-bg);
+  border-color: var(--surface-border);
+  background: var(--surface);
 }
 
 :global(:root[data-theme="dark"]) .forumCard:hover {
-  border-color: var(--card-borda-hover);
-  background: var(--card-bg);
+  border-color: var(--surface-border-hover);
+  background: var(--surface-2);
 }
 
 :global(:root[data-theme="dark"]) .forumCardTitulo {
-  color: var(--card-titulo);
+  color: var(--text-primary);
 }
 
 :global(:root[data-theme="dark"]) .forumCardTexto {
-  color: var(--card-texto);
+  color: var(--text-secondary);
 }
 
 :global(:root[data-theme="dark"]) .forumCardAutor {
-  color: var(--card-apagado);
+  color: var(--text-muted);
 }
 
 :global(:root[data-theme="dark"]) .forumCardTopo {
-  color: var(--card-destaque);
+  color: var(--text-accent);
 }
 
 .forumEsqueleto {

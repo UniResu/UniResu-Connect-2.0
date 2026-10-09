@@ -65,16 +65,6 @@
   --surface-border: rgba(31, 18, 54, 0.1);
   --surface-border-hover: rgba(76, 5, 104, 0.28);
 
-  /* Cards de projeto e do fórum. No claro, os mesmos tons das superfícies;
-     no escuro, valores próprios (abaixo). */
-  --card-bg: var(--surface);
-  --card-borda: var(--surface-border);
-  --card-borda-hover: var(--surface-border-hover);
-  --card-titulo: var(--text-primary);
-  --card-texto: var(--text-secondary);
-  --card-apagado: var(--text-muted);
-  --card-destaque: var(--text-accent);
-  --card-etiqueta-fg: var(--text-primary);
   --surface-shadow: var(--shadow-sm);
   /* Mantidos por compatibilidade: o vidro saiu do sistema. */
   --surface-highlight: 0 0 0 0 transparent;
@@ -225,16 +215,6 @@
   --surface-border: rgba(255, 255, 255, 0.13);
   --surface-border-hover: rgba(203, 137, 224, 0.5);
 
-  /* Cards no escuro: grafite neutro e cinzas sem o tom lilás, para o texto
-     ler bem e o card não brilhar sobre o fundo roxo. */
-  --card-bg: #1c1b22;
-  --card-borda: #302e38;
-  --card-borda-hover: #4b4857;
-  --card-titulo: #f2f1f6;
-  --card-texto: #c8c6d0;
-  --card-apagado: #a3a1ad;
-  --card-destaque: #d5c8e6;
-  --card-etiqueta-fg: #e4e2ea;
 
   --border: rgba(255, 255, 255, 0.16);
   --border-light: rgba(255, 255, 255, 0.1);
@@ -264,9 +244,9 @@
   --info-fg: #a6d8f6;
 
   --page-projetos-bg: #110c1c;
-  --page-projetos-glow: rgba(162, 66, 181, 0.2);
+  --page-projetos-glow: rgba(162, 66, 181, 0.1);
   --page-forum-bg: #15110f;
-  --page-forum-glow: rgba(214, 150, 50, 0.12);
+  --page-forum-glow: rgba(214, 150, 50, 0.06);
 
   --header-border: rgba(162, 66, 181, 0.45);
   --header-shadow: 0 4px 14px -8px rgba(0, 0, 0, 0.8);

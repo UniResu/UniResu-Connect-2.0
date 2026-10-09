@@ -7,11 +7,11 @@
 .card {
   display: block;
   position: relative;
-  background: var(--card-bg);
-  border: 1px solid var(--card-borda);
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-sm);
-  color: var(--card-titulo);
+  color: var(--text-primary);
   text-decoration: none;
   content-visibility: auto;
   /* Estimativa perto da altura real, para a barra de rolagem não pular. */
@@ -25,7 +25,7 @@
 
 .clicavel:hover,
 .clicavel:focus-within {
-  border-color: var(--card-borda-hover);
+  border-color: var(--surface-border-hover);
   box-shadow: var(--shadow-md);
 }
 
@@ -90,7 +90,7 @@
   flex-shrink: 0;
   font-size: var(--font-size-xs);
   font-weight: 600;
-  color: var(--card-texto);
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
@@ -108,7 +108,7 @@
 
 .data {
   font-size: var(--font-size-xs);
-  color: var(--card-apagado);
+  color: var(--text-muted);
   flex-shrink: 0;
 }
 
@@ -117,7 +117,7 @@
   font-weight: 700;
   line-height: 1.35;
   letter-spacing: -0.01em;
-  color: var(--card-titulo);
+  color: var(--text-primary);
   margin-bottom: var(--space-xs);
   overflow-wrap: anywhere;
 }
@@ -125,13 +125,13 @@
 .coordenacao {
   display: block;
   font-size: var(--font-size-sm);
-  color: var(--card-texto);
+  color: var(--text-secondary);
   margin-bottom: var(--space-sm);
 }
 
 .coordenacaoRotulo {
   margin-right: 0.35rem;
-  color: var(--card-apagado);
+  color: var(--text-muted);
 }
 
 .coordenacaoRotulo::after {
@@ -139,7 +139,7 @@
 }
 
 .resumo {
-  color: var(--card-texto);
+  color: var(--text-secondary);
   font-size: var(--font-size-sm);
   line-height: 1.6;
   display: -webkit-box;
@@ -178,53 +178,12 @@
   margin-left: auto;
   font-size: var(--font-size-xs);
   font-weight: 600;
-  color: var(--card-apagado);
+  color: var(--text-muted);
 }
 
 .ano svg {
   width: 13px;
   height: 13px;
-}
-
-/* Tema escuro: etiquetas com texto neutro e claro. A cor da área fica no
-   ícone e num tom leve do fundo, sem texto colorido sobre fundo colorido,
-   que no escuro brilhava demais e lia mal. */
-:global(:root[data-theme="dark"]) .card :global(.ui-chip) {
-  --cor-etiqueta: var(--card-apagado);
-  border-color: color-mix(in srgb, var(--cor-etiqueta) 26%, var(--card-bg));
-  background: color-mix(in srgb, var(--cor-etiqueta) 12%, var(--card-bg));
-  color: var(--card-etiqueta-fg);
-}
-
-:global(:root[data-theme="dark"]) .card :global(.ui-chip) svg {
-  color: var(--cor-etiqueta);
-}
-
-:global(:root[data-theme="dark"]) .card :global(.ui-chip-outline) {
-  background: transparent;
-}
-
-:global(:root[data-theme="dark"]) .card :global(.ui-chip-rose) { --cor-etiqueta: var(--tint-rose-fg); }
-:global(:root[data-theme="dark"]) .card :global(.ui-chip-orange) { --cor-etiqueta: var(--tint-orange-fg); }
-:global(:root[data-theme="dark"]) .card :global(.ui-chip-amber) { --cor-etiqueta: var(--tint-amber-fg); }
-:global(:root[data-theme="dark"]) .card :global(.ui-chip-green) { --cor-etiqueta: var(--tint-green-fg); }
-:global(:root[data-theme="dark"]) .card :global(.ui-chip-teal) { --cor-etiqueta: var(--tint-teal-fg); }
-:global(:root[data-theme="dark"]) .card :global(.ui-chip-sky) { --cor-etiqueta: var(--tint-sky-fg); }
-:global(:root[data-theme="dark"]) .card :global(.ui-chip-indigo) { --cor-etiqueta: var(--tint-indigo-fg); }
-:global(:root[data-theme="dark"]) .card :global(.ui-chip-violet) { --cor-etiqueta: var(--tint-violet-fg); }
-:global(:root[data-theme="dark"]) .card :global(.ui-chip-slate) { --cor-etiqueta: var(--tint-slate-fg); }
-:global(:root[data-theme="dark"]) .card :global(.ui-chip-primary) { --cor-etiqueta: var(--card-destaque); }
-:global(:root[data-theme="dark"]) .card :global(.ui-chip-success) { --cor-etiqueta: var(--success-fg); }
-
-/* O selo do módulo continua com a cor dele, sobre um fundo mais discreto. */
-:global(:root[data-theme="dark"]) .tipoPesquisa {
-  background: color-mix(in srgb, var(--tint-violet-fg) 14%, var(--card-bg));
-  color: var(--tint-violet-fg);
-}
-
-:global(:root[data-theme="dark"]) .tipoExtensao {
-  background: color-mix(in srgb, var(--tint-sky-fg) 14%, var(--card-bg));
-  color: var(--tint-sky-fg);
 }
 
 @media (max-width: 768px) {

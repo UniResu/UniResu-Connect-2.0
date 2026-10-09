@@ -174,19 +174,6 @@
   padding-top: 0.2rem;
 }
 
-/* Tema escuro: votos e respostas em etiquetas neutras, sem o lilás. */
-:global(:root[data-theme="dark"]) .linhaChips :global(.ui-chip),
-:global(:root[data-theme="dark"]) .chips :global(.ui-chip) {
-  border-color: var(--card-borda);
-  background: var(--card-bg);
-  color: var(--card-texto);
-}
-
-:global(:root[data-theme="dark"]) .linhaChips :global(.ui-chip-primary),
-:global(:root[data-theme="dark"]) .chips :global(.ui-chip-primary) {
-  color: var(--card-destaque);
-}
-
 .linhaTitulo {
   margin: 0;
   font-size: var(--font-size-lg);
