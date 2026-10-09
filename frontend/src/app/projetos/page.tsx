@@ -505,11 +505,11 @@ function ProjetosConteudo({ qInicial, pronto }: { qInicial: string; pronto: bool
             Projetos de pesquisa e extensão das universidades, em um só lugar. Encontre o seu e envie uma
             carta de intenção à coordenação.
           </p>
-          {/* Faixa da largura da busca: no desktop mostra o resumo numa linha e
-              abre o texto completo; no celular fica só o título, recolhido. */}
+          {/* Linha discreta: no desktop mostra o resumo e abre o texto completo;
+              no celular fica só o título, recolhido. */}
           <details className={styles.origem}>
             <summary className={styles.origemResumo}>
-              <IconeInfo tamanho={18} />
+              <IconeInfo tamanho={16} />
               <span className={styles.origemTitulo}>De onde vêm estes projetos</span>
               <span className={styles.origemFrase}>
                 Só projetos em andamento que as universidades publicam em acesso aberto, atualizados toda semana.

@@ -21,25 +21,24 @@
 }
 
 /* ── Aviso sobre a origem dos dados ──
-   Faixa da largura da busca, logo acima dela. No desktop o resumo fica
-   visível numa linha e "Saiba mais" abre o texto completo; no celular só o
-   título aparece, recolhido, para não empurrar a busca para baixo. */
+   Uma linha discreta sob o subtítulo, em texto apagado e sem moldura. No
+   desktop a frase de resumo aparece na mesma linha (o título sozinho ficava
+   pequeno demais para a largura da página) e "Saiba mais" abre o texto
+   completo; no celular fica só o título, recolhido. */
 
 .origem {
-  margin-top: var(--space-lg);
-  border: 1px solid var(--surface-border);
-  border-radius: var(--radius-control);
-  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  margin-top: var(--space-md);
 }
 
 .origemResumo {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.6rem;
-  min-height: 2.75rem;
-  padding: 0.55rem 0.9rem;
-  border-radius: inherit;
-  color: var(--text-secondary);
+  gap: 0.25rem 0.5rem;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 2rem;
+  color: var(--text-muted);
   font-size: var(--font-size-sm);
   cursor: pointer;
   list-style: none;
@@ -51,31 +50,23 @@
 
 .origemResumo > svg:first-child {
   flex-shrink: 0;
-  color: var(--text-accent);
 }
 
 .origemResumo:focus-visible {
   outline: none;
+  border-radius: var(--radius-control);
   box-shadow: var(--ring);
 }
 
 .origemTitulo {
-  flex-shrink: 0;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.origemFrase {
-  flex: 1;
-  min-width: 0;
+  font-weight: 600;
+  color: var(--text-secondary);
 }
 
 .origemAcao {
   display: inline-flex;
-  flex-shrink: 0;
   align-items: center;
-  gap: 0.3rem;
-  margin-left: auto;
+  gap: 0.2rem;
   font-weight: 600;
   color: var(--text-accent);
 }
@@ -104,27 +95,20 @@
 
 .origemTexto {
   max-width: 72ch;
-  margin: 0 0.9rem 0.9rem calc(0.9rem + 18px + 0.6rem);
+  margin-top: var(--space-sm);
+  padding-left: var(--space-md);
+  border-left: 2px solid var(--primary-200);
   color: var(--text-secondary);
   font-size: var(--font-size-sm);
   line-height: 1.6;
 }
 
-/* Celular: só o título e a ação; o texto completo abre embaixo, alinhado
-   à borda da faixa. */
+/* Celular: só o título e a seta; o texto completo abre embaixo. */
 @media (max-width: 767px) {
   .origemFrase,
   .origemAbrir,
-  .origemFechar {
-    display: none;
-  }
-
   .origem[open] .origemFechar {
     display: none;
-  }
-
-  .origemTexto {
-    margin-left: 0.9rem;
   }
 }
 
