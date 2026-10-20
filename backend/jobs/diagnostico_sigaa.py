@@ -39,7 +39,12 @@ def _campos(form) -> list[str]:
             continue
         extra = ""
         if tag.name == "select":
-            extra = f" opções={len(tag.find_all('option'))}"
+            opcoes = tag.find_all("option")
+            extra = f" opções={len(opcoes)}"
+            if len(opcoes) <= 12:
+                extra += " [" + "; ".join(
+                    f"{o.get('value')}={_cortar(o.get_text(), 30)}{' (selecionada)' if o.has_attr('selected') else ''}"
+                    for o in opcoes) + "]"
         elif tipo in ("checkbox", "radio"):
             extra = f" value={tag.get('value')!r} checked={tag.has_attr('checked')}"
         elif tipo != "hidden":
@@ -62,6 +67,23 @@ def _mensagens(soup) -> str:
     return " || ".join(textos[:5]) or "(nenhuma)"
 
 
+def _texto_depois_do_form(soup) -> str:
+    """Texto visível depois do formulário de busca, onde a listagem ou o aviso
+    de busca vazia apareceriam."""
+    form = soup.find("form")
+    if form is None:
+        return "(sem form)"
+    partes = []
+    for irmao in form.find_all_next(string=True):
+        if irmao.parent.name in ("script", "style", "option"):
+            continue
+        partes.append(irmao)
+        if sum(len(p) for p in partes) > 2000:
+            break
+    texto = " ".join(" ".join(partes).split())
+    return _cortar(texto[texto.rfind("Cancelar") + 8:] if "Cancelar" in texto else texto, 300)
+
+
 def _resposta(titulo: str, resp) -> BeautifulSoup:
     historico = " -> ".join(f"{r.status_code} {r.headers.get('location', '')}" for r in resp.history) or "sem redirecionamento"
     soup = BeautifulSoup(resp.text, "html.parser")
@@ -70,7 +92,22 @@ def _resposta(titulo: str, resp) -> BeautifulSoup:
     print(f"    redirecionamentos: {historico}")
     print(f"    mensagens: {_mensagens(soup)}")
     print(f"    table.listagem: {'linhas=' + str(len(tabela.find_all('tr'))) if tabela else 'não existe'}")
+    if tabela is None:
+        print(f"    texto depois do form: {_texto_depois_do_form(soup)}")
     return soup
+
+
+def _variante(client, url: str, dados: dict, titulo: str, tirar) -> None:
+    """Refaz a busca numa sessão nova, sem os campos para os quais `tirar(nome)` é verdadeiro."""
+    form = parser.achar_form(BeautifulSoup(client.get(url), "html.parser"))
+    base = parser.payload_base(form)
+    for nome in list(base):
+        if nome.startswith(form.get("id") + ":check") or nome.startswith(form.get("id") + ":select"):
+            base.pop(nome)
+    base.update({k: v for k, v in dados.items() if k != "javax.faces.ViewState"})
+    for nome in [k for k in base if tirar(k)]:
+        base.pop(nome)
+    _resposta(titulo, client.request_raw("POST", url, data=base))
 
 
 def _cookies(client) -> str:
@@ -112,13 +149,17 @@ def diagnosticar(modulo: str, ano: str) -> None:
     print(f"    itens reconhecidos: {len(itens)}")
 
     if not itens:
-        # Mesma busca sem o ano, para separar "filtro errado" de "módulo vazio".
-        sem_ano = {k: v for k, v in dados.items() if "ano" not in k.lower()}
-        html_novo = client.get(url)
-        base = parser.payload_base(parser.achar_form(BeautifulSoup(html_novo, "html.parser")))
-        base.update({k: v for k, v in sem_ano.items() if k != "javax.faces.ViewState"})
-        resp2 = client.request_raw("POST", url, data=base)
-        _resposta("busca sem o campo de ano", resp2)
+        # Variações da busca, para separar "filtro errado" de "módulo vazio".
+        def e_ano(k):
+            return k.lower().endswith(("ano", "checkano", "buscaano", "selectbuscaano"))
+
+        def e_tipo(k):
+            return "tipo" in k.lower()
+
+        _variante(client, url, dados, "busca sem o ano", e_ano)
+        if modulo == "extensao":
+            _variante(client, url, dados, "busca sem o tipo de ação", e_tipo)
+            _variante(client, url, dados, "busca sem ano nem tipo", lambda k: e_ano(k) or e_tipo(k))
         return
 
     tabela = soup.find("table", class_="listagem")
