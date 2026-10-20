@@ -73,9 +73,9 @@ jobs:
               curl -sS -L -m 120 -A "UniResuConnect/2.1 (+https://uniresu.org; diagnostico)" -o /tmp/b.bin "$url" || echo "curl falhou ($?)"
               if head -c 5 /tmp/b.bin | grep -q "%PDF"; then
                 if [ -n "$GREP_TEXTO" ]; then
-                  pdftotext -layout /tmp/b.bin /tmp/t.txt && { grep -n -i -C2 -E "$GREP_TEXTO" /tmp/t.txt | head -c "$BYTES" || echo "(nenhuma linha com esses termos)"; }
+                  pdftotext -layout /tmp/b.bin /tmp/t.txt 2>/dev/null && { grep -n -i -C2 -E "$GREP_TEXTO" /tmp/t.txt | head -c "$BYTES" || echo "(nenhuma linha com esses termos)"; }
                 else
-                  pdftotext -layout /tmp/b.bin /tmp/t.txt && head -c "$BYTES" /tmp/t.txt
+                  pdftotext -layout /tmp/b.bin /tmp/t.txt 2>/dev/null && head -c "$BYTES" /tmp/t.txt
                 fi
                 echo; echo "--- páginas: $(pdfinfo /tmp/b.bin 2>/dev/null | grep Pages)"
                 continue
