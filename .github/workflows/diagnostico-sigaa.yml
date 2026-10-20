@@ -21,6 +21,10 @@ on:
         description: "Ano da busca (vazio = ano corrente)"
         required: false
         default: ""
+      timeout:
+        description: "Espera máxima por resposta, em segundos (portais lentos)"
+        required: false
+        default: "60"
 
 permissions:
   contents: read
@@ -51,6 +55,7 @@ jobs:
           ANO: ${{ inputs.ano }}
           SIGAA_PESQUISA_SITUACAO: ${{ vars.SIGAA_PESQUISA_SITUACAO || 'EM EXECUÇÃO' }}
           SIGAA_MAX_TENTATIVAS: "2"
+          SIGAA_TIMEOUT_SEGUNDOS: ${{ inputs.timeout }}
         run: |
           for sigla in ${INSTITUICOES//,/ }; do
             for modulo in ${MODULOS//,/ }; do
