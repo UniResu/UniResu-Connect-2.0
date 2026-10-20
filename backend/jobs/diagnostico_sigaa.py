@@ -13,6 +13,7 @@ from datetime import date
 
 from bs4 import BeautifulSoup
 
+from services.http_client import ErroColeta
 from services.sigaa import parser, scraper
 from services.sigaa.config import SigaaConfig
 
@@ -132,7 +133,7 @@ def diagnosticar(modulo: str, ano: str) -> None:
     situacao = cfg.pesquisa_situacao if modulo == "pesquisa" else None
     try:
         dados = scraper.montar_payload_busca(html_form, modulo, ano, situacao)
-    except (ValueError, scraper.SigaaErro) as e:
+    except (ValueError, ErroColeta) as e:
         print(f"  payload da busca: ERRO {e}")
         return
     print("  payload da busca (sem ViewState):")
@@ -177,7 +178,7 @@ def diagnosticar(modulo: str, ano: str) -> None:
     if item.get("link_detalhe"):
         try:
             _detalhe("detalhe pelo link público", client.request_raw("GET", item["link_detalhe"]), modulo)
-        except scraper.SigaaErro as e:
+        except ErroColeta as e:
             print(f"  detalhe pelo link público: ERRO {e}")
     if item.get("detalhe_params"):
         form_lista = parser.achar_form(soup, item.get("detalhe_form") or "formConsulta")
