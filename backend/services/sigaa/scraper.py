@@ -225,7 +225,8 @@ def _detalhe_por_postback(client: SigaaClient, modulo: str, pagina: PaginaListag
         try:
             if tentativa == 1:
                 html = _buscar(client, modulo, ano, pagina.extra).html
-            form = parser.achar_form(BeautifulSoup(html, "html.parser"), "formConsulta")
+            # O form que o link submete: o da listagem ("form" na extensão), não o da busca.
+            form = parser.achar_form(BeautifulSoup(html, "html.parser"), item.get("detalhe_form") or "formConsulta")
             dados = parser.payload_base(form)
             dados.update(item.get("detalhe_params") or {})
             resposta = client.post(_urls(client)[modulo], dados)

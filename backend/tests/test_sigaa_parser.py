@@ -123,6 +123,28 @@ class TestFormularioJSF:
         assert parser.params_link_jsf(onclick) == {
             "form:j_id_1": "form:j_id_1", "idAtividadeExtensaoSelecionada": "4695", "acao": "2",
         }
+        assert parser.form_link_jsf(onclick) == "form"
+
+    def test_params_link_jsf_formato_antigo(self):
+        # SIGAA da UFC: os parâmetros vêm num texto 'nome,valor,nome,valor'.
+        onclick = ("if(typeof jsfcljs == 'function'){jsfcljs(document.forms['form'],"
+                   "'form:j_id_jsp_1576737121_51,form:j_id_jsp_1576737121_51,id,78426074,acao,2','');}return false")
+        assert parser.params_link_jsf(onclick) == {
+            "form:j_id_jsp_1576737121_51": "form:j_id_jsp_1576737121_51", "id": "78426074", "acao": "2",
+        }
+        assert parser.form_link_jsf(onclick) == "form"
+
+    def test_listagem_extensao_com_link_no_formato_antigo(self):
+        html = """<table class="listagem"><tbody><tr class="linhaPar"><td>
+            <a href="#" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.forms['form'],'form:j_id_51,form:j_id_51,id,78426074,acao,2','');}return false"
+               title="Visualizar Ação">2028 - CONTA - Corpo, Negritudes, Tempo e Ancestralidades.</a></td>
+            <td> PROGRAMA </td><td>DP</td></tr></tbody></table>"""
+        [item] = parser.parse_listagem_extensao(html, "https://si3.ufc.br")
+        assert item["sigaa_id"] == "78426074"
+        assert item["titulo"] == "CONTA - Corpo, Negritudes, Tempo e Ancestralidades."
+        assert item["ano"] == "2028"
+        assert item["detalhe_form"] == "form"
+        assert item["link_detalhe"] == "https://si3.ufc.br/sigaa/link/public/extensao/visualizacaoAcaoExtensao/78426074"
 
 
 class TestEquipe:

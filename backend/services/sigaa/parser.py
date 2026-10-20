@@ -36,6 +36,9 @@ SITUACAO_EM_EXECUCAO = "EM EXECUÇÃO"
 _RE_EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 _RE_DATA = re.compile(r"(\d{2}/\d{2}/\d{4})")
 _RE_PARAMS_JSF = re.compile(r"'([^']+)':'([^']*)'")
+# jsfcljs(document.forms['form'],'k,v,k,v','') das versões antigas do SIGAA.
+_RE_PARAMS_JSF_LISTA = re.compile(r"jsfcljs\((?:[^,()]|\([^)]*\))*,\s*'([^']*)'")
+_RE_FORM_JSF = re.compile(r"jsfcljs\(document\.(?:getElementById\(|forms\[)'([^']+)'")
 
 
 # ─────────────────────────────────────────────
@@ -209,9 +212,24 @@ def aplicar_botao_buscar(form, dados: dict) -> None:
 
 
 def params_link_jsf(onclick: str) -> dict:
-    """Extrai os parâmetros `{'k':'v', ...}` de um link `jsfcljs(form, {...})` do JSF."""
+    """Extrai os parâmetros de um link `jsfcljs(form, ...)` do JSF. As versões
+    novas do SIGAA passam um objeto `{'k':'v', ...}`; as antigas (UFC), um
+    texto 'k,v,k,v' com nomes e valores alternados."""
     m = re.search(r"\{([^}]*)\}\s*,", onclick or "")
-    return dict(_RE_PARAMS_JSF.findall(m.group(1))) if m else {}
+    if m:
+        return dict(_RE_PARAMS_JSF.findall(m.group(1)))
+    m = _RE_PARAMS_JSF_LISTA.search(onclick or "")
+    if not m:
+        return {}
+    partes = m.group(1).split(",")
+    return dict(zip(partes[0::2], partes[1::2]))
+
+
+def form_link_jsf(onclick: str) -> Optional[str]:
+    """Id do form que um link `jsfcljs` submete (`getElementById('form')` ou
+    `forms['form']`). Na extensão é o form da listagem, não o da busca."""
+    m = _RE_FORM_JSF.search(onclick or "")
+    return m.group(1) if m else None
 
 
 # ─────────────────────────────────────────────
@@ -288,6 +306,7 @@ def parse_listagem_pesquisa(html: str) -> list[dict]:
                 "situacao": limpar(tds[2].get_text()) or None,
                 "sigaa_id": params.get("id"),
                 "detalhe_params": params,
+                "detalhe_form": form_link_jsf(link["onclick"]) if link else None,
             })
             itens.append(atual)
             atual = None
@@ -315,6 +334,7 @@ def parse_listagem_extensao(html: str, base_url: str = BASE_URL) -> list[dict]:
         itens.append({
             "sigaa_id": sigaa_id,
             "detalhe_params": params,
+            "detalhe_form": form_link_jsf(link["onclick"]) if link else None,
             "onclick": (link["onclick"][:300] if link else None),
             "titulo": titulo,
             "ano": ano,

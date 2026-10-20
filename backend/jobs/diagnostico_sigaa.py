@@ -175,24 +175,34 @@ def diagnosticar(modulo: str, ano: str) -> None:
     print(f"  cookies: {_cookies(client)}")
 
     if item.get("link_detalhe"):
-        resp_d = client.request_raw("GET", item["link_detalhe"])
-        _resposta("detalhe pelo link público", resp_d)
-        print(f"    {parser.diagnostico_pagina(resp_d.text, 400)}")
+        try:
+            _detalhe("detalhe pelo link público", client.request_raw("GET", item["link_detalhe"]), modulo)
+        except scraper.SigaaErro as e:
+            print(f"  detalhe pelo link público: ERRO {e}")
     if item.get("detalhe_params"):
-        form_lista = parser.achar_form(soup, "formConsulta")
+        form_lista = parser.achar_form(soup, item.get("detalhe_form") or "formConsulta")
         payload = parser.payload_base(form_lista)
         payload.update(item["detalhe_params"])
         print(f"  postback do detalhe: form {form_lista.get('id')} (action {form_lista.get('action')}), "
               f"parâmetros do link {item['detalhe_params']}")
-        resp_d = client.request_raw("POST", url, data=payload)
-        _resposta("detalhe por postback", resp_d)
-        print(f"    {parser.diagnostico_pagina(resp_d.text, 400)}")
-        acao = form_lista.get("action")
-        if acao and not url.endswith(acao):
-            alvo = cfg.base_url.rstrip("/") + acao if acao.startswith("/") else acao
-            resp_a = client.request_raw("POST", alvo, data=payload)
-            _resposta(f"detalhe por postback na action do form ({alvo})", resp_a)
-            print(f"    {parser.diagnostico_pagina(resp_a.text, 400)}")
+        _detalhe("detalhe por postback", client.request_raw("POST", url, data=payload), modulo)
+
+
+def _detalhe(titulo: str, resp, modulo: str) -> None:
+    """Resposta do detalhe, o que o parser tira dela e, se ele falhar, o HTML
+    cru da área de dados, para adaptar o parser ao layout."""
+    soup = _resposta(titulo, resp)
+    print(f"    {parser.diagnostico_pagina(resp.text, 400)}")
+    parse = parser.parse_detalhe_pesquisa if modulo == "pesquisa" else parser.parse_detalhe_extensao
+    try:
+        dados = parse(resp.text)
+        print(f"    parser: {({k: _cortar(str(v), 80) for k, v in dados.items() if k != 'equipe'})}")
+    except ValueError as e:
+        print(f"    parser: ERRO {e}")
+        area = soup.find("table", class_="visualizacao") or soup.find(id="conteudo") or soup.body
+        for tag in area.find_all(["script", "style"]):
+            tag.decompose()
+        print(f"    HTML da área de dados: {_cortar(str(area), 3500)}")
 
 
 if __name__ == "__main__":
