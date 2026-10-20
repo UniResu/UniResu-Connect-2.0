@@ -11,7 +11,13 @@ import "swiper/css";
 import "swiper/css/effect-fade";
 import AvatarMembro, { type SimboloFuncao } from "@/components/home/AvatarMembro";
 import ProjetoCard from "@/components/projetos/ProjetoCard";
-import { IconeLupa, IconeNaveTransmite, IconeSetaDireita, IconeSetaEsquerda } from "@/components/ui/Icones";
+import {
+  IconeCapelo,
+  IconeLupa,
+  IconeNaveTransmite,
+  IconeSetaDireita,
+  IconeSetaEsquerda,
+} from "@/components/ui/Icones";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { acordarApi, api } from "@/lib/api";
 import type { Projeto } from "@/types/projeto";
@@ -603,6 +609,20 @@ function QuemSomos() {
             ))}
           </div>
         )}
+
+        {/* O projeto é da equipe; a UERJ entra como vínculo de extensão. */}
+        <aside className={`ui-card ${styles.vinculo}`} aria-label="Vínculo institucional">
+          <span className={styles.cardIcone}>
+            <IconeCapelo tamanho={22} />
+          </span>
+          <div className={styles.vinculoTexto}>
+            <p className={styles.vinculoRotulo}>Projeto de extensão universitária</p>
+            <p className={styles.cardCorpo}>
+              Criado e conduzido pela nossa equipe, o UniResu Connect também é, desde 2025, um projeto de extensão
+              vinculado à Universidade do Estado do Rio de Janeiro (UERJ).
+            </p>
+          </div>
+        </aside>
       </div>
     </section>
   );
