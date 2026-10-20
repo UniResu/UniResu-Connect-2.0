@@ -213,24 +213,60 @@ def buscar_paginas(client: SigaaClient, modulo: str, ano: str) -> list[PaginaLis
     return paginas
 
 
+def _busca_do_item(client, modulo: str, ano: str, extra: Optional[tuple[str, str]], item: dict) -> tuple[str, dict]:
+    """Sessão nova com uma busca só pelo título do item: devolve a listagem
+    (pequena) e o item como aparece nela, com o link do detalhe válido nessa
+    sessão. Usada quando o portal invalida a sessão depois de mostrar um
+    detalhe (UFPA): a listagem antiga deixa de servir e até uma busca nova na
+    mesma sessão volta para a página inicial."""
+    sessao = getattr(client, "session", None)
+    if sessao is not None:
+        sessao.cookies.clear()
+    url = _urls(client)[modulo]
+    html_form = client.get(url)
+    situacao = client.cfg.pesquisa_situacao if modulo == "pesquisa" else None
+    dados = montar_payload_busca(html_form, modulo, ano, situacao, extra)
+    form = parser.achar_form(BeautifulSoup(html_form, "html.parser"))
+    if not parser.aplicar_filtro_texto(form, dados, ["TITULO"], item.get("titulo") or ""):
+        raise SigaaErro("Campo Título não encontrado no formulário.")
+    html = client.post(url, dados)
+    if modulo == "pesquisa":
+        itens = parser.parse_listagem_pesquisa(html)
+    else:
+        itens = parser.parse_listagem_extensao(html, _base_url(client))
+    achado = next((i for i in itens if i.get("sigaa_id") == item.get("sigaa_id")), None)
+    if achado is None:
+        raise SigaaErro("Item não encontrado na busca pelo título.")
+    return html, achado
+
+
 def _detalhe_por_postback(client: SigaaClient, modulo: str, pagina: PaginaListagem, item: dict, ano: str,
                           parse, diagnosticar: bool = False) -> dict:
     """Detalhe aberto por postback do form da listagem (a página de detalhe
-    não tem URL própria). Se o ViewState expirou, refaz a busca e tenta de novo.
+    não tem URL própria). Se a resposta não é o detalhe (ViewState expirado,
+    ou sessão que o portal invalida depois de mostrar um detalhe), tenta de
+    novo numa sessão nova, com uma busca só por aquele item. Quando é a
+    sessão nova que funciona, os itens seguintes já vão direto por ela.
     Com `diagnosticar`, a página que o parser não reconheceu vai para o log,
     para adaptar o parser a essa versão do SIGAA."""
-    html = pagina.html
     resposta = ""
-    for tentativa in range(2):
+    direto = getattr(client, "sessao_nova_por_detalhe", False)
+    for tentativa in range(1 if direto else 0, 2):
         try:
+            html, alvo = pagina.html, item
             if tentativa == 1:
-                html = _buscar(client, modulo, ano, pagina.extra).html
+                html, alvo = _busca_do_item(client, modulo, ano, pagina.extra, item)
             # O form que o link submete: o da listagem ("form" na extensão), não o da busca.
-            form = parser.achar_form(BeautifulSoup(html, "html.parser"), item.get("detalhe_form") or "formConsulta")
+            form = parser.achar_form(BeautifulSoup(html, "html.parser"), alvo.get("detalhe_form") or "formConsulta")
             dados = parser.payload_base(form)
-            dados.update(item.get("detalhe_params") or {})
+            dados.update(alvo.get("detalhe_params") or {})
             resposta = client.post(_urls(client)[modulo], dados)
-            return parse(resposta)
+            detalhe = parse(resposta)
+            if tentativa == 1 and not direto:
+                logger.info("%s %s: o portal invalida a sessão depois de cada detalhe; "
+                            "os próximos abrem numa sessão nova", _nome(client), modulo)
+                client.sessao_nova_por_detalhe = True
+            return detalhe
         except (ErroColeta, ValueError):
             if tentativa == 1:
                 if diagnosticar and resposta:

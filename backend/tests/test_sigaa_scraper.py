@@ -202,6 +202,59 @@ class TestColetaPesquisa:
         assert res.erros == []
 
 
+class ClienteSessaoInvalidada:
+    """Portal que invalida a sessão depois de mostrar um detalhe (UFPA): o
+    postback seguinte e até uma busca nova na mesma sessão voltam para a
+    página inicial, até o cliente começar uma sessão nova."""
+
+    HOME = "<html><body>Entrar no sistema Acadêmico Biblioteca</body></html>"
+
+    def __init__(self):
+        self.cfg = SigaaConfig(modulos=["pesquisa"])
+        self.listagem = ler_fixture("sigaa_pesquisa_listagem.html")
+        self.detalhe = ler_fixture("sigaa_pesquisa_detalhe.html")
+        self.detalhes_na_sessao = 0
+        self.buscas_por_titulo = []
+        self.total_requisicoes = 0
+        sessao = self
+
+        class Cookies:
+            def clear(self):
+                sessao.detalhes_na_sessao = 0
+
+        class Sessao:
+            cookies = Cookies()
+
+        self.session = Sessao()
+
+    def get(self, url):
+        self.total_requisicoes += 1
+        return self.listagem
+
+    def post(self, url, data):
+        self.total_requisicoes += 1
+        if self.detalhes_na_sessao:
+            return self.HOME
+        if "id" in data:
+            self.detalhes_na_sessao += 1
+            return self.detalhe
+        if data.get("formConsulta:checkTitulo"):
+            self.buscas_por_titulo.append(data["formConsulta:titulo"])
+        return self.listagem
+
+
+def test_sessao_invalidada_apos_detalhe_abre_os_seguintes_em_sessao_nova():
+    cliente = ClienteSessaoInvalidada()
+    res = scraper.coletar_pesquisa(cliente, "2026")
+
+    assert res.erros == []
+    assert len(res.itens) == 3 and all(i["detalhe_ok"] for i in res.itens)
+    # O primeiro abre pela listagem; o segundo falha nela e abre na sessão
+    # nova; o terceiro já vai direto pela sessão nova.
+    assert cliente.buscas_por_titulo == [res.itens[1]["titulo"], res.itens[2]["titulo"]]
+    assert cliente.sessao_nova_por_detalhe is True
+
+
 # ── Portais que limitam resultados e vocabulários de situação diferentes ───
 
 FORM_PESQUISA_LIMITADO = """
