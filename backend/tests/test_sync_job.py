@@ -78,3 +78,22 @@ async def test_erros_de_detalhe_nao_abortam(db):
     assert run["modulos"]["extensao"]["coletados"] == 2
     assert run["modulos"]["extensao"]["erros_detalhe"] == 1
     assert await db.projetos.count_documents({"modulo": "extensao"}) == 2
+
+
+async def test_modo_incremental_passa_ao_coletor_os_ids_com_detalhe(db):
+    await executar_sync(db, CFG, coletores([item("pesquisa", "A"), item("pesquisa", "B", detalhe_ok=False)],
+                                           [item("extensao", "X")]), ClienteNulo())
+    recebidos = {}
+
+    def coletar(modulo):
+        def _coletar(client, ano, pular_detalhe=frozenset()):
+            recebidos[modulo] = set(pular_detalhe)
+            return ResultadoColeta(modulo, [item(modulo, "A" if modulo == "pesquisa" else "X")], [])
+        return _coletar
+
+    cfg = SigaaConfig(anos=["2026"], max_detalhes=50)
+    run = await executar_sync(db, cfg, {"pesquisa": coletar("pesquisa"), "extensao": coletar("extensao")},
+                              ClienteNulo())
+
+    assert recebidos == {"pesquisa": {"A"}, "extensao": {"X"}}
+    assert run["status"] == "sucesso"

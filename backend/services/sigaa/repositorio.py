@@ -16,7 +16,7 @@ sobrescritos pelo sync.
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Iterable, Optional
 
 from services.areas import classificar_area
@@ -198,6 +198,24 @@ async def upsert_projetos(
             res.atualizados += 1
         res.chaves.append(chave)
     return res
+
+
+async def ids_com_detalhe(db, modulo: str, fonte: Fonte = SIGAA, hoje: Optional[date] = None) -> set[str]:
+    """Ids na fonte dos projetos cujo detalhe já foi lido e continua valendo.
+    No modo incremental o coletor não reabre esses detalhes; os de período já
+    encerrado ficam de fora, para a situação ser reavaliada."""
+    hoje_iso = (hoje or date.today()).isoformat()
+    filtro = {
+        **_escopo(fonte),
+        "modulo": modulo,
+        "detalhe_ok": True,
+        "$or": [{"periodo_fim": None}, {"periodo_fim": {"$gte": hoje_iso}}],
+    }
+    ids = set()
+    async for doc in db.projetos.find(filtro, {fonte.campo_id: 1}):
+        if doc.get(fonte.campo_id):
+            ids.add(doc[fonte.campo_id])
+    return ids
 
 
 async def desativar_ausentes(

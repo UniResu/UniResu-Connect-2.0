@@ -17,7 +17,7 @@ mantido com os dados da listagem e o erro é registrado.
 import logging
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Optional
+from typing import Collection, Optional
 
 from bs4 import BeautifulSoup
 
@@ -240,11 +240,48 @@ def _detalhe_por_postback(client: SigaaClient, modulo: str, pagina: PaginaListag
     raise SigaaErro("detalhe indisponível")
 
 
+# Falhas seguidas no detalhe a partir das quais o portal é dado como fora do
+# ar nesta execução: o resto entra só com a listagem, sem martelar o servidor.
+MAX_FALHAS_SEGUIDAS = 5
+
+
+class _CotaDetalhes:
+    """Decide, item a item, se o detalhe é aberto nesta execução. Não abre
+    quando o detalhe já foi lido antes (modo incremental, `pular_detalhe`),
+    quando a cota da execução (max_detalhes) acabou ou quando o portal falhou
+    MAX_FALHAS_SEGUIDAS vezes seguidas. Nesses casos o item entra só com a
+    listagem e `so_listagem`, e o upsert confirma a presença sem apagar o que
+    um detalhe anterior gravou."""
+
+    def __init__(self, client, modulo: str, ano: str, pular_detalhe: Collection[str]):
+        self.client, self.modulo, self.ano, self.pular = client, modulo, ano, pular_detalhe
+        self.teto = int(getattr(getattr(client, "cfg", None), "max_detalhes", 0) or 0)
+        self.abertos = self.sem_detalhe = self.falhas_seguidas = 0
+
+    def abrir(self, item: dict) -> bool:
+        if (item.get("sigaa_id") in self.pular or (self.teto and self.abertos >= self.teto)
+                or self.falhas_seguidas >= MAX_FALHAS_SEGUIDAS):
+            self.sem_detalhe += 1
+            return False
+        self.abertos += 1
+        return True
+
+    def registrar(self, ok: bool) -> None:
+        self.falhas_seguidas = 0 if ok else self.falhas_seguidas + 1
+        if self.falhas_seguidas == MAX_FALHAS_SEGUIDAS:
+            logger.warning("%s %s %s: %d falhas seguidas no detalhe; o resto entra só com a listagem",
+                           _nome(self.client), self.modulo, self.ano, MAX_FALHAS_SEGUIDAS)
+
+    def resumo(self) -> None:
+        if self.sem_detalhe:
+            logger.info("%s %s %s: %d detalhes abertos, %d só com a listagem (já lidos, fora da cota ou portal falhando)",
+                        _nome(self.client), self.modulo, self.ano, self.abertos, self.sem_detalhe)
+
 # ─────────────────────────────────────────────
 #  Pesquisa
 # ─────────────────────────────────────────────
 
-def coletar_pesquisa(client: SigaaClient, ano: str) -> ResultadoColeta:
+def coletar_pesquisa(client: SigaaClient, ano: str, pular_detalhe: Collection[str] = frozenset()) -> ResultadoColeta:
     res = ResultadoColeta("pesquisa")
     paginas = buscar_paginas(client, "pesquisa", ano)
     itens: list[tuple[dict, PaginaListagem]] = []
@@ -266,7 +303,11 @@ def coletar_pesquisa(client: SigaaClient, ano: str) -> ResultadoColeta:
                        parser.diagnostico_pagina(paginas[0].html))
 
     diagnosticado = False
+    cota = _CotaDetalhes(client, "pesquisa", ano, pular_detalhe)
     for item, pagina in itens:
+        if not cota.abrir(item):
+            res.itens.append({**_registro("pesquisa", item, None), "so_listagem": True})
+            continue
         detalhe = None
         try:
             detalhe = _detalhe_por_postback(client, "pesquisa", pagina, item, ano, parser.parse_detalhe_pesquisa,
@@ -274,7 +315,9 @@ def coletar_pesquisa(client: SigaaClient, ano: str) -> ResultadoColeta:
         except (ErroColeta, ValueError) as e:
             diagnosticado = True
             res.erros.append(_erro("pesquisa", item, e))
+        cota.registrar(detalhe is not None)
         res.itens.append(_registro("pesquisa", item, detalhe))
+    cota.resumo()
     return res
 
 
@@ -282,7 +325,7 @@ def coletar_pesquisa(client: SigaaClient, ano: str) -> ResultadoColeta:
 #  Extensão
 # ─────────────────────────────────────────────
 
-def coletar_extensao(client: SigaaClient, ano: str) -> ResultadoColeta:
+def coletar_extensao(client: SigaaClient, ano: str, pular_detalhe: Collection[str] = frozenset()) -> ResultadoColeta:
     res = ResultadoColeta("extensao")
     paginas = buscar_paginas(client, "extensao", ano)
     tipos = {parser.normalizar(t) for t in client.cfg.extensao_tipos}
@@ -306,7 +349,11 @@ def coletar_extensao(client: SigaaClient, ano: str) -> ResultadoColeta:
 
     link_publico_quebrado = False  # neste SIGAA o link público do detalhe não existe (404)
     diagnosticado = False
+    cota = _CotaDetalhes(client, "extensao", ano, pular_detalhe)
     for item, pagina in itens:
+        if not cota.abrir(item):
+            res.itens.append({**_registro("extensao", item, None), "so_listagem": True})
+            continue
         detalhe = None
         try:
             if not item.get("link_detalhe") and not item.get("detalhe_params"):
@@ -339,7 +386,9 @@ def coletar_extensao(client: SigaaClient, ano: str) -> ResultadoColeta:
                 detalhe["situacao"] = parser.SITUACAO_EM_EXECUCAO
         except (ErroColeta, ValueError) as e:
             res.erros.append(_erro("extensao", item, e))
+        cota.registrar(detalhe is not None)
         res.itens.append(_registro("extensao", item, detalhe))
+    cota.resumo()
     return res
 
 

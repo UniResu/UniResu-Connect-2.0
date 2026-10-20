@@ -24,6 +24,7 @@ import os
 import logging
 import sys
 from datetime import datetime, timezone
+from functools import partial
 from typing import Awaitable, Callable, Optional
 
 from dotenv import load_dotenv
@@ -73,9 +74,13 @@ async def executar_sync(
                  "erros_detalhe": 0, "status": "sucesso"}
         registros: list[dict] = []
         anos_ok: list[str] = []
+        coletor = coletores[modulo]
+        if cfg.max_detalhes and not dry_run:
+            # Portal lento: só os detalhes que faltam, até a cota da execução.
+            coletor = partial(coletor, pular_detalhe=await repositorio.ids_com_detalhe(db, modulo, fonte=fonte))
         for ano in cfg.anos:
             try:
-                res = await asyncio.to_thread(coletores[modulo], client, ano)
+                res = await asyncio.to_thread(coletor, client, ano)
             except Exception as e:  # falha na busca/listagem do módulo
                 logger.error("%s %s %s: busca falhou: %s", fonte.rotulo, modulo, ano, e)
                 erros.append({"modulo": modulo, "ano": ano, "erro": f"busca falhou: {e}"})

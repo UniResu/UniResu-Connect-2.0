@@ -157,6 +157,31 @@ class TestColetaExtensao:
         }]
 
 
+    def test_modo_incremental_pula_detalhes_lidos_e_respeita_a_cota(self):
+        cfg = SigaaConfig(extensao_tipos=["PROJETO", "PROGRAMA"], max_detalhes=2)
+        cliente = ClienteRoteado(cfg, self._rotas())
+        res = scraper.coletar_extensao(cliente, "2026", pular_detalhe={"4527"})
+
+        abertos = {i["sigaa_id"] for i in res.itens if i["detalhe_ok"]}
+        so_listagem = {i["sigaa_id"] for i in res.itens if i.get("so_listagem")}
+        assert len(res.itens) == 4
+        assert "4527" in so_listagem and "4527" not in abertos
+        assert len(abertos) == 2 and len(so_listagem) == 2
+        assert cliente.total_requisicoes == 2 + 2  # formulário e busca, mais os dois detalhes da cota
+
+
+    def test_falhas_seguidas_param_de_abrir_detalhes(self, monkeypatch):
+        monkeypatch.setattr(scraper, "MAX_FALHAS_SEGUIDAS", 2)
+        rotas = self._rotas()
+        for id_ in ("4527", "4534", "4712", "4019"):
+            rotas[_link(id_)] = SigaaErro("Falha após 3 tentativas: timeout")
+        cliente = ClienteRoteado(SigaaConfig(extensao_tipos=["PROJETO", "PROGRAMA"]), rotas)
+        res = scraper.coletar_extensao(cliente, "2026")
+
+        assert len(res.erros) == 2
+        assert sum(1 for i in res.itens if i.get("so_listagem")) == 2
+
+
 class TestColetaPesquisa:
     def test_coleta_listagem_e_detalhes(self):
         listagem = ler_fixture("sigaa_pesquisa_listagem.html")

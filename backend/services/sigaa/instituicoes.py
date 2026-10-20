@@ -18,6 +18,11 @@ class InstituicaoSigaa:
     base_url: str
     # Módulos com consulta pública funcionando (padrão: pesquisa e extensão).
     modulos: tuple[str, ...] = ("pesquisa", "extensao")
+    # Portais lentos: espera maior por resposta e teto de detalhes abertos por
+    # execução (0 = todos). Com teto, a coleta é incremental: abre primeiro os
+    # detalhes que faltam e completa o resto nas semanas seguintes.
+    timeout_segundos: float = 60.0
+    max_detalhes: int = 0
 
 
 _LISTA = [
@@ -69,8 +74,10 @@ _LISTA = [
     InstituicaoSigaa("IFSUDESTEMG", "Instituto Federal do Sudeste de Minas Gerais", "https://sig.ifsudestemg.edu.br"),
     InstituicaoSigaa("IFAM", "Instituto Federal do Amazonas", "https://sig.ifam.edu.br"),
     InstituicaoSigaa("IFAC", "Instituto Federal do Acre", "https://sig.ifac.edu.br"),
+    # Sem projetos na consulta pública de pesquisa. O detalhe da extensão só
+    # abre por postback e leva perto de um minuto por ação.
     InstituicaoSigaa("UFC", "Universidade Federal do Ceará", "https://si3.ufc.br",
-                     modulos=("extensao",)),  # nenhum projeto de pesquisa na consulta pública
+                     modulos=("extensao",), timeout_segundos=300.0, max_detalhes=120),
     InstituicaoSigaa("UFABC", "Universidade Federal do ABC", "https://sig.ufabc.edu.br"),
     InstituicaoSigaa("UFPE", "Universidade Federal de Pernambuco", "https://sigaa.ufpe.br"),
     InstituicaoSigaa("UFRPE", "Universidade Federal Rural de Pernambuco", "https://sigs.ufrpe.br"),

@@ -257,3 +257,34 @@ async def test_troca_de_coordenacao_mantem_o_mesmo_documento(db):
     docs = await db.projetos.find({"sigaa_id": "4191"}).to_list(10)
     assert len(docs) == 1 and docs[0]["_id"] == antes["_id"]
     assert docs[0]["nome_professor"] == "JANDRA" and docs[0]["chave_sigaa"] == b.chaves[0]
+
+
+async def test_ids_com_detalhe_ignora_detalhe_falho_e_periodo_encerrado(db):
+    from datetime import date
+
+    await repositorio.upsert_projetos(db, [
+        reg(sigaa_id="1", titulo="Vigente", periodo_fim="2027-03-01"),
+        reg(sigaa_id="2", titulo="Sem periodo"),
+        reg(sigaa_id="3", titulo="Encerrado", periodo_fim="2026-01-31"),
+        reg(sigaa_id="4", titulo="Detalhe falhou", detalhe_ok=False),
+        reg(sigaa_id="5", titulo="Outro modulo", modulo="extensao"),
+    ])
+
+    ids = await repositorio.ids_com_detalhe(db, "pesquisa", hoje=date(2026, 10, 20))
+
+    assert ids == {"1", "2"}
+
+
+async def test_so_listagem_confirma_presenca_sem_apagar_o_detalhe(db):
+    # Modo incremental: o item conhecido volta só com a listagem e mantém
+    # e-mail, descrição e situação gravados pelo detalhe anterior.
+    await repositorio.upsert_projetos(db, [reg(descricao="Resumo lido no detalhe")])
+    r = await repositorio.upsert_projetos(db, [reg(email=None, descricao=None, situacao=None,
+                                                   detalhe_ok=False, so_listagem=True)])
+    doc = await db.projetos.find_one({"sigaa_id": "100"})
+
+    assert (r.novos, r.atualizados) == (0, 1)
+    assert doc["email_professor"] == "ana@unir.br"
+    assert doc["descricao"] == "Resumo lido no detalhe"
+    assert doc["situacao"] == "EM EXECUÇÃO"
+    assert doc["detalhe_ok"] is True

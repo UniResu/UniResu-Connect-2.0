@@ -32,6 +32,9 @@ class SigaaConfig:
     modulos: list[str] = field(default_factory=lambda: ["pesquisa", "extensao"])
     # Teto de itens por módulo cujo detalhe é aberto (0 = todos; útil no dry-run).
     max_itens: int = 0
+    # Teto de detalhes abertos por módulo numa execução (0 = todos). Com teto,
+    # a coleta é incremental: detalhes já lidos não são reabertos.
+    max_detalhes: int = 0
     # Pausa mínima entre requisições (nunca menos que 1s).
     pausa_segundos: float = 1.5
     timeout_segundos: float = 60.0
@@ -43,6 +46,8 @@ class SigaaConfig:
         """Configuração apontando para o SIGAA de uma instituição conhecida."""
         inst = instituicao_sigaa(sigla)
         kwargs.setdefault("modulos", list(inst.modulos))
+        kwargs.setdefault("timeout_segundos", inst.timeout_segundos)
+        kwargs.setdefault("max_detalhes", inst.max_detalhes)
         return cls(instituicao=inst.sigla, base_url=inst.base_url, **kwargs)
 
     @classmethod
@@ -59,6 +64,8 @@ class SigaaConfig:
         if os.getenv("SIGAA_MODULOS"):
             cfg.modulos = [m.lower() for m in _lista(os.environ["SIGAA_MODULOS"])]
         cfg.max_itens = max(0, int(os.getenv("SIGAA_MAX_ITENS") or 0))
+        if os.getenv("SIGAA_MAX_DETALHES"):
+            cfg.max_detalhes = max(0, int(os.environ["SIGAA_MAX_DETALHES"]))
         cfg.pausa_segundos = max(1.0, float(os.getenv("SIGAA_PAUSA_SEGUNDOS", cfg.pausa_segundos)))
         cfg.timeout_segundos = float(os.getenv("SIGAA_TIMEOUT_SEGUNDOS", cfg.timeout_segundos))
         cfg.max_tentativas = max(1, int(os.getenv("SIGAA_MAX_TENTATIVAS", cfg.max_tentativas)))
