@@ -32,7 +32,8 @@ _LISTA = [
     InstituicaoSigaa("UNB", "Universidade de Brasília", "https://sigaa.unb.br"),
     InstituicaoSigaa("UFRRJ", "Universidade Federal Rural do Rio de Janeiro", "https://sigaa.ufrrj.br"),
     InstituicaoSigaa("UFSB", "Universidade Federal do Sul da Bahia", "https://sig.ufsb.edu.br"),
-    InstituicaoSigaa("UFCA", "Universidade Federal do Cariri", "https://sig.ufca.edu.br"),
+    InstituicaoSigaa("UFCA", "Universidade Federal do Cariri", "https://sig.ufca.edu.br",
+                     modulos=("extensao",)),  # nenhum projeto de pesquisa na consulta pública
     InstituicaoSigaa("UNILAB", "Universidade da Integração Internacional da Lusofonia Afro-Brasileira",
                      "https://sig.unilab.edu.br"),
     InstituicaoSigaa("UNILA", "Universidade Federal da Integração Latino-Americana", "https://sig.unila.edu.br"),
@@ -40,7 +41,8 @@ _LISTA = [
     InstituicaoSigaa("UFPA", "Universidade Federal do Pará", "https://sigaa.ufpa.br"),
     InstituicaoSigaa("UFERSA", "Universidade Federal Rural do Semi-Árido", "https://sigaa.ufersa.edu.br"),
     InstituicaoSigaa("UFAL", "Universidade Federal de Alagoas", "https://sigaa.sig.ufal.br"),
-    InstituicaoSigaa("UFCG", "Universidade Federal de Campina Grande", "https://sigaa.ufcg.edu.br"),
+    InstituicaoSigaa("UFCG", "Universidade Federal de Campina Grande", "https://sigaa.ufcg.edu.br",
+                     modulos=("pesquisa",)),  # nenhuma ação na consulta pública de extensão
     InstituicaoSigaa("UFLA", "Universidade Federal de Lavras", "https://sigaa.ufla.br"),
     InstituicaoSigaa("UFRA", "Universidade Federal Rural da Amazônia", "https://sigaa.ufra.edu.br"),
     InstituicaoSigaa("UFOB", "Universidade Federal do Oeste da Bahia", "https://sig.ufob.edu.br"),
@@ -48,7 +50,8 @@ _LISTA = [
                      modulos=("extensao",)),  # a consulta de pesquisa dá erro no portal
     InstituicaoSigaa("UEMA", "Universidade Estadual do Maranhão", "https://sis.sig.uema.br"),
     InstituicaoSigaa("UFRB", "Universidade Federal do Recôncavo da Bahia", "https://sistemas.ufrb.edu.br"),
-    InstituicaoSigaa("UFSJ", "Universidade Federal de São João del-Rei", "https://sig.ufsj.edu.br"),
+    InstituicaoSigaa("UFSJ", "Universidade Federal de São João del-Rei", "https://sig.ufsj.edu.br",
+                     modulos=("extensao",)),  # nenhum projeto de pesquisa na consulta pública
     InstituicaoSigaa("IFPA", "Instituto Federal do Pará", "https://sigaa.ifpa.edu.br"),
     InstituicaoSigaa("IFS", "Instituto Federal de Sergipe", "https://sigaa.ifs.edu.br"),
     InstituicaoSigaa("IFES", "Instituto Federal do Espírito Santo", "https://sigaa.ifes.edu.br"),
@@ -66,7 +69,8 @@ _LISTA = [
     InstituicaoSigaa("IFSUDESTEMG", "Instituto Federal do Sudeste de Minas Gerais", "https://sig.ifsudestemg.edu.br"),
     InstituicaoSigaa("IFAM", "Instituto Federal do Amazonas", "https://sig.ifam.edu.br"),
     InstituicaoSigaa("IFAC", "Instituto Federal do Acre", "https://sig.ifac.edu.br"),
-    InstituicaoSigaa("UFC", "Universidade Federal do Ceará", "https://si3.ufc.br"),
+    InstituicaoSigaa("UFC", "Universidade Federal do Ceará", "https://si3.ufc.br",
+                     modulos=("extensao",)),  # nenhum projeto de pesquisa na consulta pública
     InstituicaoSigaa("UFABC", "Universidade Federal do ABC", "https://sig.ufabc.edu.br"),
     InstituicaoSigaa("UFPE", "Universidade Federal de Pernambuco", "https://sigaa.ufpe.br"),
     InstituicaoSigaa("UFRPE", "Universidade Federal Rural de Pernambuco", "https://sigs.ufrpe.br"),
@@ -97,9 +101,13 @@ INSTITUICOES_SIGAA: dict[str, InstituicaoSigaa] = {i.sigla: i for i in _LISTA}
 # UFLA, UFOPA, UFRPE e UNIFESSPA (sem resposta), IFAP, IFTO, UFAC e UFT (DNS),
 # IFPR (405), UFOB e UFRR (403), UNIVASF (404), UDESC (erro), IFSC,
 # IFSUDESTEMG e UFRB (captcha ou bloqueio de robôs).
+# Saíram em 20/10/2026, porque as duas consultas respondem mas não têm nenhum
+# projeto, nem buscando sem filtro (pesquisa: "Não foram encontrados
+# resultados"; extensão: "Nenhuma ação de extensão localizada"; ver
+# jobs/diagnostico_sigaa.py): IFES, IFRJ, UEM, UEPA, UFAPE, UFBA, UFDPAR e UFFS.
 ATIVAS: tuple[str, ...] = (
-    "UNIR", "IFAL", "IFAM", "IFC", "IFES", "IFPA", "IFRJ", "IFRS", "UEM", "UEMASUL", "UEPA", "UERN",
-    "UFABC", "UFAL", "UFAPE", "UFBA", "UFC", "UFCA", "UFCAT", "UFCG", "UFDPAR", "UFERSA", "UFFS", "UFG",
+    "UNIR", "IFAL", "IFAM", "IFC", "IFPA", "IFRS", "UEMASUL", "UERN",
+    "UFABC", "UFAL", "UFC", "UFCA", "UFCAT", "UFCG", "UFERSA", "UFG",
     "UFJ", "UFMA", "UFPA", "UFPB", "UFPE", "UFRA", "UFRN", "UFRRJ", "UFS", "UFSB", "UFSJ", "UNB",
     "UNEMAT", "UNIFAP", "UNIFEI", "UNILA", "UNILAB",
 )
