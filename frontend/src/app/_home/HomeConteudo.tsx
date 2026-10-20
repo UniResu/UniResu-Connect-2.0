@@ -618,8 +618,9 @@ function QuemSomos() {
           <div className={styles.vinculoTexto}>
             <p className={styles.vinculoRotulo}>Projeto de extensão universitária</p>
             <p className={styles.cardCorpo}>
-              Criado e conduzido pela nossa equipe, o UniResu Connect também é, desde 2025, um projeto de extensão
-              vinculado à Universidade do Estado do Rio de Janeiro (UERJ).
+              Criado e conduzido pela nossa equipe, o UniResu Connect também é um projeto de extensão vinculado à
+              Faculdade de Ciências Médicas (FCM) da Universidade do Estado do Rio de Janeiro (UERJ), aprovado no
+              biênio 2025-2027.
             </p>
           </div>
         </aside>
