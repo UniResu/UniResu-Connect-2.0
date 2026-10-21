@@ -36,6 +36,10 @@ on:
         description: "Tarefa forum-remover: id do tópico (veja em forum-listar)"
         required: false
         default: ""
+      incluir_lentas:
+        description: "Tarefa recalcular-coordenacao: incluir as instituições de portal lento (UFC)"
+        type: boolean
+        default: false
       confirmar:
         description: "Apagar de fato (desmarcado = só listar)"
         type: boolean
@@ -97,6 +101,7 @@ jobs:
         run: |
           args=()
           if [ "${{ inputs.confirmar }}" = "true" ]; then args+=(--confirmar); fi
+          if [ "${{ inputs.incluir_lentas }}" = "true" ]; then args+=(--incluir-lentas); fi
           python -m jobs.recalcular_coordenacao "${args[@]}"
         env:
           MONGO_URI: ${{ secrets.MONGO_URI_ADMIN || secrets.MONGO_URI }}

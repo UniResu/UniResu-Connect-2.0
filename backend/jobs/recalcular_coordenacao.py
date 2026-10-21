@@ -4,12 +4,15 @@ regra de `parser.escolher_coordenacao` (a FUNÇÃO na equipe decide: vice,
 sub e coordenação adjunta não contam como coordenação). Usa a equipe e o
 responsável pela ação guardados no banco, sem acessar os portais.
 
-Sem --confirmar, só lista o que mudaria.
+Sem --confirmar, só lista o que mudaria. As instituições de portal lento
+(com teto de detalhes em services/sigaa/instituicoes.py, como a UFC) ficam de
+fora, a não ser com --incluir-lentas.
 
 Uso (a partir de backend/) ou pelo workflow "Manutenção do banco"
 (tarefa `recalcular-coordenacao`):
     python -m jobs.recalcular_coordenacao
     python -m jobs.recalcular_coordenacao --confirmar
+    python -m jobs.recalcular_coordenacao --confirmar --incluir-lentas
 """
 
 import asyncio
@@ -18,9 +21,12 @@ from collections import Counter
 
 from dotenv import load_dotenv
 
+from services.sigaa.instituicoes import INSTITUICOES_SIGAA
 from services.sigaa.parser import escolher_coordenacao, normalizar
 
 FILTRO = {"origem": "sigaa", "modulo": "extensao", "equipe": {"$exists": True, "$ne": []}}
+# Portais lentos, de coleta incremental: só entram quando pedidos.
+LENTAS = sorted(sigla for sigla, inst in INSTITUICOES_SIGAA.items() if inst.max_detalhes)
 CAMPOS = {"titulo": 1, "instituicao": 1, "equipe": 1, "responsavel_acao": 1, "nome_professor": 1,
           "email_professor": 1}
 
@@ -39,10 +45,14 @@ def nova_coordenacao(doc: dict) -> tuple[str, str]:
     return nome or doc.get("nome_professor"), email or doc.get("email_professor")
 
 
-async def recalcular(db, confirmar: bool = False, exemplos: int = 20) -> dict:
+async def recalcular(db, confirmar: bool = False, exemplos: int = 20, incluir_lentas: bool = False) -> dict:
+    filtro = dict(FILTRO)
+    if not incluir_lentas and LENTAS:
+        filtro["instituicao"] = {"$nin": LENTAS}
+        print(f"Fora desta execução (portal lento): {', '.join(LENTAS)}. Use --incluir-lentas para incluir.")
     mudancas = []
     examinados = 0
-    async for doc in db.projetos.find(FILTRO, CAMPOS):
+    async for doc in db.projetos.find(filtro, CAMPOS):
         examinados += 1
         nome, email = nova_coordenacao(doc)
         if nome != doc.get("nome_professor") or email != doc.get("email_professor"):
@@ -75,7 +85,8 @@ async def main(argv: list[str]) -> int:
 
     await Database.connect()
     try:
-        await recalcular(Database.get_db(), confirmar="--confirmar" in argv)
+        await recalcular(Database.get_db(), confirmar="--confirmar" in argv,
+                         incluir_lentas="--incluir-lentas" in argv)
     finally:
         await Database.disconnect()
     return 0

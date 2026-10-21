@@ -41,3 +41,10 @@ async def test_email_que_era_da_vice_nao_fica_com_o_coordenador(db):
     doc = await db.projetos.find_one({"titulo": "MEDPOP"})
     assert doc["nome_professor"] == "ANTÔNIO COUTINHO NETO"
     assert doc["email_professor"] == "christian@unir.br"
+
+
+async def test_portal_lento_fica_de_fora_a_nao_ser_quando_pedido(db):
+    await _medpop(db, "antonio@unir.br")
+    await db.projetos.update_one({"titulo": "MEDPOP"}, {"$set": {"instituicao": "UFC"}})
+    assert (await recalcular(db, confirmar=True))["examinados"] == 0
+    assert (await recalcular(db, confirmar=True, incluir_lentas=True))["mudancas"] == 1
