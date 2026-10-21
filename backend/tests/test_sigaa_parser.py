@@ -163,8 +163,9 @@ class TestEquipe:
                   {"nome": "ANTONIO COUTINHO NETO", "categoria": "DOCENTE", "funcao": "COORDENADOR(A)",
                    "email": "antonio@unir.br"}]
         resp = "ANTÔNIO COUTINHO NETO"
-        assert parser.escolher_coordenacao(equipe, resp, None) == ("ANTONIO COUTINHO NETO", "antonio@unir.br")
-        assert parser.escolher_coordenacao(equipe, resp, "resp@unir.br") == ("ANTONIO COUTINHO NETO", "resp@unir.br")
+        # A grafia com acento do responsável vale sobre a da lista da equipe.
+        assert parser.escolher_coordenacao(equipe, resp, None) == (resp, "antonio@unir.br")
+        assert parser.escolher_coordenacao(equipe, resp, "resp@unir.br") == (resp, "resp@unir.br")
         # Só a vice na equipe: vale o responsável pela ação, com o e-mail dele;
         # sem esse e-mail, o da vice fica de reserva.
         assert parser.escolher_coordenacao(equipe[:1], resp, "resp@unir.br") == (resp, "resp@unir.br")

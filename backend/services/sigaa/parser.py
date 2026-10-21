@@ -477,7 +477,9 @@ def escolher_coordenacao(equipe: list[dict], responsavel: Optional[str],
     if membro is None:
         return responsavel, email_responsavel or reserva
     if responsavel and normalizar(membro.get("nome")) == normalizar(responsavel):
-        return membro["nome"], email_responsavel or membro.get("email") or reserva
+        # Mesma pessoa: fica a grafia com acentos (a lista da equipe costuma vir sem).
+        nome = max((responsavel, membro["nome"]), key=lambda n: sum(ord(c) > 127 for c in n))
+        return nome, email_responsavel or membro.get("email") or reserva
     return membro["nome"], membro.get("email") or email_responsavel or reserva
 
 
