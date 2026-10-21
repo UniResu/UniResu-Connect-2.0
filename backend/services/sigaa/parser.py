@@ -435,19 +435,54 @@ def parse_equipe(soup: BeautifulSoup) -> list[dict]:
     return equipe
 
 
-def membro_coordenador(equipe: list[dict]) -> Optional[dict]:
-    """Membro que coordena de fato: função de coordenação (não adjunta), de
-    preferência docente. O campo "Responsável pela Ação" do SIGAA pode trazer
-    um discente."""
-    coordenadores = [m for m in equipe if "COORDENADOR" in normalizar(m.get("funcao"))]
-    titulares = [m for m in coordenadores if "ADJUNT" not in normalizar(m.get("funcao"))] or coordenadores
+# Funções que têm "COORDENADOR" no nome mas não são a coordenação titular.
+_COORDENACAO_NAO_TITULAR = ("VICE", "SUB", "ADJUNT", "CO-COORD", "COCOORD", "CO COORD")
+
+
+def coordenacao_titular(funcao: Optional[str]) -> bool:
+    """COORDENADOR(A) de fato: vice, sub, adjunto e co-coordenação não contam."""
+    f = normalizar(funcao)
+    return "COORDENADOR" in f and not any(p in f for p in _COORDENACAO_NAO_TITULAR)
+
+
+def membro_coordenador(equipe: list[dict], responsavel: Optional[str] = None) -> Optional[dict]:
+    """Quem coordena, pela FUNÇÃO na equipe: o COORDENADOR(A) titular. Entre
+    os titulares, vale o responsável pela ação se ele for um deles; senão, de
+    preferência um docente. Sem titular na equipe, devolve None (quem chama
+    usa o responsável pela ação)."""
+    titulares = [m for m in equipe if coordenacao_titular(m.get("funcao"))]
+    if responsavel:
+        alvo = normalizar(responsavel)
+        mesmo = [m for m in titulares if normalizar(m.get("nome")) == alvo]
+        if mesmo:
+            return mesmo[0]
     docentes = [m for m in titulares if "DOCENTE" in normalizar(m.get("categoria"))]
     return (docentes or titulares or [None])[0]
 
 
-def coordenacao_da_equipe(equipe: list[dict]) -> Optional[str]:
-    membro = membro_coordenador(equipe)
-    return membro["nome"] if membro else None
+def escolher_coordenacao(equipe: list[dict], responsavel: Optional[str],
+                         email_responsavel: Optional[str]) -> tuple[Optional[str], Optional[str]]:
+    """(nome, e-mail) da coordenação de uma ação de extensão. Ordem: o
+    COORDENADOR(A) titular da equipe (o responsável pela ação, se for um
+    deles); sem titular, o responsável pela ação; sem os dois, a vice ou a
+    coordenação adjunta, que é melhor que nenhum contato. O e-mail é o da
+    pessoa escolhida; se ela não publica e-mail, fica o do responsável pela
+    ação, que é o contato oficial da ação no SIGAA, e por último o de alguém
+    da coordenação (a vice, por exemplo), para a candidatura chegar à equipe."""
+    coordenacao = [m for m in equipe if "COORDENADOR" in normalizar(m.get("funcao"))]
+    reserva = next((m["email"] for m in coordenacao if m.get("email")), None)
+    membro = membro_coordenador(equipe, responsavel)
+    if membro is None and not responsavel:
+        membro = coordenacao[0] if coordenacao else None
+    if membro is None:
+        return responsavel, email_responsavel or reserva
+    if responsavel and normalizar(membro.get("nome")) == normalizar(responsavel):
+        return membro["nome"], email_responsavel or membro.get("email") or reserva
+    return membro["nome"], membro.get("email") or email_responsavel or reserva
+
+
+def coordenacao_da_equipe(equipe: list[dict], responsavel: Optional[str] = None) -> Optional[str]:
+    return escolher_coordenacao(equipe, responsavel, None)[0]
 
 
 def _periodo_tolerante(c: dict) -> tuple[Optional[str], Optional[str]]:
@@ -470,14 +505,13 @@ def parse_detalhe_extensao(html: str) -> dict:
     inicio, fim = _periodo_tolerante(c)
     responsavel = c.get("RESPONSAVEL PELA ACAO") or None
     equipe = parse_equipe(soup)
-    coordenador = membro_coordenador(equipe)
+    # Coordenação pela função na equipe (vice-coordenação não é coordenação).
+    coordenador, email = escolher_coordenacao(equipe, responsavel, _email(c.get("E-MAIL DO RESPONSAVEL")))
     return {
-        # Coordenação docente da equipe; sem equipe publicada, fica o responsável.
-        "coordenador": (coordenador["nome"] if coordenador else None) or responsavel,
+        "coordenador": coordenador,
         "responsavel_acao": responsavel,
         "equipe": equipe,
-        # E-mail do responsável; sem ele, o da coordenação publicado na equipe.
-        "email": _email(c.get("E-MAIL DO RESPONSAVEL")) or (coordenador or {}).get("email"),
+        "email": email,
         "unidade": c.get("UNIDADE PROPONENTE") or None,
         "periodo_inicio": inicio,
         "periodo_fim": fim,

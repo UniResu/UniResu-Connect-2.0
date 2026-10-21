@@ -18,7 +18,7 @@ on:
       tarefa:
         description: "Tarefa (status = só lê e imprime um resumo do banco)"
         type: choice
-        options: [status, consultar, remover-projetos-teste, forum-listar, forum-remover, usuarios]
+        options: [status, consultar, remover-projetos-teste, recalcular-coordenacao, forum-listar, forum-remover, usuarios]
         default: status
       termo:
         description: "Tarefa consultar: trecho do título do projeto a procurar"
@@ -89,6 +89,16 @@ jobs:
           TERMO: ${{ inputs.termo }}
           CONSULTA_INSTITUICAO: ${{ inputs.instituicao }}
           CONSULTA_MODULO: ${{ inputs.modulo }}
+          MONGO_URI: ${{ secrets.MONGO_URI_ADMIN || secrets.MONGO_URI }}
+          MONGO_DB_NAME: ${{ vars.MONGO_DB_NAME || 'UniResuDB' }}
+
+      - name: Recalcular a coordenação das ações de extensão do SIGAA
+        if: inputs.tarefa == 'recalcular-coordenacao'
+        run: |
+          args=()
+          if [ "${{ inputs.confirmar }}" = "true" ]; then args+=(--confirmar); fi
+          python -m jobs.recalcular_coordenacao "${args[@]}"
+        env:
           MONGO_URI: ${{ secrets.MONGO_URI_ADMIN || secrets.MONGO_URI }}
           MONGO_DB_NAME: ${{ vars.MONGO_DB_NAME || 'UniResuDB' }}
 

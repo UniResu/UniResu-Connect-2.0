@@ -156,6 +156,27 @@ class TestEquipe:
         assert parser.coordenacao_da_equipe([{"nome": "X", "categoria": "DOCENTE", "funcao": "MEMBRO"}]) is None
         assert parser.coordenacao_da_equipe([]) is None
 
+    def test_vice_coordenacao_nao_e_coordenacao(self):
+        # MEDPOP (UNIR): o vice-coordenador aparecia como coordenador.
+        equipe = [{"nome": "CHRISTIAN COLLINS KUEHN", "categoria": "DOCENTE", "funcao": "VICE-COORDENADOR(A)",
+                   "email": "christian@unir.br"},
+                  {"nome": "ANTONIO COUTINHO NETO", "categoria": "DOCENTE", "funcao": "COORDENADOR(A)",
+                   "email": "antonio@unir.br"}]
+        resp = "ANTÔNIO COUTINHO NETO"
+        assert parser.escolher_coordenacao(equipe, resp, None) == ("ANTONIO COUTINHO NETO", "antonio@unir.br")
+        assert parser.escolher_coordenacao(equipe, resp, "resp@unir.br") == ("ANTONIO COUTINHO NETO", "resp@unir.br")
+        # Só a vice na equipe: vale o responsável pela ação, com o e-mail dele;
+        # sem esse e-mail, o da vice fica de reserva.
+        assert parser.escolher_coordenacao(equipe[:1], resp, "resp@unir.br") == (resp, "resp@unir.br")
+        assert parser.escolher_coordenacao(equipe[:1], resp, None) == (resp, "christian@unir.br")
+        # Sem titular e sem responsável, a vice é melhor que nenhum contato.
+        assert parser.escolher_coordenacao(equipe[:1], None, None) == ("CHRISTIAN COLLINS KUEHN", "christian@unir.br")
+
+    def test_outro_titular_que_nao_o_responsavel_usa_o_proprio_email(self):
+        equipe = [{"nome": "MARIA", "categoria": "DOCENTE", "funcao": "COORDENADOR(A)", "email": "maria@ufpb.br"},
+                  {"nome": "JOAO", "categoria": "DISCENTE", "funcao": "SUBCOORDENADOR(A)"}]
+        assert parser.escolher_coordenacao(equipe, "JOAO", "joao@ufpb.br") == ("MARIA", "maria@ufpb.br")
+
     def test_sem_equipe_publicada_usa_o_responsavel(self):
         html = """<html><body><table><tr><th>Responsável pela Ação:</th><td>MARIA</td></tr>
         <tr><th>E-mail do Responsável:</th><td>m@unir.br</td></tr></table></body></html>"""
