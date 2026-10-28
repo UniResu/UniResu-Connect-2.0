@@ -205,7 +205,7 @@ class PerfilUpdate(BaseModel):
     bio: Optional[str] = Field(None, max_length=2000)
     avatar_url: Optional[str] = None
     papel: Optional[PapelUsuario] = None     # vínculo pode ser escolhido/alterado pela pessoa
-    email: Optional[EmailStr] = None         # só aceito enquanto for o provisório do ORCID
+    email: Optional[EmailStr] = None         # só enquanto for o provisório do ORCID; institucional ou pessoal
     instituicao: Optional[str] = Field(None, max_length=200)
     curso: Optional[str] = Field(None, max_length=200)
     departamento: Optional[str] = Field(None, max_length=200)
@@ -249,8 +249,8 @@ class UsuarioResponse(BaseModel):
     """Resposta completa do usuário logado (sem dados sensíveis)."""
     id: str
     email: EmailStr
-    # E-mail institucional informado por uma conta do ORCID e ainda não
-    # confirmado pelo link enviado; substitui `email` na confirmação.
+    # E-mail (institucional ou pessoal) informado por uma conta do ORCID e
+    # ainda não confirmado pelo link enviado; substitui `email` na confirmação.
     email_pendente: Optional[EmailStr] = None
     # True quando esse e-mail já pertence a uma conta por senha: ao confirmar,
     # o ORCID é vinculado a ela e esta conta provisória é desativada.
@@ -275,7 +275,7 @@ class UsuarioResponse(BaseModel):
     dados_egresso: Optional[DadosEgresso] = None
     orcid: Optional[OrcidData] = None
     # False só para contas criadas pelo ORCID que ainda não escolheram o
-    # vínculo nem informaram o e-mail institucional (/perfil/completar).
+    # vínculo nem informaram um e-mail (/perfil/completar).
     perfil_completo: bool = True
     criado_em: Optional[datetime] = None
 

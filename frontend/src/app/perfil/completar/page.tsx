@@ -5,15 +5,21 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import { PERFIS, NIVEIS, type TipoPerfil, emailInstitucionalValido, emailProvisorio, PERIODO_POR_NIVEL } from "@/lib/perfis";
+import {
+  PERFIS, NIVEIS, type TipoPerfil, emailInstitucionalValido, emailProvisorio, emailValido, PERIODO_POR_NIVEL,
+} from "@/lib/perfis";
+import { descartarRegistroPendente, lerRegistroPendente } from "@/lib/registroOrcid";
+import CaixaOpcao from "@/components/ui/CaixaOpcao";
 import styles from "./completar.module.css";
 
 /**
  * Completar o perfil depois do login via ORCID.
  *
  * O ORCID não diz se a pessoa é discente, docente ou pesquisador(a), e a conta
- * nasce com um e-mail provisório. Aqui ela escolhe o vínculo, informa o e-mail
- * institucional e a instituição, e só então segue para o perfil.
+ * nasce com um e-mail provisório. Aqui ela escolhe o vínculo, informa um
+ * e-mail (institucional ou pessoal) e a instituição, e só então segue para o
+ * perfil. Quem se registrou por /registrar só chega aqui se a gravação na
+ * volta do ORCID falhou: o formulário abre com o que ela preencheu.
  */
 export default function CompletarPerfilPage() {
   const { user, token, isAuthenticated, isLoading, refreshUser } = useAuth();
@@ -21,6 +27,9 @@ export default function CompletarPerfilPage() {
 
   const [papel, setPapel] = useState<TipoPerfil | "">("");
   const [email, setEmail] = useState("");
+  const [semEmailInstitucional, setSemEmailInstitucional] = useState(false);
+  // Nome informado em /registrar, quando o formulário de lá veio junto.
+  const [nomeRegistro, setNomeRegistro] = useState("");
   const [instituicao, setInstituicao] = useState("");
   const [curso, setCurso] = useState("");
   const [departamento, setDepartamento] = useState("");
@@ -56,6 +65,35 @@ export default function CompletarPerfilPage() {
         setAceiteRegras(!!user.aceite_regras);
         setAceiteDados(!!user.aceite_dados);
         setEmail(user.email_pendente || "");
+        setSemEmailInstitucional(!!user.email_pendente && !emailInstitucionalValido(user.email_pendente));
+      }
+
+      // Volta do ORCID em que a gravação do formulário de /registrar falhou:
+      // tudo o que a pessoa preencheu lá, e o motivo da falha.
+      const pendente = user.perfil_completo === false ? lerRegistroPendente() : null;
+      if (pendente) {
+        const d = pendente.dados;
+        const texto = (valor: unknown) => (typeof valor === "string" ? valor : "");
+        // Sub-documento do vínculo (dados_aluno, dados_professor...): o nome segue o do papel.
+        const vinculo = (d[`dados_${texto(d.papel)}`] ?? {}) as Record<string, unknown>;
+        if (PERFIS.some((p) => p.value === d.papel)) setPapel(d.papel as TipoPerfil);
+        if (texto(d.instituicao)) setInstituicao(texto(d.instituicao));
+        setCurso(texto(d.curso));
+        setDepartamento(texto(d.departamento));
+        setEmail(texto(d.email));
+        setSemEmailInstitucional(!emailInstitucionalValido(texto(d.email)));
+        setNomeRegistro(texto(d.nome));
+        setAceiteRegras(d.aceite_regras === true);
+        setAceiteDados(d.aceite_dados === true);
+        if (texto(vinculo.nivel)) setNivel(texto(vinculo.nivel));
+        if (vinculo.semestre) setSemestre(String(vinculo.semestre));
+        setTitulo(texto(vinculo.titulo));
+        setCargo(texto(vinculo.cargo));
+        setVinculoPesq(texto(vinculo.vinculo));
+        setSetor(texto(vinculo.setor));
+        if (vinculo.ano_conclusao) setAnoConclusao(String(vinculo.ano_conclusao));
+        setAtuacao(texto(vinculo.atuacao));
+        setError(pendente.erro || "");
       }
       setPreenchido(true);
     }
@@ -92,12 +130,16 @@ export default function CompletarPerfilPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
-    if (!papel) {
-      setError("Escolha o seu vínculo institucional.");
+    if (precisaEmail && !(semEmailInstitucional ? emailValido(email) : emailInstitucionalValido(email))) {
+      setError(
+        semEmailInstitucional
+          ? "Informe um e-mail pessoal válido."
+          : "Use um e-mail institucional acadêmico (como .edu.br) ou marque “Não tenho e-mail institucional”."
+      );
       return;
     }
-    if (precisaEmail && !emailInstitucionalValido(email)) {
-      setError("Informe o seu e-mail institucional acadêmico.");
+    if (!papel) {
+      setError("Escolha o seu vínculo institucional.");
       return;
     }
     if (!aceiteRegras || !aceiteDados) {
@@ -110,11 +152,12 @@ export default function CompletarPerfilPage() {
         "/api/perfil",
         {
           papel,
+          ...(nomeRegistro.trim().length >= 2 ? { nome: nomeRegistro.trim() } : {}),
           instituicao: instituicao || null,
           // só os campos que o vínculo escolhido mostra no formulário
           curso: papel === "aluno" || papel === "egresso" ? curso || null : null,
           departamento: papel === "professor" || papel === "pesquisador" ? departamento || null : null,
-          ...(precisaEmail ? { email } : {}),
+          ...(precisaEmail ? { email: email.trim() } : {}),
           aceite_regras: aceiteRegras,
           aceite_dados: aceiteDados,
           perfil_completo: true,
@@ -122,6 +165,7 @@ export default function CompletarPerfilPage() {
         },
         { token: token || undefined }
       );
+      descartarRegistroPendente();
       await refreshUser();
       router.push("/perfil");
     } catch (err: unknown) {
@@ -145,8 +189,8 @@ export default function CompletarPerfilPage() {
         <header className={styles.cabecalho}>
           <h1 className={styles.titulo}>Complete seu perfil</h1>
           <p className={styles.intro}>
-            Olá, {user.nome_social || user.nome}. Seu ORCID já está vinculado. Falta dizer qual é o seu vínculo
-            institucional{precisaEmail ? " e o seu e-mail institucional" : ""}.
+            Olá, {user.nome_social || user.nome}. Seu ORCID já está vinculado. Falta escolher o seu vínculo
+            institucional{precisaEmail ? " e informar um e-mail" : ""}.
           </p>
         </header>
 
@@ -155,11 +199,20 @@ export default function CompletarPerfilPage() {
 
           {precisaEmail && (
             <section className={styles.grupo} aria-labelledby="cp-grupo-conta">
-              <h2 id="cp-grupo-conta" className={styles.grupoTitulo}>Conta</h2>
+              <h2 id="cp-grupo-conta" className={styles.grupoTitulo}>E-mail</h2>
+              <CaixaOpcao
+                marcada={semEmailInstitucional}
+                onMudar={setSemEmailInstitucional}
+                titulo="Não tenho e-mail institucional"
+                descricao="Informe um e-mail pessoal: a sua conta ORCID já identifica você."
+              />
               <div className={styles.campo}>
-                <label htmlFor="cp-email" className="ui-label">E-mail institucional</label>
+                <label htmlFor="cp-email" className="ui-label">
+                  {semEmailInstitucional ? "E-mail pessoal" : "E-mail institucional"}
+                </label>
                 <input id="cp-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                  placeholder="voce@universidade.edu.br" required className="ui-field" autoComplete="email" aria-describedby="cp-email-hint" />
+                  placeholder={semEmailInstitucional ? "voce@exemplo.com" : "voce@universidade.edu.br"} required
+                  className="ui-field" autoComplete="email" aria-describedby="cp-email-hint" />
                 <p id="cp-email-hint" className="ui-hint">Enviaremos um link de confirmação para esse endereço.</p>
               </div>
             </section>

@@ -95,7 +95,7 @@ export default function PerfilPage() {
   if (!user) return null;
 
   const perfilIncompleto = user.perfil_completo === false;
-  // Conta do ORCID que informou o e-mail institucional e ainda não confirmou.
+  // Conta do ORCID que informou um e-mail (institucional ou pessoal) e ainda não confirmou.
   const emailPendente = user.email_pendente || null;
   const semEmail = !perfilIncompleto && !emailPendente && emailProvisorio(user.email);
   const temAviso = perfilIncompleto || !!emailPendente || semEmail;
@@ -151,7 +151,7 @@ export default function PerfilPage() {
               <IconeAlerta />
               <p className={styles.avisoTexto}>
                 Seu perfil ainda não está completo: falta escolher o vínculo institucional
-                {emailProvisorio(user.email) ? " e informar o e-mail institucional" : ""}.{" "}
+                {emailProvisorio(user.email) ? " e informar um e-mail" : ""}.{" "}
                 <Link href="/perfil/completar">Completar agora</Link>
               </p>
             </div>
@@ -189,7 +189,7 @@ export default function PerfilPage() {
               <IconeAlerta />
               <p className={styles.avisoTexto}>
                 Sua conta ainda usa o e-mail provisório do ORCID.{" "}
-                <Link href="/perfil/completar">Informar o e-mail institucional</Link>
+                <Link href="/perfil/completar">Informar um e-mail</Link>
               </p>
             </div>
           )}

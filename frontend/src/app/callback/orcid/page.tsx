@@ -4,13 +4,14 @@ import { Suspense, useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { TOKEN_KEY } from "@/lib/constants";
+import { descartarRegistroPendente, guardarRegistroPendente, lerRegistroPendente } from "@/lib/registroOrcid";
 import type { LoginResponse } from "@/types/user";
 import styles from "../../login/conta.module.css";
 
 function OrcidCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState<"loading" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "concluindo" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState("");
 
   const hasProcessed = useRef(false);
@@ -38,8 +39,34 @@ function OrcidCallbackContent() {
         );
 
         localStorage.setItem(TOKEN_KEY, response.access_token);
-        // Quem acabou de entrar pelo ORCID ainda não escolheu o vínculo nem
-        // informou o e-mail institucional: segue para completar o perfil.
+
+        // Conta nova vinda de /registrar: grava o formulário preenchido antes
+        // do ORCID, e a pessoa vai direto ao perfil, sem outro formulário.
+        const pendente = lerRegistroPendente();
+        if (response.usuario?.perfil_completo === false && pendente) {
+          setStatus("concluindo");
+          try {
+            await api.patch(
+              "/api/perfil",
+              { ...pendente.dados, perfil_completo: true },
+              { token: response.access_token }
+            );
+            descartarRegistroPendente();
+            window.location.href = "/perfil";
+          } catch (err: unknown) {
+            // E-mail já usado em outra conta, por exemplo: /perfil/completar
+            // abre com os mesmos dados e o motivo.
+            const apiErr = err as { detail?: string };
+            guardarRegistroPendente(pendente.dados, apiErr.detail || "Não foi possível concluir o registro.");
+            window.location.href = "/perfil/completar";
+          }
+          return;
+        }
+
+        // Conta que já existia: um formulário guardado não se aplica a ela.
+        descartarRegistroPendente();
+        // Quem entrou pelo ORCID sem passar por /registrar ainda não escolheu
+        // o vínculo nem informou um e-mail: segue para completar o perfil.
         const completo = response.usuario?.perfil_completo !== false;
         window.location.href = completo ? "/perfil" : "/perfil/completar";
       } catch (err: unknown) {
@@ -95,9 +122,13 @@ function OrcidCallbackContent() {
       <div className={`ui-card animate-fade-in ${styles.cartao}`}>
         <div className={styles.estado} aria-busy="true">
           <div className={styles.spinner} aria-hidden="true" />
-          <h1 className={styles.titulo}>Autenticando com ORCID...</h1>
+          <h1 className={styles.titulo}>
+            {status === "concluindo" ? "Concluindo seu registro..." : "Autenticando com ORCID..."}
+          </h1>
           <p className={styles.estadoTexto}>
-            Estamos processando sua autenticação. Aguarde um momento.
+            {status === "concluindo"
+              ? "Estamos gravando os dados que você preencheu. Aguarde um momento."
+              : "Estamos processando sua autenticação. Aguarde um momento."}
           </p>
         </div>
       </div>

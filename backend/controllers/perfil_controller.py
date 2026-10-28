@@ -13,7 +13,7 @@ from fastapi import HTTPException, status
 from database.connection import Database
 from controllers.usuario_controller import _enviar_email_verificacao
 from models.usuario_model import DADOS_POR_PAPEL, PerfilUpdate
-from services.emails_institucionais import email_provisorio, filtro_email, validar_email_institucional
+from services.emails_institucionais import email_provisorio, filtro_email
 
 
 def formatar_perfil(doc: Dict[str, Any]) -> Dict[str, Any]:
@@ -153,19 +153,18 @@ async def atualizar_perfil_controller(
             update_fields[campo_dados] = dados_dict.pop(campo_dados, None) or {}
 
     # E-mail: só pode ser definido aqui enquanto for o provisório do ORCID.
-    # Fica em `email_pendente` até a pessoa confirmar pelo link enviado (mesmo
-    # fluxo de verificação do registro); enquanto isso a conta continua
-    # funcionando pelo login do ORCID, com o e-mail provisório.
+    # Pode ser institucional ou pessoal: quem identifica a pessoa é a conta
+    # ORCID, e sem isso quem não tem e-mail institucional não concluiria o
+    # registro. Fica em
+    # `email_pendente` até a pessoa confirmar pelo link enviado (mesmo fluxo
+    # de verificação do registro); enquanto isso a conta continua funcionando
+    # pelo login do ORCID, com o e-mail provisório.
     enviar_verificacao = None
     if "email" in dados_dict:
         novo_email = str(dados_dict["email"]).strip().lower()
         if not email_provisorio(atual.get("email")):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                                 detail="O e-mail da conta não pode ser alterado por aqui.")
-        try:
-            validar_email_institucional(novo_email)
-        except ValueError as e:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
         em_uso = await db.usuarios.find_one(
             {"$or": [filtro_email(novo_email), filtro_email(novo_email, "email_pendente")], "_id": {"$ne": oid}})
         vincula = False
@@ -193,9 +192,9 @@ async def atualizar_perfil_controller(
         update_fields["aceites_em"] = agora
 
     # Conclusão do perfil (contas do ORCID): decidida aqui, não pelo cliente.
-    # Exige vínculo escolhido, os dois aceites e o e-mail institucional
-    # informado (ou já definido). Sem isso o frontend voltaria a pedir, e a
-    # flag é o que libera o uso da plataforma sem aceite registrado.
+    # Exige vínculo escolhido, os dois aceites e um e-mail informado (ou já
+    # definido). Sem isso o frontend voltaria a pedir, e a flag é o que
+    # libera o uso da plataforma sem aceite registrado.
     if dados_dict.get("perfil_completo"):
         depois = {**atual, **update_fields}
         faltas = []
@@ -204,7 +203,7 @@ async def atualizar_perfil_controller(
         if not (depois.get("aceite_regras") and depois.get("aceite_dados")):
             faltas.append("aceitar as regras e o compartilhamento de dados")
         if email_provisorio(depois.get("email")) and not depois.get("email_pendente"):
-            faltas.append("informar o e-mail institucional")
+            faltas.append("informar um e-mail, institucional ou pessoal")
         if faltas:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                                 detail="Para concluir o perfil falta " + "; ".join(faltas) + ".")

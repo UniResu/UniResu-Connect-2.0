@@ -78,9 +78,14 @@ export interface DadosEgresso {
 /** Perfis que coordenam projetos (cadastram vagas e recebem candidaturas). */
 export const PERFIS_COORDENADORES: TipoPerfil[] = ["professor", "pesquisador"];
 
-/** E-mail provisório que o login via ORCID cria até a pessoa informar o institucional. */
+/** E-mail provisório que o login via ORCID cria até a pessoa informar o dela. */
 export function emailProvisorio(email?: string | null) {
   return !!email && email.endsWith("@orcid.placeholder");
+}
+
+/** Só o formato: o e-mail pessoal das contas do ORCID não passa pela lista de domínios. */
+export function emailValido(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
 /** Domínios aceitos no registro (espelha a validação do backend). */

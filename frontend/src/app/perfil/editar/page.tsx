@@ -233,7 +233,7 @@ export default function EditarPerfilPage() {
                   </>
                 ) : emailProvisorio(user.email) ? (
                   <>
-                    E-mail provisório do ORCID. <Link href="/perfil/completar">Informar o e-mail institucional</Link>
+                    E-mail provisório do ORCID. <Link href="/perfil/completar">Informar um e-mail</Link>
                   </>
                 ) : (
                   "O e-mail da conta não muda por aqui."

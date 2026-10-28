@@ -1,6 +1,7 @@
 """
-Validação de e-mail institucional acadêmico (registro e troca do e-mail
-provisório criado pelo login via ORCID).
+Validação de e-mail institucional acadêmico (registro por e-mail e senha).
+O e-mail provisório criado pelo login via ORCID pode ser trocado por um
+institucional ou pessoal (ver perfil_controller).
 
 Regra:
   - Aceita qualquer domínio terminado em '.edu.br' ou '.edu'.
@@ -42,7 +43,7 @@ def filtro_email(email: str, campo: str = "email") -> dict:
 
 
 def email_provisorio(email: str | None) -> bool:
-    """E-mail criado pelo login via ORCID até a pessoa informar o institucional."""
+    """E-mail criado pelo login via ORCID até a pessoa informar o dela."""
     return bool(email) and email.lower().endswith(SUFIXO_PROVISORIO)
 
 

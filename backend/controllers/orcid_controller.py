@@ -167,9 +167,10 @@ async def processar_callback_orcid(
     else:
         # Criar novo usuário. O ORCID não diz se a pessoa é discente, docente
         # ou pesquisador(a): o papel abaixo é só um valor provisório e
-        # `perfil_completo: False` manda o frontend para /perfil/completar,
-        # onde ela escolhe o vínculo, informa o e-mail institucional e aceita
-        # as regras.
+        # `perfil_completo: False` faz o frontend gravar o formulário que a
+        # pessoa preencheu em /registrar antes de ir ao ORCID, ou abrir
+        # /perfil/completar, onde ela escolhe o vínculo, informa um e-mail
+        # (institucional ou pessoal) e aceita as regras.
         nome = name or "Usuário ORCID"
         novo_usuario = {
             "email": f"{orcid_id}@orcid.placeholder",  # Placeholder até o usuário informar

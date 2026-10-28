@@ -354,8 +354,8 @@ async def verificar_email_controller(token: str) -> Dict[str, Any]:
 
     Três casos:
       - registro por e-mail/senha: marca `email_verificado` e libera o login;
-      - conta do ORCID confirmando o e-mail institucional informado em
-        /perfil/completar: o e-mail pendente substitui o provisório;
+      - conta do ORCID confirmando o e-mail (institucional ou pessoal)
+        informado no registro: o e-mail pendente substitui o provisório;
       - conta do ORCID cujo e-mail pendente pertence a uma conta por senha
         já existente: clicar no link prova a posse da caixa postal, então o
         ORCID é vinculado à conta existente e a provisória é desativada
@@ -455,8 +455,8 @@ async def reenviar_verificacao_controller(email: str) -> None:
     Útil caso o token original tenha expirado ou o e-mail não chegou.
     """
     db = Database.get_db()
-    # `email_pendente`: e-mail institucional informado por uma conta do ORCID
-    # e ainda não confirmado.
+    # `email_pendente`: e-mail informado por uma conta do ORCID e ainda não
+    # confirmado.
     usuario = await db.usuarios.find_one({"$or": [filtro_email(email), filtro_email(email, "email_pendente")]})
 
     # Resposta sempre igual (a rota devolve 200 genérico): e-mail desconhecido,

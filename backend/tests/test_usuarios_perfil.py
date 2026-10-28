@@ -110,7 +110,7 @@ async def test_perfil_completo_nao_e_aceito_sem_vinculo_aceites_e_email(api_orci
     # aceites sem e-mail: ainda falta
     r = await api_orcid.patch("/api/perfil", json={"perfil_completo": True, "papel": "aluno",
                                                    "aceite_regras": True, "aceite_dados": True})
-    assert r.status_code == 400 and "e-mail institucional" in r.text
+    assert r.status_code == 400 and "informar um e-mail" in r.text
     # com tudo (e-mail pendente conta): conclui
     r = await api_orcid.patch("/api/perfil", json={"perfil_completo": True, "papel": "aluno", "email": "c@unirio.br",
                                                    "aceite_regras": True, "aceite_dados": True})
@@ -165,6 +165,22 @@ async def test_completar_perfil_escolhe_vinculo_email_e_aceites(api_orcid, db):
     doc = await db.usuarios.find_one({"_id": api_orcid.oid})
     assert doc["email"] == "carlos.lima@unirio.br" and doc["email_verificado"] is True
     assert "email_pendente" not in doc and "token_verificacao_email" not in doc
+
+
+async def test_conta_orcid_conclui_com_email_pessoal(api_orcid, db):
+    # sem e-mail institucional: a conta ORCID identifica a pessoa e o e-mail
+    # pessoal fica para contato, com a mesma confirmação pelo link
+    r = await api_orcid.patch("/api/perfil", json={
+        "papel": "aluno", "email": "Carlos.Lima@Gmail.com", "aceite_regras": True, "aceite_dados": True,
+        "perfil_completo": True, "dados_aluno": {"nivel": "graduacao_incompleta", "semestre": 3}})
+    assert r.status_code == 200, r.text
+    assert r.json()["perfil_completo"] is True and r.json()["email_pendente"] == "carlos.lima@gmail.com"
+    token = (await db.usuarios.find_one({"_id": api_orcid.oid}))["token_verificacao_email"]
+    assert (await api_orcid.get("/api/auth/verificar-email", params={"token": token})).status_code == 200
+    doc = await db.usuarios.find_one({"_id": api_orcid.oid})
+    assert doc["email"] == "carlos.lima@gmail.com" and doc["email_verificado"] is True
+    # formato inválido continua recusado
+    assert (await api_orcid.patch("/api/perfil", json={"email": "carlos-sem-arroba"})).status_code == 422
 
 
 async def test_confirmacao_vincula_se_o_email_virou_conta_por_senha_nesse_meio_tempo(api_orcid, db):
@@ -246,8 +262,6 @@ async def test_trocar_vinculo_cria_sub_documento_do_novo_tipo(api_orcid, db):
 
 
 async def test_email_so_muda_enquanto_for_o_provisorio(api_orcid, db):
-    r = await api_orcid.patch("/api/perfil", json={"email": "carlos@gmail.com"})
-    assert r.status_code == 400 and "institucionais" in r.text
     assert (await api_orcid.patch("/api/perfil", json={"email": "carlos.lima@unirio.br"})).status_code == 200
     # enquanto não confirmou, pode corrigir o e-mail informado
     r = await api_orcid.patch("/api/perfil", json={"email": "c.lima@unirio.br"})

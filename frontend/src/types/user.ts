@@ -71,7 +71,7 @@ export interface OrcidData {
 export interface User {
   id: string;
   email: string;
-  /** E-mail institucional informado por uma conta do ORCID e ainda não confirmado pelo link enviado. */
+  /** E-mail (institucional ou pessoal) informado por uma conta do ORCID e ainda não confirmado pelo link enviado. */
   email_pendente?: string | null;
   /** O e-mail pendente já tem conta por senha: ao confirmar, o ORCID é vinculado a ela. */
   email_pendente_vincula?: boolean;

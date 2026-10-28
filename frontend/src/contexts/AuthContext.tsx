@@ -17,6 +17,7 @@ import {
 } from "react";
 import { api } from "@/lib/api";
 import { TOKEN_KEY } from "@/lib/constants";
+import { descartarRegistroPendente, guardarRegistroPendente, type DadosRegistro } from "@/lib/registroOrcid";
 import type { User, LoginResponse } from "@/types/user";
 
 interface AuthContextType {
@@ -25,7 +26,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, senha: string) => Promise<void>;
-  loginWithOrcid: () => Promise<void>;
+  loginWithOrcid: (registro?: DadosRegistro) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -77,11 +78,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(response.usuario);
   }, []);
 
-  /** Inicia fluxo OAuth ORCID */
-  const loginWithOrcid = useCallback(async () => {
+  /**
+   * Inicia fluxo OAuth ORCID. `registro`: o formulário de /registrar, gravado
+   * na conta na volta (lib/registroOrcid). Sem ele, um formulário guardado
+   * antes não vale para este login e é descartado.
+   */
+  const loginWithOrcid = useCallback(async (registro?: DadosRegistro) => {
     const response = await api.get<{ authorize_url: string }>(
       "/api/auth/orcid/authorize"
     );
+    if (registro) guardarRegistroPendente(registro);
+    else descartarRegistroPendente();
     window.location.href = response.authorize_url;
   }, []);
 
