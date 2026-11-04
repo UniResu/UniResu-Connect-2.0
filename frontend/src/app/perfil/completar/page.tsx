@@ -334,7 +334,7 @@ export default function CompletarPerfilPage() {
               </label>
               <label className={styles.aceite}>
                 <input type="checkbox" checked={aceiteDados} onChange={(e) => setAceiteDados(e.target.checked)} />
-                <span>Declaro que estou ciente do compartilhamento desses dados com as coordenações dos projetos a que eu me candidatar.</span>
+                <span>Declaro que estou ciente do compartilhamento desses dados com as coordenações dos projetos que eu contatar.</span>
               </label>
             </div>
           </section>

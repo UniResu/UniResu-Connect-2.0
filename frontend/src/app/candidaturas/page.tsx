@@ -20,14 +20,16 @@ interface Candidatura {
   nome_professor?: string | null;
 }
 
+// A coordenação responde direto no e-mail da pessoa e a plataforma não
+// acompanha a resposta: "pendente" quer dizer só que a carta foi enviada.
 const STATUS_LABEL: Record<Candidatura["status"], string> = {
-  pendente: "Pendente",
+  pendente: "Carta enviada",
   aprovado: "Aprovada",
   recusado: "Recusada",
 };
 
 const STATUS_CHIP: Record<Candidatura["status"], string> = {
-  pendente: "ui-chip-warning",
+  pendente: "ui-chip-info",
   aprovado: "ui-chip-success",
   recusado: "ui-chip-error",
 };
@@ -107,7 +109,7 @@ export default function CandidaturasPage() {
         if (!cancelled) {
           const detail =
             (err as { detail?: string })?.detail ||
-            "Não foi possível carregar suas candidaturas.";
+            "Não foi possível carregar os projetos que você contatou.";
           setErrorMsg(detail);
           setCandidaturas([]);
         }
@@ -128,14 +130,14 @@ export default function CandidaturasPage() {
     <div className={styles.pagina}>
       <div className={styles.container}>
         <header className="ui-page-header">
-          <h1 className="ui-page-title">Minhas candidaturas</h1>
+          <h1 className="ui-page-title">Projetos contatados</h1>
           <p className="ui-page-subtitle">
-            Acompanhe o andamento das candidaturas que você enviou aos projetos acadêmicos.
+            As cartas de intenção que você enviou às coordenações. As respostas chegam direto no seu e-mail.
           </p>
         </header>
 
         {carregando ? (
-          <div className={styles.lista} aria-busy="true" aria-label="Carregando candidaturas">
+          <div className={styles.lista} aria-busy="true" aria-label="Carregando os projetos contatados">
             {[0, 1, 2].map((i) => (
               <div key={i} className={`skeleton ${styles.esqueleto}`} />
             ))}
@@ -149,10 +151,10 @@ export default function CandidaturasPage() {
             <span className={styles.vazioIcone}>
               <IconeFoguete tamanho={28} />
             </span>
-            <h2 className={styles.vazioTitulo}>Você ainda não enviou nenhuma candidatura</h2>
+            <h2 className={styles.vazioTitulo}>Você ainda não contatou nenhum projeto</h2>
             <p className={styles.vazioTexto}>
-              Explore os projetos acadêmicos disponíveis e candidate-se àqueles que combinam com seus
-              interesses de pesquisa.
+              Explore os projetos acadêmicos e, quando um deles combinar com os seus interesses, envie uma
+              carta de intenção à coordenação.
             </p>
             <Link href="/projetos" className="ui-btn ui-btn-primary">
               Explorar projetos
@@ -176,7 +178,7 @@ export default function CandidaturasPage() {
                   </span>
                   <span className={styles.metaItem}>
                     <IconeCalendario />
-                    <span>Enviada em {formatarData(c.data_candidatura)}</span>
+                    <span>Em {formatarData(c.data_candidatura)}</span>
                   </span>
                 </div>
 

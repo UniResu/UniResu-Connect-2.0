@@ -141,7 +141,7 @@ async def _verificar_rate_limit(db, usuario_id) -> None:
         if total >= limite:
             raise HTTPException(
                 status_code=429,
-                detail=f"Você atingiu o limite de {limite} candidaturas {texto}. Tente novamente mais tarde.",
+                detail=f"Você atingiu o limite de {limite} cartas de intenção {texto}. Tente novamente mais tarde.",
             )
 
 
@@ -163,7 +163,7 @@ async def enviar_candidatura(projeto_id: str, dados: CandidaturaCreate, usuario_
     if not destino:
         raise HTTPException(
             status_code=400,
-            detail="Este projeto ainda não tem contato cadastrado para receber candidaturas.",
+            detail="Este projeto ainda não tem contato cadastrado para receber cartas de intenção.",
         )
 
     # Identificador do aluno — prioriza o id já formatado pelo middleware
@@ -178,7 +178,7 @@ async def enviar_candidatura(projeto_id: str, dados: CandidaturaCreate, usuario_
         "$or": [{"usuario_id": usuario_id}, {"email_aluno": dados.email}],
     })
     if candidatura_existente:
-        raise HTTPException(status_code=409, detail="Você já se candidatou a este projeto.")
+        raise HTTPException(status_code=409, detail="Você já contatou a coordenação deste projeto.")
 
     await _verificar_rate_limit(db, usuario_id)
 
@@ -231,7 +231,7 @@ async def enviar_candidatura(projeto_id: str, dados: CandidaturaCreate, usuario_
 
     return {
         "status": "success",
-        "message": "Candidatura enviada com sucesso!",
+        "message": "Carta de intenção enviada com sucesso!",
         "candidatura_id": str(candidatura_id),
         "email_enviado": email_enviado,
         "confirmacao_enviada": confirmacao_enviada,

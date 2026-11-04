@@ -2,7 +2,8 @@
 
 /**
  * Detalhe de um projeto: descrição, dados da fonte, link para o portal de
- * origem e a candidatura. Usado no modal da busca (/projetos) e na página
+ * origem e o contato com a coordenação (carta de intenção, gravada como
+ * candidatura na API). Usado no modal da busca (/projetos) e na página
  * própria de cada projeto (/projetos/[id]), que os buscadores indexam.
  */
 
@@ -27,8 +28,8 @@ function avisoSemContato(p: Projeto) {
   if (geral) {
     return (
       <>
-        A UFV não divulga o e-mail de cada coordenação nos dados abertos, então a candidatura por aqui
-        fica indisponível. O contato geral é o {geral.rotulo}:{" "}
+        A UFV não divulga o e-mail de cada coordenação nos dados abertos, então o contato por aqui fica
+        indisponível. O contato geral é o {geral.rotulo}:{" "}
         <a href={`mailto:${geral.email}`}>{geral.email}</a>. Cite o título do projeto na mensagem.
       </>
     );
@@ -36,7 +37,7 @@ function avisoSemContato(p: Projeto) {
   if (p.origem === "puccamp") {
     return (
       <>
-        A PUC-Campinas não divulga o e-mail de cada docente na página de extensão, então a candidatura por
+        A PUC-Campinas não divulga o e-mail de cada docente na página de extensão, então o contato por
         aqui fica indisponível. Use o botão acima para ver o projeto no portal da universidade ou procure a
         faculdade indicada.
       </>
@@ -155,7 +156,7 @@ export const DetalheProjeto = memo(function DetalheProjeto({
   if (p.modalidade) metadados.push({ rotulo: "Modalidade", valor: p.modalidade });
   if (p.local) metadados.push({ rotulo: "Localização", valor: p.local });
 
-  // Celular e tablet: a candidatura fica no fim da rolagem, então uma barra
+  // Celular e tablet: o contato fica no fim da rolagem, então uma barra
   // fixa no rodapé do modal leva até ela. A barra vem depois da seção no DOM
   // (gruda no rodapé enquanto não chega a vez dela) e some quando a seção
   // aparece; o espaço que ela deixa fica no fim do modal.
@@ -302,7 +303,7 @@ export const DetalheProjeto = memo(function DetalheProjeto({
 
       <section ref={candidaturaRef} className={`ui-card ${m.candidatura}`} aria-labelledby="candidatura-titulo">
         <h3 id="candidatura-titulo" className={m.candidaturaTitulo} tabIndex={-1}>
-          Candidatar-se
+          Contatar a coordenação
         </h3>
 
         {!p.tem_contato ? (
@@ -312,7 +313,7 @@ export const DetalheProjeto = memo(function DetalheProjeto({
               <p>{avisoSemContato(p)}</p>
             </div>
             <button type="button" className="ui-btn ui-btn-primary" disabled>
-              Candidatar-se
+              Contatar a coordenação
             </button>
           </>
         ) : !token ? (
@@ -321,7 +322,7 @@ export const DetalheProjeto = memo(function DetalheProjeto({
               Entre na sua conta para enviar uma carta de intenção à coordenação deste projeto.
             </p>
             <button type="button" className="ui-btn ui-btn-primary" onClick={() => router.push("/login")}>
-              Faça login para se candidatar
+              Faça login para contatar a coordenação
             </button>
           </>
         ) : (
@@ -339,7 +340,7 @@ export const DetalheProjeto = memo(function DetalheProjeto({
           onClick={irParaCandidatura}
           tabIndex={candidaturaVisivel ? -1 : 0}
         >
-          Candidatar-se
+          Contatar a coordenação
         </button>
         {linkFonte && (
           <a
@@ -422,7 +423,7 @@ function FormularioCandidatura({ projeto, onEnviado }: { projeto: Projeto; onEnv
     } catch (err: unknown) {
       setFormStatus("error");
       const apiErr = err as { detail?: unknown };
-      setFormError(mensagemDeErro(apiErr.detail, "Falha ao enviar candidatura ao servidor."));
+      setFormError(mensagemDeErro(apiErr.detail, "Não foi possível enviar a carta de intenção. Tente novamente."));
     }
   }
 

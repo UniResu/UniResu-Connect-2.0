@@ -130,7 +130,7 @@ function NavbarConteudo({ pathname }: { pathname: string }) {
                       </Link>
                     ) : (
                       <Link href="/candidaturas" className={styles.dropdownItem} onClick={() => setDropdownOpen(false)}>
-                        Candidaturas
+                        Projetos contatados
                       </Link>
                     )}
                     <div className={styles.dropdownDivider} />
@@ -219,7 +219,7 @@ function NavbarConteudo({ pathname }: { pathname: string }) {
               </Link>
             ) : (
               <Link href="/candidaturas" className={styles.mobileItem} onClick={fecharMenu} tabIndex={menuOpen ? 0 : -1}>
-                Candidaturas
+                Projetos contatados
               </Link>
             )}
             <button

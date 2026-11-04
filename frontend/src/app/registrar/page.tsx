@@ -600,7 +600,7 @@ export default function RegistrarPage() {
                   >
                     compartilhamento desses dados
                   </button>{" "}
-                  com as coordenações dos projetos a que eu me candidatar.
+                  com as coordenações dos projetos que eu contatar.
                 </span>
               </label>
             </div>

@@ -542,8 +542,8 @@ function ProjetosConteudo({
               Reunimos somente projetos em andamento que as universidades publicam em acesso aberto, nos
               próprios portais. Quando uma instituição não divulga os projetos, ou divulga sem a situação ou o
               contato da coordenação, eles ficam de fora, e por isso uma busca pode voltar vazia mesmo que o
-              tema exista por lá. A base é atualizada toda semana; antes de se candidatar, vale confirmar os
-              detalhes no portal da instituição.
+              tema exista por lá. A base é atualizada toda semana; antes de contatar a coordenação, vale
+              confirmar os detalhes no portal da instituição.
             </p>
           </details>
         </header>

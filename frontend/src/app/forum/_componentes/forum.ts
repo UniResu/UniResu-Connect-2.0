@@ -14,7 +14,7 @@ export const CATEGORIAS = [
   { id: "pesquisa", nome: "Pesquisa" },
   { id: "extensao", nome: "Extensão" },
   { id: "bolsas", nome: "Bolsas e editais" },
-  { id: "candidatura", nome: "Candidatura e currículo" },
+  { id: "candidatura", nome: "Carta de intenção e currículo" },
   { id: "vida-universitaria", nome: "Vida universitária" },
 ] as const;
 
