@@ -521,7 +521,7 @@ function ProjetosConteudo({
           <h1 className="ui-page-title">Projetos acadêmicos</h1>
           <p className="ui-page-subtitle">
             Projetos de pesquisa e extensão das universidades, em um só lugar. Encontre o seu e envie uma
-            carta de intenção à coordenação.
+            carta de intenção à coordenação do projeto.
           </p>
           {/* Linha discreta: no desktop mostra o resumo e abre o texto completo;
               no celular fica só o título, recolhido. */}
@@ -541,9 +541,9 @@ function ProjetosConteudo({
             <p className={styles.origemTexto}>
               Reunimos somente projetos em andamento que as universidades publicam em acesso aberto, nos
               próprios portais. Quando uma instituição não divulga os projetos, ou divulga sem a situação ou o
-              contato da coordenação, eles ficam de fora, e por isso uma busca pode voltar vazia mesmo que o
-              tema exista por lá. A base é atualizada toda semana; antes de contatar a coordenação, vale
-              confirmar os detalhes no portal da instituição.
+              contato da coordenação do projeto, eles ficam de fora, e por isso uma busca pode voltar vazia
+              mesmo que o tema exista por lá. A base é atualizada toda semana; antes de contatar a
+              coordenação do projeto, vale confirmar os detalhes no portal da instituição.
             </p>
           </details>
         </header>

@@ -179,6 +179,14 @@ section.candidatura {
   font-size: var(--font-size-sm);
 }
 
+/* "Contatar a coordenação do projeto" é mais largo que um celular estreito:
+   o texto do botão quebra em duas linhas em vez de vazar. `button.` vence o
+   `white-space: nowrap` do `.ui-btn` global sem depender da ordem dos CSS. */
+button.botaoQuebra {
+  white-space: normal;
+  text-align: center;
+}
+
 .aviso {
   display: flex;
   align-items: flex-start;

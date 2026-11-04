@@ -57,8 +57,8 @@ PERGUNTAS: List[Dict[str, Any]] = [
             "Comece pela aba Projetos Acadêmicos aqui na plataforma: ela reúne os projetos de pesquisa e "
             "extensão em andamento coletados dos portais públicos das universidades, além dos cadastrados pelos "
             "próprios professores. Filtre por módulo (pesquisa), instituição, campus e unidade, leia o resumo e "
-            "veja quem coordena. Se o projeto tiver contato, dá para contatar a coordenação ali mesmo, com uma "
-            "carta de intenção.\n\n"
+            "veja quem coordena. Se o projeto tiver contato, dá para contatar a coordenação do projeto ali mesmo, "
+            "com uma carta de intenção.\n\n"
             "Fora da plataforma, os caminhos clássicos são: perguntar aos professores das disciplinas de que você "
             "mais gosta se eles orientam iniciação científica, olhar o Currículo Lattes deles (a seção de projetos "
             "mostra o que está ativo), consultar o Diretório dos Grupos de Pesquisa do CNPq pela sua instituição e "
@@ -87,9 +87,9 @@ PERGUNTAS: List[Dict[str, Any]] = [
             "Evite textos genéricos que serviriam para qualquer projeto, superlativos e pedidos de desculpas pela "
             "falta de experiência: todo mundo começa sem experiência, é exatamente por isso que existe a iniciação "
             "científica. Revise ortografia e concordância antes de enviar e, se tiver, inclua o link do seu Lattes.\n\n"
-            "Na UniResu, o formulário de contato com a coordenação já segue essa estrutura: a carta vai no corpo "
-            "do e-mail que o(a) coordenador(a) recebe, com o seu e-mail no campo de resposta e o Lattes como link "
-            "no final."
+            "Na UniResu, o formulário de contato com a coordenação do projeto já segue essa estrutura: a carta vai "
+            "no corpo do e-mail que o(a) coordenador(a) recebe, com o seu e-mail no campo de resposta e o Lattes "
+            "como link no final."
         ),
     },
     {

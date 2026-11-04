@@ -216,10 +216,10 @@ const PASSOS: { titulo: string; texto: string; link?: { href: string; texto: str
   },
   {
     titulo: "Envie sua carta de intenção",
-    texto: "Conte por que quer participar. A carta vai por e-mail para a coordenação, com cópia para você.",
+    texto: "Conte por que quer participar. A carta vai por e-mail para a coordenação do projeto, com cópia para você.",
   },
   {
-    titulo: "Combine com a coordenação",
+    titulo: "Combine com a coordenação do projeto",
     texto:
       "A resposta chega no seu e-mail. Enquanto isso, o fórum ajuda com dúvidas sobre bolsas, carta e rotina de pesquisa.",
   },
@@ -272,7 +272,7 @@ function ComoFunciona() {
   return (
     <section className={`${styles.secao} ${styles.comoFunciona}`} id="como-funciona" aria-labelledby="titulo-como">
       <div className={styles.container}>
-        <CabecalhoSecao id="titulo-como" rotulo="Como funciona" titulo="Da conta à coordenação em quatro passos" />
+        <CabecalhoSecao id="titulo-como" rotulo="Como funciona" titulo="Da conta à coordenação do projeto em quatro passos" />
         <ol className={styles.passos}>
           {PASSOS.map((passo, i) => (
             <li

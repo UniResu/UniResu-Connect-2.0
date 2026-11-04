@@ -1,9 +1,14 @@
-/* Candidaturas do aluno: cabeçalho de página, lista de cards com chip de
+/* Projetos contatados: cabeçalho de página, lista de cards com chip de
    status e estado vazio. Só layout e espaçamento; cores, raios e sombras
    vêm dos tokens e os controles usam as classes globais ui-*. */
 
 .pagina {
   flex: 1;
+}
+
+/* "e-mail" não se parte no hífen quando a frase quebra de linha. */
+.semQuebra {
+  white-space: nowrap;
 }
 
 .container {

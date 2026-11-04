@@ -129,7 +129,7 @@ function NavbarConteudo({ pathname }: { pathname: string }) {
                         Meus Projetos
                       </Link>
                     ) : (
-                      <Link href="/candidaturas" className={styles.dropdownItem} onClick={() => setDropdownOpen(false)}>
+                      <Link href="/contatos" className={styles.dropdownItem} onClick={() => setDropdownOpen(false)}>
                         Projetos contatados
                       </Link>
                     )}
@@ -218,7 +218,7 @@ function NavbarConteudo({ pathname }: { pathname: string }) {
                 Meus Projetos
               </Link>
             ) : (
-              <Link href="/candidaturas" className={styles.mobileItem} onClick={fecharMenu} tabIndex={menuOpen ? 0 : -1}>
+              <Link href="/contatos" className={styles.mobileItem} onClick={fecharMenu} tabIndex={menuOpen ? 0 : -1}>
                 Projetos contatados
               </Link>
             )}

@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   // filhas perderem o "| UniResu Connect" do fim.
   title: { default: "Projetos acadêmicos", template: "%s | UniResu Connect" },
   description:
-    "Projetos de pesquisa e extensão das universidades, em um só lugar. Encontre o seu e envie uma carta de intenção à coordenação.",
+    "Projetos de pesquisa e extensão das universidades, em um só lugar. Encontre o seu e envie uma carta de intenção à coordenação do projeto.",
   alternates: { canonical: "/projetos" },
 };
 

@@ -28,6 +28,12 @@ const nextConfig: NextConfig = {
         destination: "/projetos/:id",
         permanent: true,
       },
+      // A página das cartas de intenção enviadas se chamava "Minhas candidaturas".
+      {
+        source: "/candidaturas",
+        destination: "/contatos",
+        permanent: true,
+      },
     ];
   },
 };

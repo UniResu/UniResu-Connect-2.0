@@ -6,7 +6,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { IconeFoguete } from "@/components/ui/Icones";
-import styles from "./candidaturas.module.css";
+import styles from "./contatos.module.css";
 
 interface Candidatura {
   id: string;
@@ -20,10 +20,11 @@ interface Candidatura {
   nome_professor?: string | null;
 }
 
-// A coordenação responde direto no e-mail da pessoa e a plataforma não
-// acompanha a resposta: "pendente" quer dizer só que a carta foi enviada.
+// A coordenação do projeto responde direto no e-mail da pessoa e a
+// plataforma não acompanha a resposta: "pendente" quer dizer só que a carta
+// de intenção foi enviada.
 const STATUS_LABEL: Record<Candidatura["status"], string> = {
-  pendente: "Carta enviada",
+  pendente: "Mensagem enviada",
   aprovado: "Aprovada",
   recusado: "Recusada",
 };
@@ -77,7 +78,8 @@ function IconeCalendario() {
   );
 }
 
-export default function CandidaturasPage() {
+/** Projetos contatados (/contatos; o endereço antigo, /candidaturas, redireciona para cá). */
+export default function ContatosPage() {
   const { token, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -132,7 +134,8 @@ export default function CandidaturasPage() {
         <header className="ui-page-header">
           <h1 className="ui-page-title">Projetos contatados</h1>
           <p className="ui-page-subtitle">
-            As cartas de intenção que você enviou às coordenações. As respostas chegam direto no seu e-mail.
+            As cartas de intenção que você enviou às coordenações dos projetos. As respostas chegam direto no
+            seu <span className={styles.semQuebra}>e-mail</span>.
           </p>
         </header>
 
@@ -154,7 +157,7 @@ export default function CandidaturasPage() {
             <h2 className={styles.vazioTitulo}>Você ainda não contatou nenhum projeto</h2>
             <p className={styles.vazioTexto}>
               Explore os projetos acadêmicos e, quando um deles combinar com os seus interesses, envie uma
-              carta de intenção à coordenação.
+              carta de intenção à coordenação do projeto.
             </p>
             <Link href="/projetos" className="ui-btn ui-btn-primary">
               Explorar projetos
@@ -178,7 +181,7 @@ export default function CandidaturasPage() {
                   </span>
                   <span className={styles.metaItem}>
                     <IconeCalendario />
-                    <span>Em {formatarData(c.data_candidatura)}</span>
+                    <span>{formatarData(c.data_candidatura)}</span>
                   </span>
                 </div>
 

@@ -28,8 +28,8 @@ function avisoSemContato(p: Projeto) {
   if (geral) {
     return (
       <>
-        A UFV não divulga o e-mail de cada coordenação nos dados abertos, então o contato por aqui fica
-        indisponível. O contato geral é o {geral.rotulo}:{" "}
+        A UFV não divulga o e-mail da coordenação de cada projeto nos dados abertos, então o contato por
+        aqui fica indisponível. O contato geral é o {geral.rotulo}:{" "}
         <a href={`mailto:${geral.email}`}>{geral.email}</a>. Cite o título do projeto na mensagem.
       </>
     );
@@ -46,14 +46,14 @@ function avisoSemContato(p: Projeto) {
   if (p.origem === "ufv") {
     return (
       <>
-        A UFV não divulga o e-mail de cada coordenação nos dados abertos. Use a página do projeto no
+        A UFV não divulga o e-mail da coordenação de cada projeto nos dados abertos. Use a página do projeto no
         sistema de pesquisa da UFV (link acima) ou procure o departamento indicado.
       </>
     );
   }
   return (
     <>
-      Projeto ainda sem contato cadastrado. Assim que o e-mail da coordenação for cadastrado, você
+      Projeto ainda sem contato cadastrado. Assim que o e-mail da coordenação do projeto for cadastrado, você
       poderá enviar sua carta de intenção por aqui.
     </>
   );
@@ -303,7 +303,7 @@ export const DetalheProjeto = memo(function DetalheProjeto({
 
       <section ref={candidaturaRef} className={`ui-card ${m.candidatura}`} aria-labelledby="candidatura-titulo">
         <h3 id="candidatura-titulo" className={m.candidaturaTitulo} tabIndex={-1}>
-          Contatar a coordenação
+          Contatar a coordenação do projeto
         </h3>
 
         {!p.tem_contato ? (
@@ -312,8 +312,8 @@ export const DetalheProjeto = memo(function DetalheProjeto({
               <Icone nome="info" className={m.avisoIcone} />
               <p>{avisoSemContato(p)}</p>
             </div>
-            <button type="button" className="ui-btn ui-btn-primary" disabled>
-              Contatar a coordenação
+            <button type="button" className={`ui-btn ui-btn-primary ${m.botaoQuebra}`} disabled>
+              Contatar a coordenação do projeto
             </button>
           </>
         ) : !token ? (
@@ -322,7 +322,7 @@ export const DetalheProjeto = memo(function DetalheProjeto({
               Entre na sua conta para enviar uma carta de intenção à coordenação deste projeto.
             </p>
             <button type="button" className="ui-btn ui-btn-primary" onClick={() => router.push("/login")}>
-              Faça login para contatar a coordenação
+              Entrar
             </button>
           </>
         ) : (
@@ -336,11 +336,11 @@ export const DetalheProjeto = memo(function DetalheProjeto({
       >
         <button
           type="button"
-          className="ui-btn ui-btn-primary"
+          className={`ui-btn ui-btn-primary ${m.botaoQuebra}`}
           onClick={irParaCandidatura}
           tabIndex={candidaturaVisivel ? -1 : 0}
         >
-          Contatar a coordenação
+          Contatar a coordenação do projeto
         </button>
         {linkFonte && (
           <a
@@ -495,7 +495,7 @@ function FormularioCandidatura({ projeto, onEnviado }: { projeto: Projeto; onEnv
             onChange={(e) => setEmailCandidato(e.target.value)}
             autoComplete="email"
           />
-          <p className="ui-hint">A resposta da coordenação chegará neste e-mail.</p>
+          <p className="ui-hint">A resposta da coordenação do projeto chegará neste e-mail.</p>
         </div>
 
         <div className={m.campo}>
