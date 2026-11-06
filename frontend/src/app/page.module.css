@@ -691,27 +691,40 @@ button.heroBuscaBotao:hover {
   line-height: 1.65;
 }
 
-/* Nota sobre a extensão, logo abaixo de Quem somos: um card só, mais estreito
-   que a seção, com o mesmo ícone em caixa dos cards institucionais e uma
-   frase, sem título. */
+/* Nota sobre a extensão, logo abaixo de Quem somos: uma linha de rodapé da
+   seção, sem caixa de card nem título, em texto menor e cinza, com o ícone
+   dos cards institucionais em tamanho reduzido. */
 .vinculo {
   display: flex;
   align-items: center;
-  gap: var(--space-md);
-  max-width: 760px;
+  justify-content: center;
+  gap: var(--space-sm);
+  max-width: 640px;
   margin: var(--space-2xl) auto 0;
-  padding: var(--space-lg) var(--space-xl);
 }
 
+/* `.vinculo .cardIcone` vence o tamanho dos ícones dos cards. */
 .vinculo .cardIcone {
   flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+}
+
+.vinculo .cardIcone svg {
+  width: 16px;
+  height: 16px;
+}
+
+.vinculoNota {
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  color: var(--text-muted);
 }
 
 @media (max-width: 640px) {
   /* No celular a frase ocupa várias linhas: o ícone acompanha a primeira. */
   .vinculo {
     align-items: flex-start;
-    padding: var(--space-lg);
   }
 }
 
