@@ -610,19 +610,15 @@ function QuemSomos() {
           </div>
         )}
 
-        {/* O projeto é da equipe; a UERJ entra como vínculo de extensão. */}
-        <aside className={`ui-card ${styles.vinculo}`} aria-label="Vínculo institucional">
+        {/* O projeto é da equipe; o registro de extensão na FCM/UERJ entra só como nota. */}
+        <aside className={`ui-card ${styles.vinculo}`} aria-label="Nota sobre a extensão">
           <span className={styles.cardIcone}>
             <IconeCapelo tamanho={22} />
           </span>
-          <div className={styles.vinculoTexto}>
-            <p className={styles.vinculoRotulo}>Projeto de extensão universitária</p>
-            <p className={styles.cardCorpo}>
-              Criado e conduzido pela nossa equipe, o UniResu Connect também é um projeto de extensão vinculado à
-              Faculdade de Ciências Médicas (FCM) da Universidade do Estado do Rio de Janeiro (UERJ), aprovado no
-              biênio 2025-2027.
-            </p>
-          </div>
+          <p className={styles.cardCorpo}>
+            Criado e mantido pela nossa equipe, o UniResu Connect também consta como projeto de extensão na
+            Faculdade de Ciências Médicas (FCM) da UERJ, no biênio 2025-2027.
+          </p>
         </aside>
       </div>
     </section>

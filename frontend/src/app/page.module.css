@@ -691,11 +691,12 @@ button.heroBuscaBotao:hover {
   line-height: 1.65;
 }
 
-/* Vínculo de extensão, logo abaixo de Quem somos: um card só, mais estreito
-   que a seção, com o mesmo ícone em caixa dos cards institucionais. */
+/* Nota sobre a extensão, logo abaixo de Quem somos: um card só, mais estreito
+   que a seção, com o mesmo ícone em caixa dos cards institucionais e uma
+   frase, sem título. */
 .vinculo {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-md);
   max-width: 760px;
   margin: var(--space-2xl) auto 0;
@@ -706,20 +707,10 @@ button.heroBuscaBotao:hover {
   flex-shrink: 0;
 }
 
-.vinculoTexto {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  min-width: 0;
-}
-
-.vinculoRotulo {
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
 @media (max-width: 640px) {
+  /* No celular a frase ocupa várias linhas: o ícone acompanha a primeira. */
   .vinculo {
+    align-items: flex-start;
     padding: var(--space-lg);
   }
 }

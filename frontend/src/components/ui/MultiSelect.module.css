@@ -67,6 +67,29 @@
   box-shadow: var(--shadow-lg);
 }
 
+/* Com a busca no topo, a lista ganha altura para continuar mostrando umas
+   seis opções abaixo dela. */
+.listaComBusca {
+  max-height: 400px;
+}
+
+/* A busca fica presa no topo enquanto a lista rola por baixo dela. */
+.busca {
+  position: sticky;
+  top: calc(-1 * var(--space-xs));
+  z-index: 1;
+  margin: calc(-1 * var(--space-xs)) calc(-1 * var(--space-xs)) var(--space-xs);
+  padding: var(--space-xs);
+  border-bottom: 1px solid var(--border-light);
+  background: var(--surface);
+}
+
+/* `.busca .campoBusca` vence o `.ui-field` global sem depender da ordem dos CSS. */
+.busca .campoBusca {
+  min-height: 2.25rem;
+  padding: 0.4rem 0.75rem;
+}
+
 .cabecalhoLista {
   display: flex;
   align-items: center;
@@ -147,5 +170,11 @@
 @media (pointer: coarse) {
   .opcao {
     min-height: 2.75rem;
+  }
+
+  /* 16px na tela de toque: abaixo disso o iPhone dá zoom na página ao focar o campo. */
+  .busca .campoBusca {
+    min-height: 2.75rem;
+    font-size: 1rem;
   }
 }
