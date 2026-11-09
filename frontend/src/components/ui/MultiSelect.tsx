@@ -55,8 +55,7 @@ export default function MultiSelect({
 }) {
   const [aberto, setAberto] = useState(false);
   const [busca, setBusca] = useState("");
-  // Altura da lista medida ao abrir: o painel de filtros fica preso na tela,
-  // e uma lista mais alta que o espaço abaixo do botão teria o fim inalcançável.
+  // Altura da lista medida ao abrir (ver `abrir`).
   const [alturaLista, setAlturaLista] = useState<number | undefined>(undefined);
   const raiz = useRef<HTMLDivElement>(null);
   const botaoRef = useRef<HTMLButtonElement>(null);
@@ -90,11 +89,30 @@ export default function MultiSelect({
     setBusca("");
   }
 
+  /**
+   * O painel de filtros fica preso na tela, então uma lista mais alta que o
+   * espaço abaixo do botão teria o fim inalcançável. Ao abrir, a página rola
+   * o que for preciso para a lista caber (o painel sobe até grudar no topo) e
+   * a altura é medida depois: o espaço que ainda faltar encurta a lista.
+   */
   function abrir() {
-    const caixa = botaoRef.current?.getBoundingClientRect();
-    if (caixa) {
-      const espacoAbaixo = window.innerHeight - caixa.bottom - 16;
-      setAlturaLista(Math.max(220, Math.min(temBusca ? 400 : 340, espacoAbaixo)));
+    const botao = botaoRef.current;
+    if (botao) {
+      const desejada = temBusca ? 400 : 340;
+      const margem = 22; // os 6px entre o botão e a lista, mais 16px de folga até a borda da tela
+      let caixa = botao.getBoundingClientRect();
+      const falta = caixa.bottom + margem + desejada - window.innerHeight;
+      if (falta > 0) {
+        // "instant": a medida logo abaixo precisa da página já rolada (o site usa rolagem suave).
+        window.scrollBy({ top: falta, behavior: "instant" });
+        const depois = botao.getBoundingClientRect();
+        // Rolar além do ponto em que o painel gruda no topo, ou com o painel do
+        // celular, que não sai do lugar, só tiraria os resultados de vista: desfaz o excesso.
+        const excesso = falta - (caixa.top - depois.top);
+        if (excesso > 1) window.scrollBy({ top: -excesso, behavior: "instant" });
+        caixa = botao.getBoundingClientRect();
+      }
+      setAlturaLista(Math.max(220, Math.min(desejada, window.innerHeight - caixa.bottom - margem)));
     }
     setAberto(true);
   }
