@@ -37,6 +37,12 @@ Modulo = Literal["pesquisa", "extensao"]
 PAPEIS_PERMITIDOS = ("professor", "pesquisador")
 
 
+DESCRICAO_FINANCIAMENTO = (
+    "Projetos financiados (repita o parâmetro; vale qualquer um): bolsa (bolsas concedidas a alunos), "
+    "capes, cnpq, fap (qualquer FAP), fap:<SIGLA> (uma FAP, ex.: fap:FAPESP) e instituicao (a própria universidade)"
+)
+
+
 def verificar_papel(usuario: dict):
     """Garante que o usuário é professor ou pesquisador."""
     if usuario.get("papel") not in PAPEIS_PERMITIDOS:
@@ -63,6 +69,7 @@ async def buscar_projetos_route(
     incluir_inativos: bool = Query(False, description="Inclui projetos inativos/finalizados"),
     last_id: Optional[str] = Query(None, description="ID do último item (paginação por cursor)"),
     page_size: int = Query(20, ge=1, le=50, description="Itens por página"),
+    financiamento: Optional[List[str]] = Query(None, description=DESCRICAO_FINANCIAMENTO),
 ):
     """Busca projetos acadêmicos com filtros e paginação."""
     return await buscar_projetos_controller(
@@ -78,6 +85,7 @@ async def buscar_projetos_route(
         incluir_inativos=incluir_inativos,
         last_id=last_id,
         page_size=page_size,
+        financiamento=financiamento,
     )
 
 
@@ -105,12 +113,16 @@ async def listar_filtros_route(
     unidade: Optional[List[str]] = Query(None),
     campus: Optional[List[str]] = Query(None),
     remoto: bool = False,
+    area: Optional[AreaConhecimento] = Query(None, description="Recorte das contagens de financiamento"),
+    financiamento: Optional[List[str]] = Query(None, description=DESCRICAO_FINANCIAMENTO),
 ):
-    """Opções de filtro: instituições > unidades/departamentos e campi, com contagens, e
+    """Opções de filtro: instituições > unidades/departamentos e campi, com contagens;
     as grandes áreas do CNPq com projetos no recorte dado por `q`, `modulo`,
-    `instituicao`, `unidade` e `remoto` (os mesmos parâmetros da busca)."""
+    `instituicao`, `unidade`, `remoto` e `financiamento` (os mesmos parâmetros
+    da busca); e as opções de "Projetos financiados" no mesmo recorte, com a
+    área no lugar do financiamento."""
     return await listar_filtros_controller(q=q, modulo=modulo, instituicao=instituicao, unidade=unidade,
-                                           remoto=remoto, campus=campus)
+                                           remoto=remoto, campus=campus, area=area, financiamento=financiamento)
 
 
 @router.get("/projetos/indice", response_model=IndiceProjetosResponse)

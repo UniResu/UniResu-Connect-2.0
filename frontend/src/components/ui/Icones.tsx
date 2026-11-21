@@ -228,6 +228,28 @@ export function IconeInfo(p: Props) {
   );
 }
 
+/** Ponto de interrogação num círculo (ajuda). */
+export function IconeAjuda(p: Props) {
+  return (
+    <svg {...base(p)}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.6 9.3a2.5 2.5 0 0 1 4.8 1c0 1.7-2.4 2.3-2.4 2.3" />
+      <path d="M12 16.5h.01" />
+    </svg>
+  );
+}
+
+/** Moedas (financiamento). */
+export function IconeMoedas(p: Props) {
+  return (
+    <svg {...base(p)}>
+      <circle cx="9" cy="9" r="6" />
+      <path d="M18.1 10.4A6 6 0 1 1 10.3 18" />
+      <path d="M8 7h1v4" />
+    </svg>
+  );
+}
+
 export function IconeMensagem(p: Props) {
   return (
     <svg {...base(p)}>

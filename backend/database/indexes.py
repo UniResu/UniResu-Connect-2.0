@@ -60,6 +60,9 @@ async def criar_indices(db) -> None:
     )
     # Filtro e contagem por grande área do CNPq (busca e /projetos/filtros).
     await db.projetos.create_index([("area_conhecimento", ASCENDING)], name="area_conhecimento")
+    # Filtro "Projetos financiados": quem financia (lista) e bolsas da extensão.
+    await db.projetos.create_index([("financiadores", ASCENDING)], name="financiadores", sparse=True)
+    await db.projetos.create_index([("bolsas_alunos", ASCENDING)], name="bolsas_alunos", sparse=True)
     await db.sigaa_sync_runs.create_index([("iniciada_em", DESCENDING)], name="runs_recentes")
     await db.sigaa_sync_runs.create_index([("fonte", ASCENDING), ("finalizada_em", DESCENDING)], name="runs_por_fonte")
     # Rate limit e checagem de duplicidade das candidaturas.

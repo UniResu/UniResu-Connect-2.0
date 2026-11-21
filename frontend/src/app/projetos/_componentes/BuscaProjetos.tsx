@@ -18,6 +18,11 @@ import MultiSelect from "@/components/ui/MultiSelect";
 import ProjetoCard from "@/components/projetos/ProjetoCard";
 import { IconeInfo, IconeUfo } from "@/components/ui/Icones";
 import { DetalheProjeto } from "./DetalheProjeto";
+import FiltroFinanciados, {
+  rotuloEtiquetaFinanciamento,
+  valoresFinanciamento,
+  type FinanciamentoFiltro,
+} from "./FiltroFinanciados";
 import { Icone } from "./Icone";
 import { PAGE_SIZE, PARAMS_PRIMEIRA_PAGINA } from "./busca";
 import styles from "../projetos.module.css";
@@ -47,6 +52,8 @@ interface AreaFiltro {
 interface FiltrosResponse {
   instituicoes: InstituicaoFiltro[];
   areas: AreaFiltro[];
+  /** Opções de "Projetos financiados" no recorte atual (ausente em versões antigas da API). */
+  financiamento?: FinanciamentoFiltro;
 }
 
 type Modulo = "" | "pesquisa" | "extensao";
@@ -138,8 +145,12 @@ function ProjetosConteudo({
   const [campiEscolhidos, setCampiEscolhidos] = useState<string[]>([]);
   const [areaEscolhida, setAreaFiltro] = useState("");
   const [remotoFiltro, setRemotoFiltro] = useState(false);
+  // "Projetos financiados": "bolsa", "capes", "cnpq", "fap", "fap:<SIGLA>", "instituicao".
+  const [financiamentoEscolhido, setFinanciamentoEscolhido] = useState<string[]>([]);
   const [filtros, setFiltros] = useState<InstituicaoFiltro[]>([]);
   const [areas, setAreas] = useState<AreaFiltro[]>([]);
+  const [opcoesFinanciamento, setOpcoesFinanciamento] = useState<FinanciamentoFiltro | null>(null);
+  const financiamentoFiltro = valoresFinanciamento(financiamentoEscolhido);
 
   const inputBuscaRef = useRef<HTMLInputElement>(null);
   const idBusca = useId();
@@ -221,7 +232,8 @@ function ProjetosConteudo({
     campiFiltro.length +
     unidadesFiltro.length +
     (areaFiltro ? 1 : 0) +
-    (remotoFiltro ? 1 : 0);
+    (remotoFiltro ? 1 : 0) +
+    financiamentoFiltro.length;
 
   const temFiltroAtivo =
     busca.trim() !== "" ||
@@ -230,7 +242,8 @@ function ProjetosConteudo({
     campiFiltro.length > 0 ||
     unidadesFiltro.length > 0 ||
     areaFiltro !== "" ||
-    remotoFiltro;
+    remotoFiltro ||
+    financiamentoFiltro.length > 0;
 
   // Painel de filtros: coluna fixa no desktop; no celular e no tablet, uma
   // folha que sobe do rodapé, aberta pelo botão "Filtros".
@@ -300,6 +313,7 @@ function ProjetosConteudo({
   // o conteúdo muda (a resposta de /filtros recria os arrays a cada vez).
   const chaveUnidades = JSON.stringify(unidadesFiltro);
   const chaveCampi = JSON.stringify(campiFiltro);
+  const chaveFinanciamento = JSON.stringify(financiamentoFiltro);
   const montarParamsRecorte = useCallback(() => {
     const params = new URLSearchParams();
     if (buscaAplicada) params.set("q", buscaAplicada);
@@ -308,8 +322,9 @@ function ProjetosConteudo({
     (JSON.parse(chaveUnidades) as string[]).forEach((u) => params.append("unidade", u));
     (JSON.parse(chaveCampi) as string[]).forEach((c) => params.append("campus", c));
     if (remotoFiltro) params.set("remoto", "true");
+    (JSON.parse(chaveFinanciamento) as string[]).forEach((v) => params.append("financiamento", v));
     return params;
-  }, [buscaAplicada, tipoFiltro, instituicaoFiltro, chaveUnidades, chaveCampi, remotoFiltro]);
+  }, [buscaAplicada, tipoFiltro, instituicaoFiltro, chaveUnidades, chaveCampi, remotoFiltro, chaveFinanciamento]);
 
   const montarParams = useCallback(() => {
     const params = montarParamsRecorte();
@@ -366,24 +381,30 @@ function ProjetosConteudo({
   }, [busca]);
 
   // Opções de filtro. As instituições (e suas unidades) não dependem do
-  // recorte; as áreas do conhecimento sim, então a lista é refeita a cada
-  // mudança nos outros filtros, e respostas de recortes antigos são ignoradas.
+  // recorte; as áreas do conhecimento e as opções de "Projetos financiados"
+  // sim, então a lista é refeita a cada mudança nos outros filtros, e
+  // respostas de recortes antigos são ignoradas. A área vai junto só para a
+  // contagem de financiamento (a API conta cada filtro sem ele mesmo).
   useEffect(() => {
     if (!pronto) return;
     const id = ++filtrosAtuais.current;
-    const query = montarParamsRecorte().toString();
+    const params = montarParamsRecorte();
+    if (areaFiltro) params.set("area", areaFiltro);
+    const query = params.toString();
     api
       .get<FiltrosResponse>(`/api/projetos/filtros${query ? `?${query}` : ""}`)
       .then((f) => {
         if (id !== filtrosAtuais.current) return;
         setFiltros(f.instituicoes || []);
         setAreas(f.areas || []);
+        setOpcoesFinanciamento(f.financiamento ?? null);
       })
       .catch(() => {
         if (id !== filtrosAtuais.current) return;
         setAreas([]);
+        setOpcoesFinanciamento(null);
       });
-  }, [montarParamsRecorte, pronto]);
+  }, [montarParamsRecorte, areaFiltro, pronto]);
 
   // Link direto (/projetos?projeto=<id>): busca o projeto pela rota pública
   // e abre o modal. Lido de window.location dentro do efeito, que só roda
@@ -448,6 +469,7 @@ function ProjetosConteudo({
     setCampiEscolhidos([]);
     setAreaFiltro("");
     setRemotoFiltro(false);
+    setFinanciamentoEscolhido([]);
   }
 
   function limparFiltros() {
@@ -459,6 +481,7 @@ function ProjetosConteudo({
     setCampiEscolhidos([]);
     setAreaFiltro("");
     setRemotoFiltro(false);
+    setFinanciamentoEscolhido([]);
   }
 
   // Estáveis, para o card (memo) e o modal não serem refeitos a cada render.
@@ -513,6 +536,17 @@ function ProjetosConteudo({
   );
   if (areaFiltro) etiquetas.push({ chave: "area", rotulo: areaFiltro, limpar: () => setAreaFiltro("") });
   if (remotoFiltro) etiquetas.push({ chave: "remoto", rotulo: "Remoto", limpar: () => setRemotoFiltro(false) });
+  financiamentoFiltro.forEach((v) =>
+    etiquetas.push({
+      chave: `financiamento-${v}`,
+      rotulo: rotuloEtiquetaFinanciamento(v),
+      limpar: () =>
+        setFinanciamentoEscolhido((atuais) =>
+          // Tirar "FAP" (todas) leva junto as FAPs escolhidas pelo nome.
+          atuais.filter((x) => x !== v && !(v === "fap" && x.startsWith("fap:")))
+        ),
+    })
+  );
 
   return (
     <div className={styles.pagina}>
@@ -739,6 +773,12 @@ function ProjetosConteudo({
                   ))}
                 </select>
               </div>
+
+              <FiltroFinanciados
+                opcoes={opcoesFinanciamento}
+                selecionados={financiamentoEscolhido}
+                onChange={setFinanciamentoEscolhido}
+              />
 
               <label className={styles.marcar}>
                 <input type="checkbox" checked={remotoFiltro} onChange={(e) => setRemotoFiltro(e.target.checked)} />

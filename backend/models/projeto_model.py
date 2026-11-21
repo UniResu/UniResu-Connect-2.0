@@ -84,6 +84,12 @@ class ProjetoPublicoResponse(BaseModel):
     linhas_extensao: Optional[List[str]] = None
     grupo_pesquisa: Optional[str] = None
     financiamento: Optional[str] = None
+    # Filtro "Projetos financiados" (SIGAA): bolsas concedidas e fonte do
+    # financiamento da ação de extensão; etiquetas de quem financia ("capes",
+    # "cnpq", "fap", "fap:FAPESP", "instituicao"). Nenhum dado de bolsista.
+    bolsas_alunos: Optional[int] = None
+    fonte_financiamento: Optional[str] = None
+    financiadores: Optional[List[str]] = None
 
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
@@ -116,10 +122,26 @@ class AreaFiltro(BaseModel):
     total: int
 
 
+class OpcaoFinanciamento(BaseModel):
+    """Uma opção do filtro "Projetos financiados" e quantos projetos do recorte ela tem."""
+    valor: str      # "bolsa", "capes", "cnpq", "fap", "instituicao" ou "fap:<SIGLA>"
+    total: int
+
+
+class FinanciamentoFiltro(BaseModel):
+    # Na ordem fixa do filtro: bolsa, capes, cnpq, fap, instituicao.
+    categorias: List[OpcaoFinanciamento] = []
+    # FAPs com projetos no recorte, da que tem mais projetos para a que tem menos.
+    faps: List[OpcaoFinanciamento] = []
+    # Soma das bolsas concedidas nos projetos com bolsa do recorte.
+    total_bolsas: int = 0
+
+
 class FiltrosResponse(BaseModel):
     instituicoes: List[InstituicaoFiltro] = []
     # Na ordem fixa da tabela do CNPq, só as áreas com projetos no recorte.
     areas: List[AreaFiltro] = []
+    financiamento: FinanciamentoFiltro = FinanciamentoFiltro()
 
 
 class FonteStatus(BaseModel):

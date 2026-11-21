@@ -13,7 +13,14 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import type { User } from "@/types/user";
-import { formatarData, formatarSituacao, moduloDoProjeto, tomDaSituacao, type Projeto } from "@/types/projeto";
+import {
+  financiadoresDoProjeto,
+  formatarData,
+  formatarSituacao,
+  moduloDoProjeto,
+  tomDaSituacao,
+  type Projeto,
+} from "@/types/projeto";
 import { Icone } from "./Icone";
 import m from "../modal.module.css";
 
@@ -150,6 +157,16 @@ export const DetalheProjeto = memo(function DetalheProjeto({
   }
   if (p.periodo_inicio && p.periodo_fim) {
     metadados.push({ rotulo: "Período", valor: `${formatarData(p.periodo_inicio)} a ${formatarData(p.periodo_fim)}` });
+  }
+  const bolsas = p.bolsas_alunos ?? 0;
+  if (bolsas > 0) {
+    metadados.push({ rotulo: "Bolsas para alunos", valor: bolsas === 1 ? "1 concedida" : `${bolsas} concedidas` });
+  }
+  const financiadores = financiadoresDoProjeto(p);
+  if (financiadores.length > 0) {
+    metadados.push({ rotulo: "Financiamento", valor: financiadores.join(", ") });
+  } else if (p.fonte_financiamento) {
+    metadados.push({ rotulo: "Financiamento", valor: formatarSituacao(p.fonte_financiamento) });
   }
   if (p.ano) metadados.push({ rotulo: "Ano", valor: p.ano });
   if (p.codigo && p.origem === "sigaa") metadados.push({ rotulo: "Código no SIGAA", valor: p.codigo });

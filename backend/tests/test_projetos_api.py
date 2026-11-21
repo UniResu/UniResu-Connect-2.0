@@ -294,3 +294,63 @@ async def test_projeto_coletado_sem_situacao_nao_aparece(api, base):
     r = await api.get("/api/projetos/buscar")
     assert "Situação desconhecida" not in titulos(r)
     assert "Projeto manual do professor" in titulos(r)  # manual sem situação continua
+
+
+# ── Projetos financiados ───────────────────────────────────────────────────
+
+@pytest.fixture
+async def financiados(base):
+    await base.projetos.insert_many([
+        {**sigaa("Ação com bolsas", tipo="extensao", area=SAUDE), "bolsas_alunos": 3,
+         "fonte_financiamento": "FINANCIAMENTO INTERNO", "financiadores": ["instituicao"]},
+        {**sigaa("Ação sem bolsa", tipo="extensao"), "bolsas_alunos": 0,
+         "fonte_financiamento": "AÇÃO AUTO-FINANCIADA", "financiadores": []},
+        {**sigaa("Pesquisa do CNPq e da FAPERO"), "financiadores": ["cnpq", "fap", "fap:FAPERO"]},
+        {**sigaa("Pesquisa da CAPES", area=HUMANAS), "financiadores": ["capes"]},
+        {**sigaa("Pesquisa da FAPESP"), "financiadores": ["fap", "fap:FAPESP"]},
+        {**sigaa("Financiada mas encerrada", situacao="FINALIZADO"), "financiadores": ["cnpq"], "bolsas_alunos": 9},
+    ])
+    return base
+
+
+async def test_filtro_bolsa_para_alunos(api, financiados):
+    r = await api.get("/api/projetos/buscar", params={"financiamento": "bolsa"})
+    assert titulos(r) == ["Ação com bolsas"]
+    projeto = r.json()[0]
+    assert (projeto["bolsas_alunos"], projeto["fonte_financiamento"]) == (3, "FINANCIAMENTO INTERNO")
+
+
+async def test_filtro_financiamento_vale_qualquer_opcao(api, financiados):
+    r = await api.get("/api/projetos/buscar", params=[("financiamento", "capes"), ("financiamento", "bolsa")])
+    assert titulos(r) == ["Ação com bolsas", "Pesquisa da CAPES"]
+
+
+async def test_filtro_fap_geral_e_especifica(api, financiados):
+    assert titulos(await api.get("/api/projetos/buscar", params={"financiamento": "fap"})) == [
+        "Pesquisa da FAPESP", "Pesquisa do CNPq e da FAPERO"]
+    assert titulos(await api.get("/api/projetos/buscar", params={"financiamento": "fap:FAPERO"})) == [
+        "Pesquisa do CNPq e da FAPERO"]
+
+
+async def test_filtro_financiamento_ignora_valor_desconhecido(api, financiados):
+    todos = titulos(await api.get("/api/projetos/buscar"))
+    assert titulos(await api.get("/api/projetos/buscar", params={"financiamento": "$where"})) == todos
+
+
+async def test_filtros_contam_opcoes_de_financiamento(api, financiados):
+    f = (await api.get("/api/projetos/filtros")).json()["financiamento"]
+    assert f["categorias"] == [
+        {"valor": "bolsa", "total": 1}, {"valor": "capes", "total": 1}, {"valor": "cnpq", "total": 1},
+        {"valor": "fap", "total": 2}, {"valor": "instituicao", "total": 1},
+    ]
+    assert f["faps"] == [{"valor": "fap:FAPERO", "total": 1}, {"valor": "fap:FAPESP", "total": 1}]
+    # Só os projetos visíveis contam (a encerrada com 9 bolsas fica de fora).
+    assert f["total_bolsas"] == 3
+
+
+async def test_contagens_de_financiamento_e_areas_respeitam_um_ao_outro(api, financiados):
+    f = (await api.get("/api/projetos/filtros", params={"area": HUMANAS})).json()
+    assert {c["valor"]: c["total"] for c in f["financiamento"]["categorias"]}["capes"] == 1
+    assert {c["valor"]: c["total"] for c in f["financiamento"]["categorias"]}["fap"] == 0
+    areas = (await api.get("/api/projetos/filtros", params={"financiamento": "bolsa"})).json()["areas"]
+    assert areas == [{"nome": SAUDE, "total": 1}]

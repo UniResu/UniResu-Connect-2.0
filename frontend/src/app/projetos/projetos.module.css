@@ -481,6 +481,144 @@ button.etiqueta svg {
   cursor: pointer;
 }
 
+/* ── Projetos financiados ── */
+.rotuloLinha {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.ajuda {
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin: -0.35rem 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.ajuda:hover,
+.ajuda[aria-expanded="true"] {
+  background: var(--primary-50);
+  color: var(--text-accent);
+}
+
+.ajuda:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.ajudaTexto {
+  margin: 0;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+}
+
+.ajudaTexto strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.financiados {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2rem;
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-chip);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  line-height: 1.3;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.tag:hover:not(:disabled) {
+  border-color: var(--primary-light);
+}
+
+.tag:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.tag[aria-pressed="true"] {
+  border-color: var(--primary-light);
+  background: var(--primary-100);
+  color: var(--text-accent);
+}
+
+.tag:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.tagTotal {
+  color: var(--text-muted);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.tag[aria-pressed="true"] .tagTotal {
+  color: inherit;
+}
+
+.subRotulo {
+  margin-top: 0.2rem;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+/* FAPs pelo nome: recuadas sob as demais, ligadas por um fio à esquerda. */
+.subTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-left: 0.3rem;
+  padding-left: 0.65rem;
+  border-left: 2px solid var(--border);
+}
+
+.notaBolsas {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+@media (pointer: coarse) {
+  .tag {
+    min-height: 2.5rem;
+  }
+}
+
 /* ── Aviso do link direto ── */
 
 .avisoLink {

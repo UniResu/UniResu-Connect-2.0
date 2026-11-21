@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional, Union
 from bson import ObjectId
 from database.connection import Database
 from services.areas import AREAS_CONHECIMENTO, classificar_area
+from services.financiamento import BOLSA, CATEGORIAS, PREFIXO_FAP
 from services.fontes import FONTES, INSTITUICOES, SIGAA
 from services.sigaa.links import link_consulta
 from services.sigaa.parser import SITUACAO_EM_EXECUCAO, normalizar
@@ -83,6 +84,34 @@ def _um_ou_varios(valor: Union[str, List[str]]):
     return lista[0] if len(lista) == 1 else {"$in": lista}
 
 
+def valores_financiamento(valores: Optional[List[str]]) -> List[str]:
+    """Só as opções que o filtro "Projetos financiados" conhece: as categorias
+    e "fap:<SIGLA>" (uma FAP específica). O resto é ignorado."""
+    validos = []
+    for v in valores or []:
+        v = (v or "").strip()
+        if (v in CATEGORIAS or (v.startswith(PREFIXO_FAP) and 0 < len(v) - len(PREFIXO_FAP) <= 40)) \
+                and v not in validos:
+            validos.append(v)
+    return validos
+
+
+def filtro_financiamento(valores: Optional[List[str]]) -> Optional[Dict[str, Any]]:
+    """Projetos com QUALQUER uma das opções escolhidas. "bolsa" é bolsa
+    concedida a alunos (ações de extensão com `bolsas_alunos` > 0); as demais
+    são etiquetas de `financiadores` ("fap" vale para qualquer FAP)."""
+    validos = valores_financiamento(valores)
+    condicoes: List[Dict[str, Any]] = []
+    if BOLSA in validos:
+        condicoes.append({"bolsas_alunos": {"$gt": 0}})
+    etiquetas = [v for v in validos if v != BOLSA]
+    if etiquetas:
+        condicoes.append({"financiadores": {"$in": etiquetas}})
+    if not condicoes:
+        return None
+    return condicoes[0] if len(condicoes) == 1 else {"$or": condicoes}
+
+
 def montar_filtro_busca(
     q: Optional[str] = None,
     local: Optional[str] = None,
@@ -94,6 +123,7 @@ def montar_filtro_busca(
     instituicao: Optional[str] = None,
     incluir_inativos: bool = False,
     campus: Union[str, List[str], None] = None,
+    financiamento: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """Filtro do MongoDB para a busca pública. Também é usado pelas opções de
     filtro (`/projetos/filtros`), para que a contagem por área reflita o mesmo
@@ -112,6 +142,8 @@ def montar_filtro_busca(
         campus: Campus (valor exato de /projetos/filtros); uma lista seleciona vários.
         incluir_inativos: Se False (padrão), mostra só projetos ativos e em
             execução; projetos manuais, sem situação, contam como ativos.
+        financiamento: Opções do filtro "Projetos financiados" (ver
+            `filtro_financiamento`); várias valem como "qualquer uma".
     """
     query_filter: Dict[str, Any] = {}
     and_clauses = []
@@ -150,6 +182,9 @@ def montar_filtro_busca(
         lista_de_tipos = [t.strip() for t in tipos.split(",") if t.strip()]
         if lista_de_tipos:
             query_filter["tipo_projeto"] = {"$in": lista_de_tipos}
+    condicao_financiamento = filtro_financiamento(financiamento)
+    if condicao_financiamento:
+        and_clauses.append(condicao_financiamento)
 
     if and_clauses:
         query_filter["$and"] = and_clauses
@@ -169,6 +204,7 @@ async def buscar_projetos_controller(
     incluir_inativos: bool = False,
     last_id: Optional[str] = None,
     page_size: int = 20,
+    financiamento: Optional[List[str]] = None,
 ) -> List[Dict[str, Any]]:
     """Busca projetos com filtros (ver `montar_filtro_busca`) e paginação
     baseada em cursor.
@@ -186,7 +222,8 @@ async def buscar_projetos_controller(
     page_size = min(page_size, 50)
 
     query_filter = montar_filtro_busca(q=q, local=local, area=area, remoto=remoto, tipos=tipos, modulo=modulo,
-                                       unidade=unidade, campus=campus, instituicao=instituicao, incluir_inativos=incluir_inativos)
+                                       unidade=unidade, campus=campus, instituicao=instituicao,
+                                       incluir_inativos=incluir_inativos, financiamento=financiamento)
 
     # Paginação por cursor (mais eficiente que skip/limit para grandes volumes)
     if last_id:
@@ -275,6 +312,29 @@ async def contar_por_area(db, filtro: Dict[str, Any]) -> List[Dict[str, Any]]:
     return [{"nome": area, "total": totais[area]} for area in AREAS_CONHECIMENTO if totais.get(area)]
 
 
+async def contar_financiamento(db, filtro: Dict[str, Any]) -> Dict[str, Any]:
+    """Quantos projetos do recorte há em cada opção do filtro "Projetos
+    financiados" (categorias na ordem fixa e FAPs da maior para a menor) e
+    quantas bolsas as ações com bolsa do recorte somam."""
+    pipeline = [
+        {"$match": {**filtro, "financiadores.0": {"$exists": True}}},
+        {"$unwind": "$financiadores"},
+        {"$group": {"_id": "$financiadores", "total": {"$sum": 1}}},
+    ]
+    totais = {g["_id"]: g["total"] async for g in db.projetos.aggregate(pipeline)}
+    bolsas = [g async for g in db.projetos.aggregate([
+        {"$match": {**filtro, "bolsas_alunos": {"$gt": 0}}},
+        {"$group": {"_id": None, "projetos": {"$sum": 1}, "bolsas": {"$sum": "$bolsas_alunos"}}},
+    ])]
+    totais[BOLSA] = bolsas[0]["projetos"] if bolsas else 0
+    faps = [{"valor": valor, "total": total} for valor, total in totais.items() if valor.startswith(PREFIXO_FAP)]
+    return {
+        "categorias": [{"valor": c, "total": totais.get(c, 0)} for c in CATEGORIAS],
+        "faps": sorted(faps, key=lambda f: (-f["total"], normalizar(f["valor"]))),
+        "total_bolsas": bolsas[0]["bolsas"] if bolsas else 0,
+    }
+
+
 async def listar_filtros_controller(
     q: Optional[str] = None,
     modulo: Optional[str] = None,
@@ -282,6 +342,8 @@ async def listar_filtros_controller(
     unidade: Union[str, List[str], None] = None,
     remoto: bool = False,
     campus: Union[str, List[str], None] = None,
+    area: Optional[str] = None,
+    financiamento: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """Opções de filtro da busca.
 
@@ -294,13 +356,17 @@ async def listar_filtros_controller(
     por módulo já permite ao front estreitar a lista.
 
     `areas`: contagem por grande área do CNPq dentro do recorte atual (texto,
-    módulo, instituição, unidade e remoto, os mesmos filtros da busca, exceto
-    a própria área), para o seletor "Área do conhecimento" só oferecer áreas
-    com projetos no que o usuário está vendo.
+    módulo, instituição, unidade, remoto e financiamento, os mesmos filtros
+    da busca, exceto a própria área), para o seletor "Área do conhecimento"
+    só oferecer áreas com projetos no que o usuário está vendo.
+
+    `financiamento`: contagem de cada opção do filtro "Projetos financiados"
+    no recorte atual, exceto o próprio filtro de financiamento.
     """
     db = Database.get_db()
-    areas = await contar_por_area(db, montar_filtro_busca(q=q, modulo=modulo, instituicao=instituicao,
-                                                          unidade=unidade, remoto=remoto, campus=campus))
+    recorte = dict(q=q, modulo=modulo, instituicao=instituicao, unidade=unidade, remoto=remoto, campus=campus)
+    areas = await contar_por_area(db, montar_filtro_busca(**recorte, financiamento=financiamento))
+    financiamento_opcoes = await contar_financiamento(db, montar_filtro_busca(**recorte, area=area))
     siglas = list(INSTITUICOES)
     rotulos = {sigla: f.rotulo for sigla, f in INSTITUICOES.items()}
 
@@ -356,7 +422,7 @@ async def listar_filtros_controller(
             "campi": [{"nome": c, **dados} for c, dados in sorted(g["campi"].items(),
                                                                    key=lambda kv: normalizar(kv[0]))],
         })
-    return {"instituicoes": instituicoes, "areas": areas}
+    return {"instituicoes": instituicoes, "areas": areas, "financiamento": financiamento_opcoes}
 
 
 def _iso_utc(dt) -> str:

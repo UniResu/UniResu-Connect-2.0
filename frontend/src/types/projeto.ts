@@ -41,6 +41,48 @@ export interface Projeto {
   linhas_extensao?: string[];
   grupo_pesquisa?: string;
   financiamento?: string;
+  /** Extensão no SIGAA: "Nº Bolsas Concedidas" da ação (só o número, nada sobre quem recebe). */
+  bolsas_alunos?: number | null;
+  /** Extensão no SIGAA: FINANCIAMENTO INTERNO, FINANCIAMENTO EXTERNO ou AÇÃO AUTO-FINANCIADA. */
+  fonte_financiamento?: string | null;
+  /** Quem financia: "capes", "cnpq", "fap", "fap:<SIGLA>" e "instituicao". */
+  financiadores?: string[] | null;
+}
+
+/** Opções do filtro "Projetos financiados", na ordem em que aparecem. */
+export const ROTULOS_FINANCIAMENTO: Record<string, string> = {
+  bolsa: "Bolsa para alunos",
+  capes: "CAPES",
+  cnpq: "CNPq",
+  fap: "FAP",
+  instituicao: "Própria universidade",
+};
+
+export const PREFIXO_FAP = "fap:";
+
+export function rotuloFinanciamento(valor: string) {
+  return valor.startsWith(PREFIXO_FAP) ? valor.slice(PREFIXO_FAP.length) : ROTULOS_FINANCIAMENTO[valor] ?? valor;
+}
+
+/** Quem financia o projeto, para exibir: as FAPs pelo nome, no lugar de "FAP". */
+export function financiadoresDoProjeto(projeto: Projeto): string[] {
+  const lista = projeto.financiadores || [];
+  const ordem = ["capes", "cnpq", "instituicao", "fap"];
+  const faps = lista.filter((v) => v.startsWith(PREFIXO_FAP)).sort();
+  const rotulos: string[] = [];
+  for (const valor of ordem) {
+    if (!lista.includes(valor)) continue;
+    if (valor === "fap" && faps.length > 0) rotulos.push(...faps.map(rotuloFinanciamento));
+    else rotulos.push(rotuloFinanciamento(valor));
+  }
+  return rotulos;
+}
+
+/** "3 bolsas para alunos" (ou nada, quando a fonte não informa bolsa concedida). */
+export function textoBolsas(projeto: Projeto) {
+  const n = projeto.bolsas_alunos ?? 0;
+  if (n <= 0) return "";
+  return n === 1 ? "1 bolsa para alunos" : `${n} bolsas para alunos`;
 }
 
 export type SituacaoTom = "ativa" | "encerrada" | "futura" | "neutra";

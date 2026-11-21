@@ -3,8 +3,10 @@
 import { memo, type ReactNode } from "react";
 import Link from "next/link";
 import {
+  financiadoresDoProjeto,
   formatarSituacao,
   moduloDoProjeto,
+  textoBolsas,
   tomDaSituacao,
   type Projeto,
 } from "@/types/projeto";
@@ -12,6 +14,7 @@ import {
   IconeBalanca,
   IconeBroto,
   IconeCalendario,
+  IconeCapelo,
   IconeCoracao,
   IconeEngrenagem,
   IconeFolha,
@@ -19,6 +22,7 @@ import {
   IconeGlobo,
   IconeGrade,
   IconeLivro,
+  IconeMoedas,
   IconePaleta,
   IconePin,
   IconePredio,
@@ -51,8 +55,9 @@ export function estiloDaArea(area?: string) {
  *
  * Hierarquia: tipo e situação no topo, título, quem coordena, resumo em
  * duas linhas e, no rodapé, as etiquetas do mais geral ao mais específico:
- * a área, com cor própria, a instituição, o campus e a unidade (neutros) e
- * "Remoto" em verde; o ano fica discreto à direita. Clica-se no card
+ * a área, com cor própria, a instituição, o campus e a unidade (neutros),
+ * "Remoto" e as bolsas para alunos em verde e quem financia; o ano fica
+ * discreto à direita. Clica-se no card
  * inteiro: `onClick` abre o modal na busca; `href` leva a outra página.
  */
 function ProjetoCardBase({
@@ -71,6 +76,8 @@ function ProjetoCardBase({
   const tom = tomDaSituacao(projeto.situacao);
   const situacao = formatarSituacao(projeto.situacao);
   const area = estiloDaArea(projeto.area_conhecimento);
+  const bolsas = textoBolsas(projeto);
+  const financiadores = financiadoresDoProjeto(projeto).join(", ");
 
   const conteudo = (
     <>
@@ -105,7 +112,7 @@ function ProjetoCardBase({
 
       {projeto.descricao && !compacto && <p className={styles.resumo}>{projeto.descricao}</p>}
 
-      {(projeto.area_conhecimento || projeto.instituicao || projeto.e_remoto || projeto.ano) && (
+      {(projeto.area_conhecimento || projeto.instituicao || projeto.e_remoto || projeto.ano || bolsas || financiadores) && (
         <div className={styles.rodape}>
           {projeto.area_conhecimento && (
             <span className={`ui-chip ${area.classe}`} title="Área do conhecimento (grande área do CNPq)">
@@ -137,6 +144,18 @@ function ProjetoCardBase({
             <span className="ui-chip ui-chip-success">
               <IconeGlobo />
               Remoto
+            </span>
+          )}
+          {bolsas && (
+            <span className="ui-chip ui-chip-success" title="Bolsas concedidas a alunos, como a universidade informa">
+              <IconeCapelo />
+              {bolsas}
+            </span>
+          )}
+          {financiadores && !compacto && (
+            <span className={`ui-chip ${styles.tagLonga}`} title={`Financiamento: ${financiadores}`}>
+              <IconeMoedas />
+              <span className={styles.tagTexto}>{financiadores}</span>
             </span>
           )}
           {projeto.ano && (
