@@ -106,12 +106,26 @@ def payload_base(form) -> dict:
     return dados
 
 
-def _marcar_checkbox_da_linha(tag, dados: dict) -> None:
+def _marcar_checkbox_da_linha(tag, dados: dict) -> bool:
     """No SIGAA cada filtro tem um checkbox na mesma <tr> que o "liga"."""
     linha = tag.find_parent("tr") if tag else None
     chk = linha.find("input", {"type": "checkbox"}) if linha else None
     if chk and chk.get("name"):
         dados[chk["name"]] = chk.get("value") or "on"
+        return True
+    return False
+
+
+def _marcar_checkbox_pelo_nome(form, dados: dict, nome_campo: str) -> bool:
+    """Checkbox que liga o filtro fora da linha do campo: o SIGAA o nomeia
+    "check" + nome do campo ("formConsulta:checkAgencia" para "formConsulta:agencia")."""
+    sufixo = normalizar(nome_campo.split(":")[-1])
+    for chk in form.find_all("input", {"type": "checkbox"}):
+        nome = normalizar(chk.get("name"))
+        if sufixo and nome.endswith("CHECK" + sufixo):
+            dados[chk["name"]] = chk.get("value") or "on"
+            return True
+    return False
 
 
 def aplicar_filtro_select(form, dados: dict, texto_opcao: str) -> bool:
@@ -166,7 +180,8 @@ def aplicar_select_por_nome(form, dados: dict, nome_contem: str, valor: str) -> 
     for sel in form.find_all("select"):
         if alvo in normalizar(sel.get("name")):
             dados[sel["name"]] = valor
-            _marcar_checkbox_da_linha(sel, dados)
+            if not _marcar_checkbox_da_linha(sel, dados):
+                _marcar_checkbox_pelo_nome(form, dados, sel["name"])
             return True
     return False
 

@@ -375,13 +375,37 @@ def _instituicao(client) -> tuple[Optional[str], Optional[str]]:
     return sigla, inst.nome if inst else None
 
 
-def financiadores_da_pesquisa(client: SigaaClient, ano: str) -> Optional[dict[str, list[str]]]:
+# Sinais de que o portal ignorou o filtro de agência e devolveu a listagem
+# inteira (aconteceu no IFC): uma agência que "financia" quase todos os
+# projetos coletados, ou duas agências com exatamente a mesma lista.
+COBERTURA_FILTRO_IGNORADO = 0.9
+MIN_PROJETOS_COBERTURA = 10
+MIN_PROJETOS_LISTA_REPETIDA = 3
+
+
+def filtro_de_agencia_ignorado(chaves: set, coletados: set, listas_vistas: dict) -> Optional[str]:
+    """Motivo para desconfiar do resultado de uma busca por agência, ou None."""
+    comuns = len(chaves & coletados)
+    if len(coletados) >= MIN_PROJETOS_COBERTURA and comuns >= COBERTURA_FILTRO_IGNORADO * len(coletados):
+        return f"uma só agência devolveu {comuns} dos {len(coletados)} projetos coletados"
+    lista = frozenset(chaves)
+    if len(lista) >= MIN_PROJETOS_LISTA_REPETIDA and lista in listas_vistas:
+        return f"a lista de {len(lista)} projetos repete a da agência {listas_vistas[lista]!r}"
+    return None
+
+
+def financiadores_da_pesquisa(client: SigaaClient, ano: str,
+                              coletados: Collection[str] = ()) -> Optional[dict[str, list[str]]]:
     """Etiquetas de financiamento dos projetos de pesquisa de um ano, por
     sigaa_id (ou código). A página do projeto não mostra quem financia, mas a
     consulta filtra por "Agência Financiadora": para cada agência que o
     classificador reconhece (CAPES, CNPq, FAPs, a própria instituição), uma
     busca com os mesmos filtros da coleta diz quais projetos ela financia.
-    Devolve None quando o formulário não tem o filtro de agência."""
+    `coletados` são as chaves (sigaa_id ou código) dos projetos da coleta,
+    para conferir se o portal respeitou o filtro. Devolve None quando o
+    formulário não tem o filtro de agência, e um mapa vazio quando o portal o
+    ignora (todo projeto fica sem financiador, e as etiquetas que uma coleta
+    anterior tenha gravado são apagadas)."""
     form = parser.achar_form(BeautifulSoup(client.get(_urls(client)["pesquisa"]), "html.parser"))
     opcoes = parser.opcoes_select(form, "agencia")
     if not opcoes:
@@ -392,17 +416,27 @@ def financiadores_da_pesquisa(client: SigaaClient, ano: str) -> Optional[dict[st
              if (etiquetas := classificar_financiador(texto, sigla, nome))]
     logger.info("%s pesquisa %s: %d agências financiadoras, %d reconhecidas", _nome(client), ano,
                 len(opcoes), len(alvos))
+    coletados = {c for c in coletados if c}
+    listas_vistas: dict[frozenset, str] = {}
     por_projeto: dict[str, set[str]] = {}
     for valor, texto, etiquetas in alvos:
-        encontrados = 0
+        chaves: set[str] = set()
         for pagina in buscar_paginas(client, "pesquisa", ano, fixo=("agencia", valor)):
             for item in parser.parse_listagem_pesquisa(pagina.html):
                 chave = item.get("sigaa_id") or item.get("codigo")
                 if chave:
-                    por_projeto.setdefault(chave, set()).update(etiquetas)
-                    encontrados += 1
+                    chaves.add(chave)
+        motivo = filtro_de_agencia_ignorado(chaves, coletados, listas_vistas)
+        if motivo:
+            logger.warning("%s pesquisa %s: o portal ignorou o filtro de agência (%s); os projetos ficam sem "
+                           "financiador", _nome(client), ano, motivo)
+            return {}
+        if len(chaves) >= MIN_PROJETOS_LISTA_REPETIDA:
+            listas_vistas[frozenset(chaves)] = texto
+        for chave in chaves:
+            por_projeto.setdefault(chave, set()).update(etiquetas)
         logger.info("%s pesquisa %s: agência %r -> %s: %d projeto(s)", _nome(client), ano, texto,
-                    ",".join(etiquetas), encontrados)
+                    ",".join(etiquetas), len(chaves))
     return {chave: sorted(etiquetas) for chave, etiquetas in por_projeto.items()}
 
 
@@ -410,8 +444,9 @@ def marcar_financiadores(client: SigaaClient, ano: str, registros: list[dict]) -
     """Grava `financiadores` em cada registro de pesquisa (lista vazia quando
     nenhuma agência reconhecida o financia). Se as buscas por agência falham,
     os registros ficam sem o campo e o banco mantém o que já sabia."""
+    coletados = {reg.get("sigaa_id") or reg.get("codigo") for reg in registros}
     try:
-        mapa = financiadores_da_pesquisa(client, ano)
+        mapa = financiadores_da_pesquisa(client, ano, coletados)
     except (ErroColeta, ValueError) as e:
         logger.warning("%s pesquisa %s: buscas por agência financiadora falharam: %s", _nome(client), ano, e)
         return

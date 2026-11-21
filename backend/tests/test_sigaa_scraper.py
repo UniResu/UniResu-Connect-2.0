@@ -367,10 +367,11 @@ class ClienteAgencias:
 
     VAZIA = "<html><body>Nenhum projeto encontrado com os critérios informados.</body></html>"
 
-    def __init__(self, falhar=False):
+    def __init__(self, falhar=False, ignora_filtro=False):
         self.cfg = SigaaConfig(modulos=["pesquisa"])
         self.listagem = ler_fixture("sigaa_pesquisa_listagem.html")
         self.falhar = falhar
+        self.ignora_filtro = ignora_filtro
         self.agencias = []
         self.total_requisicoes = 0
 
@@ -382,7 +383,7 @@ class ClienteAgencias:
             raise SigaaErro("portal fora do ar")
         agencia = data.get("formConsulta:agencia") if data.get("formConsulta:checkAgencia") else None
         self.agencias.append(agencia)
-        return self.listagem if agencia == "3" else self.VAZIA
+        return self.listagem if agencia == "3" or self.ignora_filtro else self.VAZIA
 
 
 def test_financiadores_da_pesquisa_busca_so_as_agencias_reconhecidas():
@@ -417,3 +418,37 @@ def test_registro_de_extensao_leva_bolsas_e_fonte():
     assert reg["financiadores"] == ["instituicao"]
     # Sem detalhe, nada de financiamento: o banco mantém o que já sabia.
     assert "bolsas_alunos" not in scraper._registro("extensao", item, None)
+
+
+def test_portal_que_ignora_o_filtro_de_agencia_deixa_todos_sem_financiador():
+    # IFC: cada busca por agência devolvia a listagem inteira, e todo projeto
+    # saía com CAPES, CNPq e FAP ao mesmo tempo.
+    registros = [{"sigaa_id": "8120935"}, {"sigaa_id": "8167592"}, {"sigaa_id": "6451015"}]
+    cliente = ClienteAgencias(ignora_filtro=True)
+    scraper.marcar_financiadores(cliente, "2026", registros)
+
+    assert [r["financiadores"] for r in registros] == [[], [], []]
+    # Parou na segunda agência, quando a lista se repetiu.
+    assert len(cliente.agencias) == 2
+
+
+def test_filtro_de_agencia_ignorado_pela_cobertura():
+    coletados = {str(i) for i in range(20)}
+    assert scraper.filtro_de_agencia_ignorado(coletados - {"0"}, coletados, {})
+    assert scraper.filtro_de_agencia_ignorado({"1", "2", "3"}, coletados, {}) is None
+    # Com poucos projetos coletados, uma agência pode mesmo financiar todos.
+    assert scraper.filtro_de_agencia_ignorado({"1", "2"}, {"1", "2"}, {}) is None
+
+
+def test_select_sem_checkbox_na_linha_liga_o_checkbox_pelo_nome():
+    from bs4 import BeautifulSoup
+    from services.sigaa import parser
+
+    html = """<form id="formConsulta"><table>
+      <tr><td><input type="checkbox" name="formConsulta:checkAgencia"/></td><td>Agência Financiadora</td></tr>
+      <tr><td><select name="formConsulta:agencia"><option value="3">CNPQ</option></select></td></tr>
+    </table><input type="hidden" name="javax.faces.ViewState" value="x"/></form>"""
+    form = parser.achar_form(BeautifulSoup(html, "html.parser"))
+    dados = {}
+    assert parser.aplicar_select_por_nome(form, dados, "agencia", "3")
+    assert dados == {"formConsulta:agencia": "3", "formConsulta:checkAgencia": "on"}
