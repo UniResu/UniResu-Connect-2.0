@@ -82,7 +82,9 @@ async def test_erros_de_detalhe_nao_abortam(db):
 
 async def test_modo_incremental_passa_ao_coletor_os_ids_com_detalhe(db):
     await executar_sync(db, CFG, coletores([item("pesquisa", "A"), item("pesquisa", "B", detalhe_ok=False)],
-                                           [item("extensao", "X")]), ClienteNulo())
+                                           [item("extensao", "X", bolsas_alunos=0),
+                                            # Lido antes de o coletor guardar as bolsas: abre de novo.
+                                            item("extensao", "Y")]), ClienteNulo())
     recebidos = {}
 
     def coletar(modulo):

@@ -288,3 +288,39 @@ async def test_so_listagem_confirma_presenca_sem_apagar_o_detalhe(db):
     assert doc["descricao"] == "Resumo lido no detalhe"
     assert doc["situacao"] == "EM EXECUÇÃO"
     assert doc["detalhe_ok"] is True
+
+
+async def test_grava_bolsas_e_financiadores(db):
+    await repositorio.upsert_projetos(db, [
+        reg(sigaa_id="1", titulo="Com agência", financiadores=["cnpq", "fap", "fap:FAPERO"]),
+        reg(sigaa_id="2", titulo="Ação com bolsa", modulo="extensao", bolsas_alunos=3,
+            fonte_financiamento="FINANCIAMENTO INTERNO", financiadores=["instituicao"]),
+        reg(sigaa_id="3", titulo="Sem informação"),
+    ])
+    com_agencia = await db.projetos.find_one({"sigaa_id": "1"})
+    acao = await db.projetos.find_one({"sigaa_id": "2"})
+    sem = await db.projetos.find_one({"sigaa_id": "3"})
+
+    assert com_agencia["financiadores"] == ["cnpq", "fap", "fap:FAPERO"]
+    assert (acao["bolsas_alunos"], acao["fonte_financiamento"]) == (3, "FINANCIAMENTO INTERNO")
+    assert "financiadores" not in sem and "bolsas_alunos" not in sem
+
+
+async def test_so_listagem_atualiza_financiadores_da_pesquisa(db):
+    # As buscas por agência não dependem do detalhe: valem também para o item
+    # que, no modo incremental, volta só com a listagem.
+    await repositorio.upsert_projetos(db, [reg(financiadores=["capes"])])
+    await repositorio.upsert_projetos(db, [reg(detalhe_ok=False, so_listagem=True, financiadores=["cnpq"])])
+    await repositorio.upsert_projetos(db, [reg(detalhe_ok=False, so_listagem=True)])
+    doc = await db.projetos.find_one({"sigaa_id": "100"})
+
+    # A última run não fez as buscas (campo ausente): fica o que já se sabia.
+    assert doc["financiadores"] == ["cnpq"]
+
+
+async def test_ids_com_detalhe_reabre_extensao_lida_antes_das_bolsas(db):
+    await repositorio.upsert_projetos(db, [
+        reg(sigaa_id="1", titulo="Lida com bolsas", modulo="extensao", bolsas_alunos=0),
+        reg(sigaa_id="2", titulo="Lida antes", modulo="extensao"),
+    ])
+    assert await repositorio.ids_com_detalhe(db, "extensao") == {"1"}

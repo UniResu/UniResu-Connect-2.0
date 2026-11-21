@@ -21,9 +21,11 @@ from typing import Collection, Optional
 
 from bs4 import BeautifulSoup
 
+from services.financiamento import classificar_financiador
 from services.http_client import ClienteHttp, ErroColeta
 from services.sigaa import parser
 from services.sigaa.config import SigaaConfig
+from services.sigaa.instituicoes import INSTITUICOES_SIGAA
 
 logger = logging.getLogger(__name__)
 
@@ -113,12 +115,15 @@ DIVISOES = {"pesquisa": ["centro", "unidade"], "extensao": ["TipoAcao", "unidade
 
 
 def montar_payload_busca(html_form: str, modulo: str, ano: str, situacao: Optional[str],
-                         extra: Optional[tuple[str, str]] = None) -> dict:
+                         extra: Optional[tuple[str, str]] = None,
+                         fixo: Optional[tuple[str, str]] = None) -> dict:
     """Monta o POST da busca a partir do HTML da página de consulta.
 
     `extra` = (trecho do name do select, valor) restringe a busca por mais um
     campo (centro, unidade, tipo de ação), usado quando o portal limita o
-    número de resultados. Se a opção de situação pedida não existe no
+    número de resultados. `fixo`, no mesmo formato, é um filtro que vale para
+    a busca inteira, divisões incluídas (a agência financiadora, por
+    exemplo). Se a opção de situação pedida não existe no
     formulário (cada SIGAA tem seu vocabulário), a busca segue sem esse
     filtro e o chamador filtra pela situação da listagem.
     """
@@ -133,8 +138,9 @@ def montar_payload_busca(html_form: str, modulo: str, ano: str, situacao: Option
                            situacao, ", ".join(parser.opcoes_de_situacao(form)) or "nenhuma")
     if not parser.aplicar_filtro_texto(form, dados, ["ANO"], ano):
         raise SigaaErro("Campo Ano não encontrado no formulário.")
-    if extra and not parser.aplicar_select_por_nome(form, dados, extra[0], extra[1]):
-        raise SigaaErro(f"Select '{extra[0]}' não encontrado no formulário.")
+    for filtro in (fixo, extra):
+        if filtro and not parser.aplicar_select_por_nome(form, dados, filtro[0], filtro[1]):
+            raise SigaaErro(f"Select '{filtro[0]}' não encontrado no formulário.")
     parser.aplicar_botao_buscar(form, dados)
     return dados
 
@@ -155,11 +161,12 @@ class PaginaListagem:
     situacao_filtrada: bool = True
 
 
-def _buscar(client: SigaaClient, modulo: str, ano: str, extra: Optional[tuple[str, str]] = None) -> PaginaListagem:
+def _buscar(client: SigaaClient, modulo: str, ano: str, extra: Optional[tuple[str, str]] = None,
+            fixo: Optional[tuple[str, str]] = None) -> PaginaListagem:
     url = _urls(client)[modulo]
     html_form = client.get(url)
     situacao = client.cfg.pesquisa_situacao if modulo == "pesquisa" else None
-    dados = montar_payload_busca(html_form, modulo, ano, situacao, extra)
+    dados = montar_payload_busca(html_form, modulo, ano, situacao, extra, fixo)
     return PaginaListagem(client.post(url, dados), extra, situacao_filtrada(html_form, situacao))
 
 
@@ -171,11 +178,13 @@ def _opcoes_divisao(client: SigaaClient, modulo: str, nome_select: str, apenas: 
     return opcoes
 
 
-def buscar_paginas(client: SigaaClient, modulo: str, ano: str) -> list[PaginaListagem]:
+def buscar_paginas(client: SigaaClient, modulo: str, ano: str,
+                   fixo: Optional[tuple[str, str]] = None) -> list[PaginaListagem]:
     """Todas as páginas de resultado de um módulo/ano. Quando o portal recusa a
     busca por excesso de resultados, divide por centro/unidade (pesquisa) ou
-    por tipo de ação e depois unidade (extensão) e junta tudo."""
-    primeira = _buscar(client, modulo, ano)
+    por tipo de ação e depois unidade (extensão) e junta tudo. `fixo` filtra
+    a busca inteira por mais um select (ver `montar_payload_busca`)."""
+    primeira = _buscar(client, modulo, ano, fixo=fixo)
     if not parser.resultados_excessivos(primeira.html):
         return [primeira]
     paginas: list[PaginaListagem] = []
@@ -185,7 +194,7 @@ def buscar_paginas(client: SigaaClient, modulo: str, ano: str) -> list[PaginaLis
     logger.info("%s %s %s: portal limita resultados; dividindo por %s (%d opções)",
                 _nome(client), modulo, ano, divisoes[0], len(primeiro_nivel))
     for valor, texto in primeiro_nivel:
-        pagina = _buscar(client, modulo, ano, (divisoes[0], valor))
+        pagina = _buscar(client, modulo, ano, (divisoes[0], valor), fixo)
         if not parser.resultados_excessivos(pagina.html):
             paginas.append(pagina)
             continue
@@ -201,7 +210,7 @@ def buscar_paginas(client: SigaaClient, modulo: str, ano: str) -> list[PaginaLis
             url = _urls(client)[modulo]
             html_form = client.get(url)
             situacao = client.cfg.pesquisa_situacao if modulo == "pesquisa" else None
-            dados = montar_payload_busca(html_form, modulo, ano, situacao, (divisoes[0], valor))
+            dados = montar_payload_busca(html_form, modulo, ano, situacao, (divisoes[0], valor), fixo)
             form = parser.achar_form(BeautifulSoup(html_form, "html.parser"))
             parser.aplicar_select_por_nome(form, dados, divisoes[1], valor2)
             html = client.post(url, dados)
@@ -354,7 +363,65 @@ def coletar_pesquisa(client: SigaaClient, ano: str, pular_detalhe: Collection[st
         cota.registrar(detalhe is not None)
         res.itens.append(_registro("pesquisa", item, detalhe))
     cota.resumo()
+    if res.itens and getattr(client.cfg, "financiadores", False):
+        marcar_financiadores(client, ano, res.itens)
     return res
+
+
+def _instituicao(client) -> tuple[Optional[str], Optional[str]]:
+    """(sigla, nome) da instituição coletada, para reconhecer recurso próprio."""
+    sigla = getattr(getattr(client, "cfg", None), "instituicao", None)
+    inst = INSTITUICOES_SIGAA.get((sigla or "").upper())
+    return sigla, inst.nome if inst else None
+
+
+def financiadores_da_pesquisa(client: SigaaClient, ano: str) -> Optional[dict[str, list[str]]]:
+    """Etiquetas de financiamento dos projetos de pesquisa de um ano, por
+    sigaa_id (ou código). A página do projeto não mostra quem financia, mas a
+    consulta filtra por "Agência Financiadora": para cada agência que o
+    classificador reconhece (CAPES, CNPq, FAPs, a própria instituição), uma
+    busca com os mesmos filtros da coleta diz quais projetos ela financia.
+    Devolve None quando o formulário não tem o filtro de agência."""
+    form = parser.achar_form(BeautifulSoup(client.get(_urls(client)["pesquisa"]), "html.parser"))
+    opcoes = parser.opcoes_select(form, "agencia")
+    if not opcoes:
+        logger.info("%s pesquisa %s: consulta sem filtro de agência financiadora", _nome(client), ano)
+        return None
+    sigla, nome = _instituicao(client)
+    alvos = [(valor, texto, etiquetas) for valor, texto in opcoes
+             if (etiquetas := classificar_financiador(texto, sigla, nome))]
+    logger.info("%s pesquisa %s: %d agências financiadoras, %d reconhecidas", _nome(client), ano,
+                len(opcoes), len(alvos))
+    por_projeto: dict[str, set[str]] = {}
+    for valor, texto, etiquetas in alvos:
+        encontrados = 0
+        for pagina in buscar_paginas(client, "pesquisa", ano, fixo=("agencia", valor)):
+            for item in parser.parse_listagem_pesquisa(pagina.html):
+                chave = item.get("sigaa_id") or item.get("codigo")
+                if chave:
+                    por_projeto.setdefault(chave, set()).update(etiquetas)
+                    encontrados += 1
+        logger.info("%s pesquisa %s: agência %r -> %s: %d projeto(s)", _nome(client), ano, texto,
+                    ",".join(etiquetas), encontrados)
+    return {chave: sorted(etiquetas) for chave, etiquetas in por_projeto.items()}
+
+
+def marcar_financiadores(client: SigaaClient, ano: str, registros: list[dict]) -> None:
+    """Grava `financiadores` em cada registro de pesquisa (lista vazia quando
+    nenhuma agência reconhecida o financia). Se as buscas por agência falham,
+    os registros ficam sem o campo e o banco mantém o que já sabia."""
+    try:
+        mapa = financiadores_da_pesquisa(client, ano)
+    except (ErroColeta, ValueError) as e:
+        logger.warning("%s pesquisa %s: buscas por agência financiadora falharam: %s", _nome(client), ano, e)
+        return
+    if mapa is None:
+        return
+    for reg in registros:
+        reg["financiadores"] = mapa.get(reg.get("sigaa_id") or "") or mapa.get(reg.get("codigo") or "") or []
+    marcados = sum(1 for reg in registros if reg["financiadores"])
+    logger.info("%s pesquisa %s: %d de %d projetos com financiador reconhecido", _nome(client), ano,
+                marcados, len(registros))
 
 
 # ─────────────────────────────────────────────
@@ -439,7 +506,7 @@ def _registro(modulo: str, item: dict, detalhe: Optional[dict]) -> dict:
     if parser.situacao_vigente(situacao):
         # Vocabulários diferentes (EM ANDAMENTO, RENOVADO) viram o valor que a plataforma exibe.
         situacao = parser.SITUACAO_EM_EXECUCAO
-    return {
+    registro = {
         "modulo": modulo,
         "sigaa_id": item.get("sigaa_id"),
         "codigo": item.get("codigo"),
@@ -458,6 +525,14 @@ def _registro(modulo: str, item: dict, detalhe: Optional[dict]) -> dict:
         # Extensão: quem assina como responsável pela ação (pode ser discente) e a equipe.
         "extras": {k: d[k] for k in ("responsavel_acao", "equipe") if d.get(k)},
     }
+    if detalhe is not None and modulo == "extensao":
+        # Número de bolsas e fonte do financiamento, como a ação publica. A
+        # fonte é um valor fixo do SIGAA (FINANCIAMENTO INTERNO, EXTERNO ou
+        # AÇÃO AUTO-FINANCIADA), então dispensa a sigla da instituição.
+        registro["bolsas_alunos"] = d.get("bolsas_concedidas")
+        registro["fonte_financiamento"] = d.get("fonte_financiamento")
+        registro["financiadores"] = classificar_financiador(d.get("fonte_financiamento"))
+    return registro
 
 
 def _erro(modulo: str, item: dict, e: Exception) -> dict:

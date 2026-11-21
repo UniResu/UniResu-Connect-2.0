@@ -35,6 +35,9 @@ class SigaaConfig:
     # Teto de detalhes abertos por módulo numa execução (0 = todos). Com teto,
     # a coleta é incremental: detalhes já lidos não são reabertos.
     max_detalhes: int = 0
+    # Pesquisa: uma busca extra por agência financiadora reconhecida (CAPES,
+    # CNPq, FAPs, a própria instituição) para o filtro "Projetos financiados".
+    financiadores: bool = True
     # Pausa mínima entre requisições (nunca menos que 1s).
     pausa_segundos: float = 1.5
     timeout_segundos: float = 60.0
@@ -64,6 +67,8 @@ class SigaaConfig:
         if os.getenv("SIGAA_MODULOS"):
             cfg.modulos = [m.lower() for m in _lista(os.environ["SIGAA_MODULOS"])]
         cfg.max_itens = max(0, int(os.getenv("SIGAA_MAX_ITENS") or 0))
+        if os.getenv("SIGAA_FINANCIADORES"):
+            cfg.financiadores = os.environ["SIGAA_FINANCIADORES"].strip().lower() not in ("0", "false", "nao", "não")
         if os.getenv("SIGAA_MAX_DETALHES"):
             cfg.max_detalhes = max(0, int(os.environ["SIGAA_MAX_DETALHES"]))
         cfg.pausa_segundos = max(1.0, float(os.getenv("SIGAA_PAUSA_SEGUNDOS", cfg.pausa_segundos)))

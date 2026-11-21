@@ -59,6 +59,9 @@ class ResultadoUpsert:
     chaves: list[str] = field(default_factory=list)
 
 
+CAMPOS_FINANCIAMENTO = ("bolsas_alunos", "fonte_financiamento", "financiadores")
+
+
 def _id_fonte(registro: dict, fonte: Fonte) -> Optional[str]:
     return registro.get(fonte.campo_id) or registro.get("id_fonte")
 
@@ -91,6 +94,9 @@ async def _confirmar_presenca(db, registro: dict, fonte: Fonte, agora: datetime)
     campos = {"ativo": True, "ultima_coleta": agora}
     if registro.get("link_detalhe"):
         campos["link_detalhe"] = registro["link_detalhe"]
+    if registro.get("financiadores") is not None:
+        # Vem das buscas por agência, que não dependem do detalhe.
+        campos["financiadores"] = registro["financiadores"]
     await db.projetos.update_one({"_id": doc["_id"]}, {"$set": campos})
     return doc[fonte.campo_chave]
 
@@ -141,6 +147,11 @@ def _campos_completos(reg: dict, fonte: Fonte, agora: datetime) -> dict:
         campos["tipo_sigaa"] = modulo
     # Campos extras que a fonte queira guardar (ex.: área temática, palavras-chave).
     campos.update(reg.get("extras") or {})
+    # Filtro "Projetos financiados": número de bolsas e fonte (extensão) e
+    # etiquetas de quem financia (CAPES, CNPq, FAP, a própria instituição).
+    for campo in CAMPOS_FINANCIAMENTO:
+        if campo in reg:
+            campos[campo] = reg[campo]
     # Grande área do CNPq, derivada do que a fonte publica (área CNPq da UFV,
     # unidade, título, descrição...). Vale para todas as fontes.
     campos["area_conhecimento"] = classificar_area(campos)
@@ -178,6 +189,8 @@ async def upsert_projetos(
                 "ultima_coleta": agora,
                 "detalhe_ok": False,
             }
+            if reg.get("financiadores") is not None:
+                campos["financiadores"] = reg["financiadores"]
         else:
             chave = chave_natural(reg, fonte)
             await _realinhar_chave(db, reg, chave, fonte)
@@ -211,6 +224,9 @@ async def ids_com_detalhe(db, modulo: str, fonte: Fonte = SIGAA, hoje: Optional[
         "detalhe_ok": True,
         "$or": [{"periodo_fim": None}, {"periodo_fim": {"$gte": hoje_iso}}],
     }
+    if modulo == "extensao":
+        # Detalhe lido antes de o coletor guardar as bolsas: abre de novo uma vez.
+        filtro["bolsas_alunos"] = {"$exists": True}
     ids = set()
     async for doc in db.projetos.find(filtro, {fonte.campo_id: 1}):
         if doc.get(fonte.campo_id):

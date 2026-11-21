@@ -509,6 +509,10 @@ def parse_detalhe_extensao(html: str) -> dict:
     equipe = parse_equipe(soup)
     # Coordenação pela função na equipe (vice-coordenação não é coordenação).
     coordenador, email = escolher_coordenacao(equipe, responsavel, _email(c.get("E-MAIL DO RESPONSAVEL")))
+    # "Nº Bolsas Concedidas" ("Nº" normalizado vira "NO") e "Fonte de
+    # Financiamento": só o número e a fonte, nunca quem recebe a bolsa.
+    bolsas = next((v for k, v in c.items() if "BOLSAS CONCEDIDAS" in k), None)
+    m_bolsas = re.search(r"\d+", bolsas or "")
     return {
         "coordenador": coordenador,
         "responsavel_acao": responsavel,
@@ -518,6 +522,8 @@ def parse_detalhe_extensao(html: str) -> dict:
         "periodo_inicio": inicio,
         "periodo_fim": fim,
         "descricao": _secao_h4(soup, "Resumo"),
+        "bolsas_concedidas": int(m_bolsas.group(0)) if m_bolsas else None,
+        "fonte_financiamento": c.get("FONTE DE FINANCIAMENTO") or None,
     }
 
 

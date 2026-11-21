@@ -195,7 +195,7 @@ class TestColetaPesquisa:
             def post(self, url, data):
                 return next(respostas)
 
-        res = scraper.coletar_pesquisa(Cliente(SigaaConfig(), {}), "2026")
+        res = scraper.coletar_pesquisa(Cliente(SigaaConfig(financiadores=False), {}), "2026")
         assert len(res.itens) == 3
         assert all(i["email"] == "coordenador@unir.br" for i in res.itens)
         assert res.itens[0]["codigo"] == "PVC2148-2026"
@@ -357,3 +357,63 @@ def test_erro_4xx_nao_e_repetido():
     with pytest.raises(ErroDefinitivo):
         cliente.get("https://x/y")
     assert sessao.chamadas == 1
+
+
+# ── Financiadores da pesquisa (filtro "Projetos financiados") ──────────────
+
+class ClienteAgencias:
+    """Consulta de pesquisa da UNIR em que só o CNPq (valor 3 no select da
+    fixture) financia os projetos da listagem."""
+
+    VAZIA = "<html><body>Nenhum projeto encontrado com os critérios informados.</body></html>"
+
+    def __init__(self, falhar=False):
+        self.cfg = SigaaConfig(modulos=["pesquisa"])
+        self.listagem = ler_fixture("sigaa_pesquisa_listagem.html")
+        self.falhar = falhar
+        self.agencias = []
+        self.total_requisicoes = 0
+
+    def get(self, url):
+        return self.listagem
+
+    def post(self, url, data):
+        if self.falhar:
+            raise SigaaErro("portal fora do ar")
+        agencia = data.get("formConsulta:agencia") if data.get("formConsulta:checkAgencia") else None
+        self.agencias.append(agencia)
+        return self.listagem if agencia == "3" else self.VAZIA
+
+
+def test_financiadores_da_pesquisa_busca_so_as_agencias_reconhecidas():
+    cliente = ClienteAgencias()
+    mapa = scraper.financiadores_da_pesquisa(cliente, "2026")
+
+    # Das 11 agências da fixture, só CAPES (4) e CNPQ (3) entram nas categorias.
+    assert sorted(cliente.agencias) == ["3", "4"]
+    assert mapa == {"8120935": ["cnpq"], "8167592": ["cnpq"], "6451015": ["cnpq"]}
+
+
+def test_marcar_financiadores_grava_lista_vazia_para_quem_nao_aparece():
+    registros = [{"sigaa_id": "8120935", "codigo": "PVC2148-2026"}, {"sigaa_id": "999", "codigo": "X-2026"}]
+    scraper.marcar_financiadores(ClienteAgencias(), "2026", registros)
+    assert registros[0]["financiadores"] == ["cnpq"]
+    assert registros[1]["financiadores"] == []
+
+
+def test_marcar_financiadores_sem_resposta_nao_mexe_nos_registros():
+    registros = [{"sigaa_id": "8120935"}]
+    scraper.marcar_financiadores(ClienteAgencias(falhar=True), "2026", registros)
+    assert "financiadores" not in registros[0]
+
+
+def test_registro_de_extensao_leva_bolsas_e_fonte():
+    item = {"sigaa_id": "1", "titulo": "Ação", "ano": "2026"}
+    detalhe = {"coordenador": "C", "bolsas_concedidas": 2, "fonte_financiamento": "FINANCIAMENTO INTERNO",
+               "periodo_inicio": None, "periodo_fim": None}
+    reg = scraper._registro("extensao", item, detalhe)
+    assert reg["bolsas_alunos"] == 2
+    assert reg["fonte_financiamento"] == "FINANCIAMENTO INTERNO"
+    assert reg["financiadores"] == ["instituicao"]
+    # Sem detalhe, nada de financiamento: o banco mantém o que já sabia.
+    assert "bolsas_alunos" not in scraper._registro("extensao", item, None)

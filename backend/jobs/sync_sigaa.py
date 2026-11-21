@@ -23,6 +23,7 @@ import json
 import os
 import logging
 import sys
+from collections import Counter
 from datetime import datetime, timezone
 from functools import partial
 from typing import Awaitable, Callable, Optional
@@ -37,6 +38,20 @@ from services.sigaa.scraper import COLETORES, SigaaClient
 logger = logging.getLogger("jobs.sync_sigaa")
 
 MAX_ERROS_REGISTRADOS = 200
+
+
+def resumo_financiamento(registros: list[dict]) -> dict:
+    """Quantos registros têm bolsa e quem financia (para o dry-run e o log)."""
+    com_bolsa = [r for r in registros if (r.get("bolsas_alunos") or 0) > 0]
+    etiquetas = Counter(e for r in registros for e in (r.get("financiadores") or []))
+    return {
+        "registros": len(registros),
+        "com_campo_financiadores": sum(1 for r in registros if r.get("financiadores") is not None),
+        "com_bolsa": len(com_bolsa),
+        "bolsas": sum(r["bolsas_alunos"] for r in com_bolsa),
+        "fontes": Counter(r.get("fonte_financiamento") for r in registros if "fonte_financiamento" in r).most_common(15),
+        "etiquetas": etiquetas.most_common(),
+    }
 
 
 async def executar_sync(
@@ -93,6 +108,9 @@ async def executar_sync(
 
         stats["coletados"] = len(registros)
         amostras[modulo] = registros[:3]
+        if dry_run:
+            print(f"\n=== Financiamento ({fonte.instituicao}, {modulo}) ===")
+            print(json.dumps(resumo_financiamento(registros), ensure_ascii=False, indent=2, default=str))
         if registros and not dry_run:
             up = await repositorio.upsert_projetos(db, registros, fonte=fonte)
             stats["novos"], stats["atualizados"] = up.novos, up.atualizados
