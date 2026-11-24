@@ -23,7 +23,7 @@ from urllib.parse import parse_qs, urljoin, urlparse
 
 from bs4 import BeautifulSoup, NavigableString, Tag
 
-from services.sigaa.parser import SITUACAO_EM_EXECUCAO, limpar, normalizar
+from services.sigaa.parser import SITUACAO_EM_EXECUCAO, coordenacao_titular, limpar, normalizar
 
 _RE_EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 _RE_DATA = re.compile(r"(\d{2}/\d{2}/\d{4})")
@@ -539,6 +539,74 @@ def _lista(valor: Optional[str], separadores: str = r"[;,|]") -> list[str]:
     return [limpar(p) for p in re.split(separadores, valor or "") if limpar(p)]
 
 
+def limpar_coordenador(nome: Optional[str]) -> Optional[str]:
+    """"NOME( email@unirio.br )" ou "NOME( -- )" (Portal da Pesquisa) vira só o nome."""
+    if not nome:
+        return None
+    return limpar(re.sub(r"\(.*?\)|" + _RE_EMAIL.pattern, "", nome)) or None
+
+
+def _participantes_tabela(soup: BeautifulSoup) -> list[dict]:
+    """Portal da Pesquisa: tabela Participante | Função | E-mail | Vínculo | Vigência."""
+    for tabela in soup.find_all("table"):
+        cabecalho = tabela.find("thead") or tabela.find("tr")
+        if cabecalho is None:
+            continue
+        colunas = [normalizar(c.get_text(" ")) for c in cabecalho.find_all(["td", "th"])]
+        if "PARTICIPANTE" not in colunas or "FUNCAO" not in colunas:
+            continue
+        corpo = tabela.find("tbody") or tabela
+        linhas = []
+        for tr in corpo.find_all("tr"):
+            celulas = [limpar(td.get_text(" ")) for td in tr.find_all("td")]
+            if len(celulas) != len(colunas) or celulas == colunas:
+                continue
+            linhas.append(dict(zip(colunas, celulas)))
+        return linhas
+    return []
+
+
+def _participantes_ficha(soup: BeautifulSoup) -> list[dict]:
+    """Portal da Extensão: card "Participantes", uma <section> por pessoa."""
+    for card in soup.select("div.card"):
+        cabecalho = card.find(class_="card-header")
+        if not cabecalho or "PARTICIPANTE" not in normalizar(cabecalho.get_text(" ")):
+            continue
+        linhas = []
+        for secao in card.find_all("section"):
+            campos: dict = {}
+            for rotulo in secao.select("p.titulo_ficha, p.card-subtitle"):
+                valor = rotulo.find_next_sibling()
+                if valor is not None:
+                    campos[normalizar(rotulo.get_text(" ")).rstrip(":").strip()] = limpar(valor.get_text(" "))
+            if campos:
+                linhas.append(campos)
+        return linhas
+    return []
+
+
+def participantes(soup: BeautifulSoup, hoje: Optional[date] = None) -> list[dict]:
+    """Função, e-mail e se a participação está ativa, sem o nome da pessoa
+    (só a coordenação interessa à plataforma, e dos bolsistas só a contagem)."""
+    hoje = hoje or date.today()
+    saida = []
+    for p in _participantes_tabela(soup) or _participantes_ficha(soup):
+        funcao = next((v for k, v in p.items() if k.startswith("FUNCAO")), "")
+        situacao = normalizar(next((v for k, v in p.items() if k.startswith("SITUACAO")), ""))
+        vigencia = next((v for k, v in p.items() if k.startswith("VIGENCIA")), "")
+        if situacao:
+            ativo = situacao.startswith("ATIVO")
+        else:
+            inicio, fim = periodo(vigencia)
+            ativo = (not inicio or date.fromisoformat(inicio) <= hoje) and (not fim or date.fromisoformat(fim) >= hoje)
+        saida.append({
+            "funcao": funcao or None,
+            "email": email(next((v for k, v in p.items() if k.startswith("E-MAIL") or k == "EMAIL"), "")),
+            "ativo": ativo,
+        })
+    return saida
+
+
 def parse_detalhe(html: str, hoje: Optional[date] = None) -> dict:
     soup = _soup(html)
     campos = _pares_ficha(soup) or _pares_rotulo_valor(soup)
@@ -552,10 +620,18 @@ def parse_detalhe(html: str, hoje: Optional[date] = None) -> dict:
         fim, _ = periodo(m.get("fim_raw"))
     coordenador = m.get("coordenador") or None
     contato = email(m.get("email_raw"))
-    if coordenador and "@" in coordenador:
-        # Portal da Pesquisa: "NOME DA PESSOA( email@unirio.br )"
+    if coordenador:
+        # Portal da Pesquisa: "NOME DA PESSOA( email@unirio.br )", ou "( -- )" sem e-mail.
         contato = contato or email(coordenador)
-        coordenador = limpar(re.sub(r"\(.*?\)|" + _RE_EMAIL.pattern, "", coordenador)) or None
+        coordenador = limpar_coordenador(coordenador)
+    equipe = participantes(soup, hoje)
+    if not contato:
+        # Sem e-mail na ficha: o da coordenação na lista de participantes (ativa primeiro).
+        coordenacao = sorted((p for p in equipe if coordenacao_titular(p["funcao"]) and p["email"]),
+                             key=lambda p: not p["ativo"])
+        contato = coordenacao[0]["email"] if coordenacao else None
+    # Bolsistas com participação ativa: só a contagem, nada sobre quem são.
+    bolsas = sum(1 for p in equipe if p["ativo"] and "BOLSISTA" in normalizar(p["funcao"])) if equipe else None
     return {
         "titulo": m.get("titulo") or None,
         "codigo": m.get("codigo") or None,
@@ -568,6 +644,7 @@ def parse_detalhe(html: str, hoje: Optional[date] = None) -> dict:
         "descricao": m.get("descricao") or None,
         "categoria": m.get("categoria") or None,
         "ano": ano_de(m.get("ano")) or ano_de(inicio),
+        "bolsas_alunos": bolsas,
         "extras": {k: v for k, v in {
             "area_tematica": m.get("area_tematica") or None,
             # itens de <ul> chegam separados por ";" e podem conter vírgulas

@@ -278,3 +278,27 @@ async def garantir_modulo(db) -> int:
         [{"$set": {"modulo": "$tipo_sigaa"}}],
     )
     return resultado.modified_count
+
+
+async def preencher_email_pela_coordenacao(db, fonte: Fonte) -> int:
+    """Projetos da fonte sem e-mail de contato recebem o e-mail que a mesma
+    coordenação (mesmo nome) informa em outro projeto da mesma fonte. Só
+    quando esse e-mail é único: com dois e-mails para o nome (homônimos), o
+    projeto fica sem contato. Roda depois de cada sync, porque o upsert grava
+    o e-mail que o portal publicou (ou nenhum). Devolve quantos preencheu."""
+    escopo = _escopo(fonte)
+    por_nome: dict[str, set[str]] = {}
+    async for doc in db.projetos.find({**escopo, "email_professor": {"$nin": [None, ""]},
+                                       "nome_professor": {"$nin": [None, ""]}},
+                                      {"nome_professor": 1, "email_professor": 1}):
+        por_nome.setdefault(normalizar(doc["nome_professor"]), set()).add(doc["email_professor"].strip().lower())
+    preenchidos = 0
+    async for doc in db.projetos.find({**escopo, "email_professor": {"$in": [None, ""]},
+                                       "nome_professor": {"$nin": [None, ""]}},
+                                      {"nome_professor": 1}):
+        emails = por_nome.get(normalizar(doc["nome_professor"]))
+        if emails and len(emails) == 1:
+            await db.projetos.update_one({"_id": doc["_id"]},
+                                         {"$set": {"email_professor": next(iter(emails))}})
+            preenchidos += 1
+    return preenchidos

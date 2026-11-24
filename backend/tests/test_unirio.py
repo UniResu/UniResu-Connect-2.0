@@ -1006,3 +1006,41 @@ class TestCargaLeve:
             cliente.get("u/1")
         # 3 tentativas: espera max(10, 120) após a 1ª e 20 após a 2ª (mais as pausas mínimas)
         assert 120 in dormidas and 20 in dormidas and len([d for d in dormidas if d >= 10]) == 2
+
+
+# ── Bolsistas e e-mail da coordenação ──────────────────────────────────────
+
+def test_extensao_conta_so_bolsistas_ativos_sem_guardar_nomes():
+    from datetime import date
+    d = parser.parse_detalhe(fixture("unirio_extensao_detalhe.html"), hoje=date(2026, 11, 24))
+    assert d["bolsas_alunos"] == 1
+    assert "GABRIELA" not in str(d)
+
+
+def test_coordenador_sem_email_perde_o_parenteses():
+    assert parser.limpar_coordenador("CARLOS ALBERTO FERREIRA( -- )") == "CARLOS ALBERTO FERREIRA"
+    assert parser.limpar_coordenador("ANA PAULA SOUZA( ana@unirio.br )") == "ANA PAULA SOUZA"
+
+
+def test_email_da_coordenacao_vem_da_lista_de_participantes():
+    html = fixture("unirio_pesquisa_detalhe.html").replace("ANA PAULA SOUZA( coordenador@unirio.br )",
+                                                           "ANA PAULA SOUZA( -- )")
+    d = parser.parse_detalhe(html)
+    assert (d["coordenador"], d["email"]) == ("ANA PAULA SOUZA", "coordenador@unirio.br")
+
+
+async def test_preenche_email_pela_mesma_coordenacao(db):
+    from services.fontes import UNIRIO
+    from services.sigaa import repositorio
+    base = {"origem": "unirio", "instituicao": "UNIRIO"}
+    await db.projetos.insert_many([
+        {**base, "titulo": "A", "nome_professor": "CARLA MENEZES", "email_professor": "carla@unirio.br"},
+        {**base, "titulo": "B", "nome_professor": "Carla Menezes", "email_professor": None},
+        {**base, "titulo": "C", "nome_professor": "JOSE SILVA", "email_professor": "j1@unirio.br"},
+        {**base, "titulo": "D", "nome_professor": "JOSE SILVA", "email_professor": "j2@unirio.br"},
+        {**base, "titulo": "E", "nome_professor": "JOSE SILVA", "email_professor": None},
+    ])
+    assert await repositorio.preencher_email_pela_coordenacao(db, UNIRIO) == 1
+    assert (await db.projetos.find_one({"titulo": "B"}))["email_professor"] == "carla@unirio.br"
+    # Dois e-mails para o mesmo nome (possíveis homônimos): fica sem contato.
+    assert (await db.projetos.find_one({"titulo": "E"}))["email_professor"] is None

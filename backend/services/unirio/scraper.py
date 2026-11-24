@@ -341,7 +341,7 @@ def _registro(modulo: str, item: dict, detalhe: Optional[dict], cfg: Optional[Un
         "unirio_id": item.get("unirio_id"),
         "codigo": d.get("codigo"),
         "titulo": d.get("titulo") or item.get("titulo"),
-        "coordenador": d.get("coordenador") or item.get("coordenador"),
+        "coordenador": d.get("coordenador") or parser.limpar_coordenador(item.get("coordenador")),
         "email": d.get("email"),
         "unidade": d.get("unidade") or item.get("unidade"),
         "situacao": situacao,
@@ -353,6 +353,8 @@ def _registro(modulo: str, item: dict, detalhe: Optional[dict], cfg: Optional[Un
         "periodo_fim": d.get("periodo_fim"),
         "extras": d.get("extras") or {},
         "detalhe_ok": detalhe is not None,
+        # Filtro "Projetos financiados": bolsistas ativos, contados no detalhe.
+        **({"bolsas_alunos": d.get("bolsas_alunos")} if detalhe is not None else {}),
     }
 
 

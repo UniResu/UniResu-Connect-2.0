@@ -241,6 +241,12 @@ async def _executar(db, cfg, coletores, client, alertar, dry_run, run, run_id, i
                 ano_minimo=cfg.pesquisa_ano_minimo if modulo == "pesquisa" else None)
         modulos[modulo] = stats
 
+    if not dry_run and db is not None:
+        preenchidos = await repositorio.preencher_email_pela_coordenacao(db, UNIRIO)
+        if preenchidos:
+            logger.info("UNIRIO: %d projeto(s) sem e-mail receberam o da mesma coordenação em outro projeto",
+                        preenchidos)
+
     if falhou:
         status = "falha"
     elif erros:
