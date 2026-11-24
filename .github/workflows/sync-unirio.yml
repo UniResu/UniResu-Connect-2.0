@@ -14,12 +14,11 @@
 name: Sync UNIRIO
 
 on:
-  # Agendamento desligado até o parser ser validado com o HTML real dos portais
-  # (rode `captura`, ajuste parser/fixtures, depois `dry-run` e `sync` manuais).
-  # Quando estiver validado, reative:
-  # schedule:
-  #   # Toda segunda-feira às 10:00 UTC (uma hora depois do sync do SIGAA).
-  #   - cron: "0 10 * * 1"
+  # Parser validado com o HTML real dos portais em 24/11/2026 (dry-run e
+  # primeira carga da pesquisa).
+  schedule:
+    # Toda segunda-feira às 10:00 UTC (uma hora depois do sync do SIGAA).
+    - cron: "0 10 * * 1"
   workflow_dispatch:
     inputs:
       modo:
