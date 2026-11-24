@@ -112,8 +112,8 @@ export default function FiltroFinanciados({
       </div>
       {ajudaAberta && (
         <p id={idAjuda} className={styles.ajudaTexto}>
-          Só a opção <strong>Bolsa para alunos</strong> confirma bolsa: são ações de extensão em que a universidade
-          informa as bolsas concedidas. As demais mostram quem financia o projeto (FAP é a fundação de amparo à
+          Só a opção <strong>Bolsa para alunos</strong> confirma bolsa: são projetos em que a universidade informa as
+          bolsas concedidas. As demais mostram quem financia o projeto (FAP é a fundação de amparo à
           pesquisa do estado), o que não garante bolsa a quem entra.
         </p>
       )}
