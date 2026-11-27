@@ -87,11 +87,16 @@ async def _confirmar_presenca(db, registro: dict, fonte: Fonte, agora: datetime)
         return None
     doc = await db.projetos.find_one(
         {**_escopo(fonte), "modulo": registro["modulo"], fonte.campo_id: id_fonte},
-        {fonte.campo_chave: 1},
+        {fonte.campo_chave: 1, "nome_professor": 1},
     )
     if not doc or not doc.get(fonte.campo_chave):
         return None
     campos = {"ativo": True, "ultima_coleta": agora}
+    coordenador = registro.get("coordenador")
+    if coordenador and "(" in (doc.get("nome_professor") or "") and "(" not in coordenador:
+        # Nome gravado antes da limpeza de "( -- )" (Portal da Pesquisa da
+        # UNIRIO): a listagem já traz o nome limpo.
+        campos["nome_professor"] = coordenador
     if registro.get("link_detalhe"):
         campos["link_detalhe"] = registro["link_detalhe"]
     if registro.get("financiadores") is not None:

@@ -290,6 +290,14 @@ async def test_so_listagem_confirma_presenca_sem_apagar_o_detalhe(db):
     assert doc["detalhe_ok"] is True
 
 
+async def test_so_listagem_limpa_nome_com_parenteses(db):
+    await repositorio.upsert_projetos(db, [reg(coordenador="Ana Souza( -- )")])
+    await repositorio.upsert_projetos(db, [reg(coordenador="Ana Souza", detalhe_ok=False, so_listagem=True)])
+    doc = await db.projetos.find_one({"sigaa_id": "100"})
+
+    assert doc["nome_professor"] == "Ana Souza"
+
+
 async def test_grava_bolsas_e_financiadores(db):
     await repositorio.upsert_projetos(db, [
         reg(sigaa_id="1", titulo="Com agência", financiadores=["cnpq", "fap", "fap:FAPERO"]),
